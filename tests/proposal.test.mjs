@@ -51,9 +51,32 @@ test("all muscles get one each, strength reps", () => {
 test("upper body covers every listed muscle", () => {
   const upper = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms"];
   const items = proposeItems(upper, lib, "muscle");
-  assert.ok(items.length >= 5 && items.length <= 8);
+  assert.equal(items.length, 9);
   const primaries = items.map(primaryOf);
   for (const m of upper) assert.ok(primaries.includes(m), m);
+  assert.deepEqual(primaries, [
+    "Chest", "Chest", "Back", "Back", "Shoulders", "Shoulders",
+    "Biceps", "Triceps", "Forearms",
+  ]);
+});
+
+test("legs day: two quads, two hamstrings, one each of the rest", () => {
+  const items = proposeItems(
+    ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"], lib, "muscle");
+  assert.deepEqual(items.map(primaryOf), [
+    "Quads", "Quads", "Hamstrings", "Hamstrings", "Glutes", "Calves", "Abs",
+  ]);
+});
+
+test("pull day: two back, two biceps, one forearms", () => {
+  const items = proposeItems(["Back", "Biceps", "Forearms"], lib, "muscle");
+  assert.deepEqual(items.map(primaryOf), [
+    "Back", "Back", "Biceps", "Biceps", "Forearms",
+  ]);
+});
+
+test("forearms alone still gets two", () => {
+  assert.equal(proposeItems(["Forearms"], lib, "muscle").length, 2);
 });
 
 test("no duplicates; empty muscles gives empty", () => {

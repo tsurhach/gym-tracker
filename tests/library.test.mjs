@@ -39,3 +39,22 @@ test("exercises with images have both files under 300 KB", () => {
     }
   }
 });
+
+test("jargon names are plain, ids unchanged", () => {
+  const byId = new Map(lib.map((e) => [e.id, e.name]));
+  assert.equal(byId.get("leverage-chest-press"), "Machine Chest Press");
+  assert.equal(byId.get("leverage-high-row"), "Machine High Row");
+  assert.equal(
+    byId.get("cable-seated-lateral-raise"),
+    "Seated Cable Lateral Raise",
+  );
+});
+
+test("major groups lead with a sensible pair", () => {
+  const second = (m) => lib.filter((e) => e.primary === m)[1].name;
+  assert.match(second("Back"), /Row/);
+  assert.match(second("Quads"), /Leg Press/);
+  assert.match(second("Hamstrings"), /Leg Curl/);
+  assert.match(second("Chest"), /Incline/);
+  assert.match(second("Shoulders"), /Lateral Raise/);
+});
