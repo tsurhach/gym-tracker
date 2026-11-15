@@ -43,17 +43,20 @@ export function createStore(storage) {
       try {
         raw = storage.getItem(KEY);
       } catch {
-        return { state: emptyState(), recovered: false };
+        return { state: emptyState(), recovered: false, kept: true };
       }
-      if (raw == null) return { state: emptyState(), recovered: false };
+      if (raw == null) return { state: emptyState(), recovered: false, kept: true };
       try {
         const parsed = JSON.parse(raw);
-        if (isValidState(parsed)) return { state: parsed, recovered: false };
+        if (isValidState(parsed)) return { state: parsed, recovered: false, kept: true };
       } catch {}
+      let kept = true;
       try {
         storage.setItem(CORRUPT_KEY, raw); // keep the bad data for manual rescue
-      } catch {}
-      return { state: emptyState(), recovered: true };
+      } catch {
+        kept = false; // bad data could not be set aside; UI should warn before saving
+      }
+      return { state: emptyState(), recovered: true, kept };
     },
     save(state) {
       try {

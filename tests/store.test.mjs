@@ -60,20 +60,20 @@ test("constants and emptyState", () => {
 
 test("load on empty storage", () => {
   const r = createStore(mem(fake())).load();
-  assert.deepEqual(r, { state: emptyState(), recovered: false });
+  assert.deepEqual(r, { state: emptyState(), recovered: false, kept: true });
 });
 
 test("save then load round-trips", () => {
   const st = mem(fake());
   const store = createStore(st);
   assert.equal(store.save(sample()), true);
-  assert.deepEqual(store.load(), { state: sample(), recovered: false });
+  assert.deepEqual(store.load(), { state: sample(), recovered: false, kept: true });
 });
 
 test("corrupt JSON is preserved and replaced", () => {
   const m = new Map([[KEY, "{not json"]]);
   const r = createStore(mem(m)).load();
-  assert.deepEqual(r, { state: emptyState(), recovered: true });
+  assert.deepEqual(r, { state: emptyState(), recovered: true, kept: true });
   assert.equal(m.get(CORRUPT_KEY), "{not json");
 });
 
@@ -110,4 +110,14 @@ test("importJson rejects invalid input with exact message", () => {
 
 test("export/import round-trips", () => {
   assert.deepEqual(importJson(exportJson(sample())), sample());
+});
+
+test("load reports kept: false when the corrupt copy cannot be written", () => {
+  const store = createStore({
+    getItem: () => "{not json",
+    setItem() {
+      throw new Error("quota");
+    },
+  });
+  assert.deepEqual(store.load(), { state: emptyState(), recovered: true, kept: false });
 });
