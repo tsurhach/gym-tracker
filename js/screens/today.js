@@ -4,7 +4,6 @@ import { discardSession, startSession } from "../session.js";
 import { confirmSheet, esc } from "../ui.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-let reminderDismissed = false; // until the page is reloaded
 
 function startBtn(w, primary) {
   return `<button class="btn${primary ? " btn-primary start" : ""}" data-act="start" data-w="${esc(w.id)}">Start ${esc(w.name)}</button>`;
@@ -46,7 +45,7 @@ export function render(root, ctx) {
           ? `<h3>Or start another</h3>${others
               .map(
                 (w) => `<div class="card row">
-          <div class="grow"><div class="ex-name">${esc(w.name)}</div><div class="muted small">${w.items.length} exercises</div></div>
+          <div class="grow"><div class="ex-name">${esc(w.name)}</div><div class="muted small">${w.items.length} ${w.items.length === 1 ? "exercise" : "exercises"}</div></div>
           <button class="btn inline" data-act="start" data-w="${esc(w.id)}">Start</button>
         </div>`,
               )
@@ -59,7 +58,8 @@ export function render(root, ctx) {
   const tally = muscleTally(state.sessions, now);
   const missing = MUSCLES.filter((m) => !tally[m]);
   const remind =
-    !reminderDismissed &&
+    (state.settings.backupNudgeDismissedAt == null ||
+      now - state.settings.backupNudgeDismissedAt > 7 * DAY_MS) &&
     state.sessions.length > 0 &&
     (state.settings.lastExportAt == null ||
       now - state.settings.lastExportAt > 30 * DAY_MS);
@@ -74,7 +74,11 @@ export function render(root, ctx) {
     ${main}
     <section class="card">
       <h3 style="margin-top:0">Last 7 days</h3>
-      <p><b>${week.length}</b> ${week.length === 1 ? "workout" : "workouts"}</p>
+      ${
+        week.length
+          ? `<p class="stat"><b>${week.length}</b> ${week.length === 1 ? "workout" : "workouts"}</p>`
+          : `<p class="muted">No workouts in the last 7 days. Start one above.</p>`
+      }
       ${
         missing.length
           ? `<p class="muted small" style="margin:8px 0 6px">Not trained yet</p><div class="tags">${missing.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ")}</div>`
@@ -100,7 +104,7 @@ export function render(root, ctx) {
       discardSession(state);
       ctx.save();
     } else if (t.dataset.act === "dismiss") {
-      reminderDismissed = true;
+      state.settings.backupNudgeDismissedAt = Date.now();
       ctx.save();
     }
   });

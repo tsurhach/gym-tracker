@@ -62,7 +62,7 @@ function listHtml(state) {
     .map((s) => {
       const sets = s.entries.reduce((n, e) => n + e.sets.length, 0);
       return `<a class="card block" href="#/history/${encodeURIComponent(s.id)}">
-        <div class="row"><b class="grow ex-name">${esc(s.workoutName)}</b><span class="muted">${esc(fmtDate(s.startedAt))}</span></div>
+        <div class="row"><b class="grow ex-name">${esc(s.workoutName)}</b><span class="muted nowrap">${esc(fmtDate(s.startedAt))}</span></div>
         <div class="muted small">${plural(s.entries.length, "exercise", "exercises")} · ${plural(sets, "set", "sets")} · ${durationMin(s)} min</div>
       </a>`;
     })
@@ -82,6 +82,13 @@ function listHtml(state) {
 
 // The session screen showing now; the page-hide listeners below read it.
 let current = null;
+
+const BAD_MSG =
+  "Weight needs a number and reps a whole number. That set was not changed.";
+
+// Rows showing a rejected edit when a set is deleted, so the redraw can put their
+// typed text and error state back at their new positions.
+let restore = null;
 
 const findSession = (c) => c.ctx.state.sessions.find((s) => s.id === c.id);
 
@@ -108,7 +115,7 @@ function syncAll() {
     bad ||= !ok;
   }
   current.root.querySelector("[data-err]").textContent = bad
-    ? "Weight needs a number and reps a whole number. That set was not changed."
+    ? BAD_MSG
     : "";
   return true;
 }
@@ -159,6 +166,19 @@ function sessionScreen(root, ctx) {
 
   current = { root, id, ctx };
 
+  if (restore) {
+    for (const r of restore) {
+      const row = root.querySelector(`.set[data-e="${r.e}"][data-i="${r.i}"]`);
+      if (!row) continue;
+      row.querySelector('[data-f="weight"]').value = r.w;
+      row.querySelector('[data-f="reps"]').value = r.r;
+      row.classList.add("bad");
+    }
+    if (restore.length)
+      root.querySelector("[data-err]").textContent = BAD_MSG;
+    restore = null;
+  }
+
   // Typing saves on change without redrawing, so a tap that blurred the field is never lost.
   root.addEventListener("change", (ev) => {
     if (!ev.target.dataset.f) return;
@@ -183,8 +203,24 @@ function sessionScreen(root, ctx) {
         ctx.save({ render: false });
         return;
       }
+      const entryGone = findSession(current)?.entries[e]?.sets.length === 1;
+      restore = [...current.root.querySelectorAll(".set.bad[data-e]")]
+        .map((r) => ({
+          e: Number(r.dataset.e),
+          i: Number(r.dataset.i),
+          w: r.querySelector('[data-f="weight"]').value,
+          r: r.querySelector('[data-f="reps"]').value,
+        }))
+        .filter((r) => !(r.e === e && r.i === i))
+        .map((r) => ({
+          ...r,
+          i: r.e === e && r.i > i ? r.i - 1 : r.i,
+          e: entryGone && r.e > e ? r.e - 1 : r.e,
+        }));
       removeSet(ctx.state, id, e, i);
-      ctx.save(); // a session left empty is gone; the redraw sends us back to History
+      // a session left empty is gone; the redraw sends us back to History
+      await ctx.save();
+      restore = null;
     } else if (act === "del-ses") {
       if (
         !(await confirmSheet(
