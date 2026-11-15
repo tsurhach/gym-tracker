@@ -14,7 +14,8 @@ const fresh = (ctx) => ({
 
 function finish(ctx, propose) {
   const d = draft;
-  draft = null;
+  const { workouts, settings } = ctx.state;
+  const prev = { workouts, goal: settings.goal };
   const named = d.drafts.map((w, i) => ({
     name: w.name.trim() || blankWorkouts(i + 1)[i].name,
     muscles: MUSCLES.filter((m) => w.muscles.includes(m)),
@@ -23,8 +24,17 @@ function finish(ctx, propose) {
   ctx.state.workouts = propose
     ? buildPlan(named, ctx.library, d.goal)
     : named.map((w) => ({ id: crypto.randomUUID(), ...w, items: [] }));
-  ctx.save();
-  ctx.go("#/plan");
+  ctx.save({ render: false }).then((saved) => {
+    if (saved) {
+      draft = null;
+      ctx.go("#/plan");
+    } else {
+      // not saved: restore the old plan and stay here so the user can retry
+      ctx.state.workouts = prev.workouts;
+      ctx.state.settings.goal = prev.goal;
+      window.dispatchEvent(new HashChangeEvent("hashchange")); // app.js re-renders
+    }
+  });
 }
 
 function stepHtml(d, ctx) {
