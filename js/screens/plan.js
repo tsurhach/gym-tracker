@@ -243,6 +243,14 @@ async function importFile(input, ctx) {
     ))
   )
     return;
+  const previous = ctx.state;
   ctx.state = imported;
-  if (await ctx.save()) showBanner("Backup restored.", { kind: "ok" });
+  if (await ctx.save({ render: false })) {
+    window.dispatchEvent(new HashChangeEvent("hashchange")); // app.js re-renders on this
+    showBanner("Backup restored.", { kind: "ok" });
+  } else {
+    ctx.state = previous; // not saved: put the old data back so nothing later persists the import
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    showBanner("Backup was not restored. Your data is unchanged.");
+  }
 }
