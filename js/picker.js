@@ -1,0 +1,120 @@
+import { MUSCLES } from "./constants.js";
+import { esc } from "./ui.js";
+
+// Full-screen exercise picker: library + custom exercises, searchable, grouped by
+// primary muscle, with a form to create a custom exercise. Not tied to any screen.
+// onPick(exerciseId) is called once, then the picker closes.
+// opts.exclude: Set of exercise ids shown as already added and not selectable.
+export function openPicker(ctx, onPick, { exclude = new Set() } = {}) {
+  const el = document.createElement("div");
+  el.className = "overlay";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  el.setAttribute("aria-label", "Add exercise");
+  el.innerHTML = `
+    <div class="overlay-inner">
+      <div class="overlay-head">
+        <button class="icon-btn" data-act="close" aria-label="Close">✕</button>
+        <h2>Add exercise</h2>
+      </div>
+      <input type="search" data-search placeholder="Search exercises" aria-label="Search exercises" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
+      <details class="card" style="margin-top:12px">
+        <summary>Create a custom exercise</summary>
+        <form data-form novalidate>
+          <input data-name placeholder="Exercise name" aria-label="Exercise name" maxlength="60" autocomplete="off" />
+          <label class="muted small">Main muscle
+            <select data-primary>${MUSCLES.map((m) => `<option>${esc(m)}</option>`).join("")}</select>
+          </label>
+          <div>
+            <div class="muted small">Other muscles (optional)</div>
+            <div class="chips" data-secondary>
+              ${MUSCLES.map((m) => `<button type="button" class="chip" aria-pressed="false" data-m="${esc(m)}">${esc(m)}</button>`).join("")}
+            </div>
+          </div>
+          <p class="err" data-err></p>
+          <button class="btn btn-primary" type="submit">Create and add</button>
+        </form>
+      </details>
+      <div data-list></div>
+    </div>`;
+
+  const list = el.querySelector("[data-list]");
+  const search = el.querySelector("[data-search]");
+
+  function draw() {
+    const q = search.value.trim().toLowerCase();
+    const custom = new Set(ctx.state.customExercises.map((c) => c.id));
+    const all = [...ctx.library, ...ctx.state.customExercises].filter((e) =>
+      e.name.toLowerCase().includes(q),
+    );
+    let html = "";
+    for (const m of MUSCLES) {
+      const rows = all.filter((e) => e.primary === m);
+      if (!rows.length) continue;
+      html += `<h3>${esc(m)}</h3>`;
+      for (const e of rows) {
+        const added = exclude.has(e.id);
+        html += `<button class="pick-row" data-id="${esc(e.id)}"${added ? " disabled" : ""}>
+          <span>${esc(e.name)}</span>
+          <span class="tag">${added ? "Added" : custom.has(e.id) ? "Custom" : ""}</span>
+        </button>`;
+      }
+    }
+    list.innerHTML = html || `<p class="muted">No exercises match.</p>`;
+  }
+
+  function close() {
+    document.removeEventListener("keydown", onKey);
+    document.body.classList.remove("locked");
+    el.remove();
+  }
+  function pick(id) {
+    if (exclude.has(id)) return;
+    close();
+    onPick(id);
+  }
+  const onKey = (e) => e.key === "Escape" && close();
+
+  search.addEventListener("input", draw);
+  el.addEventListener("click", (e) => {
+    if (e.target.closest("[data-act=close]")) return close();
+    const row = e.target.closest(".pick-row");
+    if (row) return pick(row.dataset.id);
+    const chip = e.target.closest("[data-secondary] .chip");
+    if (chip)
+      chip.setAttribute(
+        "aria-pressed",
+        String(chip.getAttribute("aria-pressed") !== "true"),
+      );
+  });
+  el.querySelector("[data-form]").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = el.querySelector("[data-name]").value.trim();
+    if (!name) {
+      el.querySelector("[data-err]").textContent = "Give the exercise a name.";
+      return;
+    }
+    const primary = el.querySelector("[data-primary]").value;
+    const secondary = [
+      ...el.querySelectorAll("[data-secondary] .chip[aria-pressed=true]"),
+    ]
+      .map((c) => c.dataset.m)
+      .filter((m) => m !== primary);
+    const ex = {
+      id: `custom-${crypto.randomUUID()}`,
+      name,
+      primary,
+      secondary,
+      images: 0,
+    };
+    ctx.state.customExercises.push(ex);
+    ctx.save();
+    pick(ex.id);
+  });
+
+  document.addEventListener("keydown", onKey);
+  document.body.classList.add("locked");
+  document.body.append(el);
+  draw();
+  el.querySelector("[data-act=close]").focus();
+}
