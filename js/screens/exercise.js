@@ -54,9 +54,6 @@ if (typeof window !== "undefined") {
   });
 }
 
-// The photo flip element is kept across renders (logging a set redraws the screen),
-// so its cross-fade never restarts. Keyed by exercise.
-let photo = null;
 // The set just confirmed: a second tap within 400 ms is a double-tap, not an undo.
 let justConfirmed = null;
 
@@ -71,6 +68,11 @@ function setHtml(s, i) {
     <button class="icon-btn" data-act="remove" aria-label="Remove set ${i + 1}">✕</button>
   </div>`;
 }
+
+// Only this section is redrawn when sets change, so the photo is never touched.
+const setsInner = (entry) => `<div class="set set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span><span></span></div>
+      ${entry.sets.map(setHtml).join("")}
+      <button class="btn" data-act="add" style="margin:8px 0 0">+ Add set</button>`;
 
 export function render(root, ctx) {
   const { state } = ctx;
@@ -100,23 +102,14 @@ export function render(root, ctx) {
     </div>
     <h1 class="title">${esc(entry.name)}</h1>
     <div class="tags">${tags.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ")}</div>
-    ${showPhotos ? `<div class="photo"><img class="a" src="${base}/0.jpg" alt="" /><img class="b" src="${base}/1.jpg" alt="" /></div>` : ""}
+    ${showPhotos ? `<div class="photo"><img class="a" src="${base}/0.jpg" alt="" loading="lazy" /><img class="b" src="${base}/1.jpg" alt="" loading="lazy" /></div>` : ""}
     <section class="card">
       <h3 style="margin-top:0">Last time${hist.length ? ` · ${esc(fmtDate(hist[hist.length - 1].startedAt))}` : ""}</h3>
       ${prev ? `<div class="last-sets">${esc(lastText(prev))}</div>` : ""}
       <div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>
     </section>
-    <section class="card">
-      <div class="set set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span><span></span></div>
-      ${entry.sets.map(setHtml).join("")}
-      <button class="btn" data-act="add" style="margin:8px 0 0">+ Add set</button>
-    </section>
+    <section class="card" data-sets>${setsInner(entry)}</section>
     <a class="btn btn-primary" href="#/workout">Done, back to list</a>`;
-
-  const slot = root.querySelector(".photo");
-  if (!slot) photo = null;
-  else if (photo?.id === entry.exerciseId) slot.replaceWith(photo.el);
-  else photo = { id: entry.exerciseId, el: slot };
 
   current = { root, entry, ctx };
 
@@ -179,6 +172,11 @@ export function render(root, ctx) {
         return;
       }
     } else return;
-    ctx.save();
+    if (act === "photos") {
+      ctx.save(); // the picture appears or disappears: redraw the whole screen
+      return;
+    }
+    root.querySelector("[data-sets]").innerHTML = setsInner(entry);
+    ctx.save({ render: false });
   });
 }
