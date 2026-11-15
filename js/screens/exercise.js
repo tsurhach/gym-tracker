@@ -47,6 +47,8 @@ function flush() {
 // Registered once for the page, not per render.
 if (typeof window !== "undefined") {
   window.addEventListener("pagehide", flush);
+  // Capture phase: must run before the shell's render listener on hashchange, while the old screen is still connected.
+  window.addEventListener("hashchange", flush, true);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") flush();
   });
