@@ -171,4 +171,17 @@ async function main() {
   render();
 }
 
+// Offline support: https always; localhost only with ?sw=1 so dev servers never serve a stale shell.
+if (
+  "serviceWorker" in navigator &&
+  (location.protocol === "https:" ||
+    (location.hostname === "localhost" && location.search.includes("sw=1")))
+) {
+  navigator.serviceWorker
+    .register("./sw.js")
+    .then(() => navigator.serviceWorker.ready)
+    .then((reg) => reg.active.postMessage("cache-images"))
+    .catch(() => {});
+}
+
 main();
