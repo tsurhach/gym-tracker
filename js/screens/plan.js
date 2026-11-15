@@ -180,13 +180,13 @@ export function render(root, ctx) {
       case "export": {
         settings.lastExportAt = Date.now();
         download(`gym-tracker-backup-${isoDay()}.json`, exportJson(state));
-        showBanner("Backup file created.", { kind: "ok" });
         break;
       }
       default:
         return;
     }
-    ctx.save();
+    const saved = await ctx.save();
+    if (saved && t.dataset.act === "export") showBanner("Backup file created.", { kind: "ok" });
   });
 
   root.addEventListener("change", async (e) => {
@@ -244,6 +244,5 @@ async function importFile(input, ctx) {
   )
     return;
   ctx.state = imported;
-  ctx.save();
-  showBanner("Backup restored.", { kind: "ok" });
+  if (await ctx.save()) showBanner("Backup restored.", { kind: "ok" });
 }

@@ -95,22 +95,25 @@ async function main() {
     go(hash) {
       location.hash = hash;
     },
+    // Resolves true only when the store actually saved.
     async save() {
       if (blocked && !(await askOverwrite())) {
         showBanner("Changes are not saved. Your old data was left untouched.", {
           sticky: true,
         });
         render();
-        return;
+        return false;
       }
       blocked = false;
-      if (!store.save(ctx.state)) {
+      const saved = store.save(ctx.state);
+      if (!saved) {
         showBanner(
           "Could not save. Storage may be full or blocked. Export a backup if you can.",
           { sticky: true },
         );
       }
       render();
+      return saved;
     },
   };
 

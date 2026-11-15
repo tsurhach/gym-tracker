@@ -1,3 +1,5 @@
+import { GOALS } from "./constants.js";
+
 export const KEY = "gymtracker.v1";
 export const CORRUPT_KEY = "gymtracker.corrupt";
 
@@ -17,6 +19,27 @@ const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
 export function isValidState(o) {
   if (!isObj(o) || o.version !== 1 || !isObj(o.settings)) return false;
   if (![o.customExercises, o.workouts, o.sessions].every(Array.isArray))
+    return false;
+  if (!Object.hasOwn(GOALS, o.settings.goal)) return false;
+  const str = (x) => typeof x === "string";
+  const num = (x) => typeof x === "number";
+  if (!o.customExercises.every((c) => isObj(c) && [c.id, c.name, c.primary].every(str)))
+    return false;
+  if (
+    !o.workouts.every(
+      (w) =>
+        isObj(w) &&
+        str(w.name) &&
+        Array.isArray(w.muscles) &&
+        Array.isArray(w.items) &&
+        w.items.every(
+          (it) =>
+            isObj(it) &&
+            str(it.exerciseId) &&
+            [it.sets, it.repMin, it.repMax, it.step].every(num),
+        ),
+    )
+  )
     return false;
   return o.sessions.every(
     (s) =>
