@@ -69,7 +69,7 @@ export function render(root, ctx) {
       <span class="muted">${mins} min</span>
     </div>
     <p class="subtitle">Tap any exercise. Do them in any order.</p>
-    <div class="card list">${a.entries.map((e) => rowHtml(e, ctx)).join("") || `<p class="muted">No exercises yet.</p>`}</div>
+    <div class="card list">${a.entries.map((e) => rowHtml(e, ctx)).join("") || `<div class="empty"><b>No exercises yet.</b><p class="muted">Tap "Add another exercise" below to build this workout.</p></div>`}</div>
     <button class="btn" data-act="add">+ Add another exercise</button>
     <button class="btn btn-primary" data-act="finish">Finish workout</button>`;
 

@@ -61,7 +61,7 @@ function workoutHtml(w, ctx, i, n) {
       (m) =>
         `<button class="chip" data-act="w-muscle" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(m)}</button>`,
     ).join("")}</div>
-    <ul class="items">${w.items.map((it, k) => itemHtml(it, ctx, k, w.items.length)).join("")}</ul>
+    <ul class="items">${w.items.map((it, k) => itemHtml(it, ctx, k, w.items.length)).join("") || `<li class="empty muted">No exercises yet. Add one below.</li>`}</ul>
     <button class="btn" data-act="add-ex">+ Add exercise</button>
   </section>`;
 }
@@ -83,7 +83,7 @@ export function render(root, ctx) {
         .join("")}</div>
       <p class="muted small" style="margin-top:8px">New exercises use ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps. Existing ones keep their own.</p>
     </section>
-    ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("")}
+    ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
     <button class="btn" data-act="redo">Redo setup</button>
     <section class="card">

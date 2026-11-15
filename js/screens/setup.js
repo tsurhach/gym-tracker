@@ -4,6 +4,7 @@ import { esc } from "../ui.js";
 
 // Wizard state lives here (not in saved state) until the user finishes.
 let draft = null;
+const MAX_WORKOUTS = 12;
 
 const fresh = (ctx) => ({
   step: 1,
@@ -12,7 +13,8 @@ const fresh = (ctx) => ({
   drafts: blankWorkouts(2),
 });
 
-function finish(ctx, propose) {
+function finish(ctx, propose, root) {
+  root.querySelectorAll("button").forEach((b) => (b.disabled = true)); // no second tap while saving
   const d = draft;
   const { workouts, settings } = ctx.state;
   const prev = { workouts, goal: settings.goal };
@@ -61,7 +63,7 @@ function stepHtml(d, ctx) {
       <div class="stepper">
         <button class="icon-btn" data-n="-1" aria-label="Fewer workouts"${d.drafts.length <= 1 ? " disabled" : ""}>−</button>
         <output aria-live="polite">${d.drafts.length}</output>
-        <button class="icon-btn" data-n="1" aria-label="More workouts">+</button>
+        <button class="icon-btn" data-n="1" aria-label="More workouts"${d.drafts.length >= MAX_WORKOUTS ? " disabled" : ""}>+</button>
       </div>
       <button class="btn btn-primary" data-next>Next</button>
       <button class="btn" data-back>Back</button>`;
@@ -116,7 +118,10 @@ export function render(root, ctx) {
         muscles: [...w.muscles],
       }));
     } else if (t.dataset.n) {
-      const n = Math.max(1, d.drafts.length + Number(t.dataset.n));
+      const n = Math.min(
+        MAX_WORKOUTS,
+        Math.max(1, d.drafts.length + Number(t.dataset.n)),
+      );
       d.preset = null;
       d.drafts = blankWorkouts(n).map((b, i) => d.drafts[i] ?? b);
     } else if (t.matches("[data-next]")) d.step = 3;
@@ -127,7 +132,7 @@ export function render(root, ctx) {
         ? w.muscles.filter((m) => m !== t.dataset.m)
         : [...w.muscles, t.dataset.m];
     } else if (t.dataset.finish)
-      return finish(ctx, t.dataset.finish === "propose");
+      return finish(ctx, t.dataset.finish === "propose", root);
     else return;
     draw();
   });

@@ -141,3 +141,11 @@ test("a full valid state with custom exercises still round-trips", () => {
   s.customExercises.push({ id: "custom-1", name: "Zottman", primary: "Biceps", secondary: [], images: 0 });
   assert.deepEqual(importJson(exportJson(s)), s);
 });
+
+test("backupNudgeDismissedAt is optional in settings", async () => {
+  const { isValidState } = await import("../js/store.js");
+  const s = emptyState();
+  assert.equal(isValidState(s), true);
+  s.settings.backupNudgeDismissedAt = Date.now();
+  assert.equal(isValidState(s), true);
+});
