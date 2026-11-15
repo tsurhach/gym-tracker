@@ -2,6 +2,56 @@ import { advice, exerciseHistory, parseNum, validSet } from "../logic.js";
 import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
 
+// Pure: a set plus the two input texts gives the updated set. A confirmed set whose
+// values are no longer valid becomes unconfirmed; weight may stay null while unconfirmed.
+export function applyInputs(set, weightText, repsText) {
+  const reps = parseNum(repsText);
+  const next = {
+    ...set,
+    weight: parseNum(weightText),
+    reps: Number.isInteger(reps) ? reps : null,
+  };
+  if (next.done && !validSet(next.weight, next.reps)) next.done = false;
+  return next;
+}
+
+// The screen currently showing; the page-hide listeners below read it.
+let current = null;
+
+// Copy every row's typed values into the sets. iOS taps do not blur the input,
+// so no change event can be relied on.
+function syncAll() {
+  if (!current?.root.isConnected) return;
+  const { root, entry } = current;
+  for (const row of root.querySelectorAll(".set[data-i]")) {
+    const s = entry.sets[Number(row.dataset.i)];
+    if (!s) continue;
+    Object.assign(
+      s,
+      applyInputs(
+        s,
+        row.querySelector('[data-f="weight"]').value,
+        row.querySelector('[data-f="reps"]').value,
+      ),
+    );
+    row.classList.toggle("done", !!s.done);
+    row.querySelector(".confirm").setAttribute("aria-pressed", String(!!s.done));
+  }
+}
+
+function flush() {
+  if (!current?.root.isConnected) return;
+  syncAll();
+  current.ctx.save({ render: false });
+}
+// Registered once for the page, not per render.
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+}
+
 const val = (n) => (n == null ? "" : fmtKg(n));
 
 function setHtml(s, i) {
@@ -55,66 +105,22 @@ export function render(root, ctx) {
     </section>
     <a class="btn btn-primary" href="#/workout">Done, back to list</a>`;
 
-  // A tap on a button can land after an input's change event has already re-rendered the page
-  // and swallowed the click. While a button is being pressed, input edits are kept in memory
-  // and saved by the click (or flushed if the press turns into a scroll).
-  let pressing = false;
-  let dirty = false;
-  let pressTimer = 0;
-  const persist = () => {
-    dirty = false;
-    ctx.save();
-  };
-  const endPress = () => {
-    clearTimeout(pressTimer);
-    pressTimer = setTimeout(() => {
-      pressing = false;
-      if (dirty) persist();
-    }, 600);
-  };
-  for (const type of ["pointerdown", "mousedown", "touchstart"]) {
-    root.addEventListener(
-      type,
-      (e) => {
-        if (e.target.closest("button, a")) {
-          pressing = true;
-          clearTimeout(pressTimer);
-        }
-      },
-      { passive: true },
-    );
-  }
-  root.addEventListener("pointercancel", () => {
-    pressing = false;
-    if (dirty) persist();
-  });
-  root.addEventListener("pointerup", endPress);
-  root.addEventListener("mouseup", endPress);
+  current = { root, entry, ctx };
 
-  const readRow = (row) => {
-    const w = parseNum(row.querySelector('[data-f="weight"]').value);
-    const r = parseNum(row.querySelector('[data-f="reps"]').value);
-    return { weight: w, reps: Number.isInteger(r) ? r : null };
-  };
-
+  // Typing saves on change without redrawing, so a tap that blurred the field is never lost.
   root.addEventListener("change", (e) => {
-    const row = e.target.closest(".set");
-    const s = row && entry.sets[Number(row.dataset.i)];
-    if (!s || !e.target.dataset.f) return;
-    Object.assign(s, readRow(row));
-    if (s.done && !validSet(s.weight, s.reps)) s.done = false;
-    if (pressing) dirty = true;
-    else persist();
+    if (!e.target.dataset.f) return;
+    syncAll();
+    ctx.save({ render: false });
   });
 
   root.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-act], a");
     if (!t) return;
-    pressing = false;
-    clearTimeout(pressTimer);
+    syncAll();
     const act = t.dataset.act;
     if (!act) {
-      if (dirty) persist(); // plain links navigate on their own
+      ctx.save({ render: false }); // plain links navigate on their own
       return;
     }
     const row = t.closest(".set");
@@ -134,31 +140,29 @@ export function render(root, ctx) {
         s.done &&
         !(await confirmSheet(`Remove confirmed set ${i + 1}?`, "Remove"))
       ) {
-        if (dirty) persist();
+        ctx.save({ render: false });
         return;
       }
       entry.sets.splice(i, 1);
     } else if (act === "confirm") {
       if (s.done) {
         s.done = false;
+      } else if (validSet(s.weight, s.reps)) {
+        s.done = true;
       } else {
-        const v = readRow(row); // read the inputs now: blur may not have fired yet
-        if (!validSet(v.weight, v.reps)) {
-          row.classList.add("bad");
-          row.classList.remove("shake");
-          void row.offsetWidth;
-          row.classList.add("shake");
-          row
-            .querySelector(
-              v.weight == null ? '[data-f="weight"]' : '[data-f="reps"]',
-            )
-            .focus();
-          if (dirty) endPress(); // keep the shake visible, save a moment later
-          return;
-        }
-        Object.assign(s, v, { done: true });
+        row.classList.add("bad");
+        row.classList.remove("shake");
+        void row.offsetWidth;
+        row.classList.add("shake");
+        row
+          .querySelector(
+            s.weight == null ? '[data-f="weight"]' : '[data-f="reps"]',
+          )
+          .focus();
+        ctx.save({ render: false });
+        return;
       }
     } else return;
-    persist();
+    ctx.save();
   });
 }

@@ -96,12 +96,13 @@ async function main() {
       location.hash = hash;
     },
     // Resolves true only when the store actually saved.
-    async save() {
+    // { render: false } saves without redrawing (used when the page is being hidden).
+    async save({ render: redraw = true } = {}) {
       if (blocked && !(await askOverwrite())) {
         showBanner("Changes are not saved. Your old data was left untouched.", {
           sticky: true,
         });
-        render();
+        if (redraw) render();
         return false;
       }
       blocked = false;
@@ -112,7 +113,7 @@ async function main() {
           { sticky: true },
         );
       }
-      render();
+      if (redraw) render();
       return saved;
     },
   };
