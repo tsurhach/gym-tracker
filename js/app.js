@@ -2,6 +2,9 @@ import { createStore } from "./store.js";
 import { confirmSheet, showBanner } from "./ui.js";
 import * as setup from "./screens/setup.js";
 import * as plan from "./screens/plan.js";
+import * as today from "./screens/today.js";
+import * as workout from "./screens/workout.js";
+import * as exercise from "./screens/exercise.js";
 
 // Screens not built yet show their name. Later tasks replace these.
 const stub = (title) => ({
@@ -11,9 +14,9 @@ const stub = (title) => ({
 });
 
 const screens = {
-  today: stub("Today"),
-  workout: stub("Workout"),
-  exercise: stub("Exercise"),
+  today,
+  workout,
+  exercise,
   history: stub("History"),
   progress: stub("Progress"),
   muscles: stub("Muscles"),
