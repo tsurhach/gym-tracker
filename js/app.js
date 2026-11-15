@@ -5,21 +5,16 @@ import * as plan from "./screens/plan.js";
 import * as today from "./screens/today.js";
 import * as workout from "./screens/workout.js";
 import * as exercise from "./screens/exercise.js";
-
-// Screens not built yet show their name. Later tasks replace these.
-const stub = (title) => ({
-  render(root) {
-    root.innerHTML = `<h1 class="title">${title}</h1>`;
-  },
-});
+import * as history from "./screens/history.js";
+import * as muscles from "./screens/muscles.js";
 
 const screens = {
   today,
   workout,
   exercise,
-  history: stub("History"),
-  progress: stub("Progress"),
-  muscles: stub("Muscles"),
+  history,
+  progress: { render: history.renderProgress },
+  muscles,
   plan,
   setup,
 };

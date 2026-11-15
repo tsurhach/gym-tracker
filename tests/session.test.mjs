@@ -9,6 +9,7 @@ import {
   finishSession,
   discardSession,
   deleteSession,
+  removeSet,
 } from "../js/session.js";
 
 const LIB = {
@@ -168,4 +169,44 @@ test("finished session survives deleting its workout and exercise", () => {
   assert.equal(s.sessions[0].entries[0].name, "Bench Press");
   assert.equal(s.sessions[0].entries[0].primary, "Chest");
   assert.equal(muscleTally(s.sessions, NOW + 200).Chest, 1);
+});
+
+function twoEntries() {
+  const s = emptyState();
+  const set = (reps) => ({ weight: 50, reps, done: true });
+  s.sessions.push({
+    id: "s1",
+    entries: [
+      { exerciseId: "bench", name: "Bench", primary: "Chest", sets: [set(10), set(9)] },
+      { exerciseId: "row", name: "Row", primary: "Back", sets: [set(8)] },
+    ],
+  });
+  return s;
+}
+
+test("removeSet removes one set and keeps the entry", () => {
+  const s = removeSet(twoEntries(), "s1", 0, 0);
+  assert.deepEqual(s.sessions[0].entries[0].sets.map((x) => x.reps), [9]);
+  assert.equal(s.sessions[0].entries.length, 2);
+});
+
+test("removeSet removes an entry whose last set goes", () => {
+  const s = removeSet(twoEntries(), "s1", 1, 0);
+  assert.deepEqual(s.sessions[0].entries.map((e) => e.exerciseId), ["bench"]);
+});
+
+test("removeSet deletes a session left with no entries", () => {
+  const s = twoEntries();
+  removeSet(s, "s1", 1, 0);
+  removeSet(s, "s1", 0, 0);
+  assert.equal(s.sessions.length, 1);
+  removeSet(s, "s1", 0, 0);
+  assert.equal(s.sessions.length, 0);
+});
+
+test("removeSet ignores unknown targets", () => {
+  const s = removeSet(twoEntries(), "nope", 0, 0);
+  removeSet(s, "s1", 5, 0);
+  removeSet(s, "s1", 0, 9);
+  assert.equal(s.sessions[0].entries[0].sets.length, 2);
 });
