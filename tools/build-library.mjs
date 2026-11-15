@@ -26,7 +26,8 @@ const MAP = {
   triceps: "Triceps",
 };
 
-// Source name, or [source name, display name]. Order matters: per muscle, the most standard movement
+// Source name, or [source name, display name], or [source name, display name, id] when the id
+// must stay as an older value (saved data and image folders reference it). Order matters: per muscle, the most standard movement
 // first, because workout proposals take exercises per muscle in this order.
 const PICKS = [
   // Chest
@@ -38,37 +39,41 @@ const PICKS = [
   "Dumbbell Flyes",
   "Cable Crossover",
   "Decline Barbell Bench Press",
-  "Leverage Chest Press",
+  ["Leverage Chest Press", "Machine Chest Press", "leverage-chest-press"],
   ["Dips - Chest Version", "Chest Dip"],
   "Incline Cable Flye",
   ["Butterfly", "Pec Deck Fly"],
   // Back
   ["Pullups", "Pull-Up"],
-  "Wide-Grip Lat Pulldown",
-  "Barbell Deadlift",
   "Bent Over Barbell Row",
   ["Seated Cable Rows", "Seated Cable Row"],
+  "Wide-Grip Lat Pulldown",
+  "Barbell Deadlift",
   "One-Arm Dumbbell Row",
   "Chin-Up",
   ["T-Bar Row with Handle", "T-Bar Row"],
   "Close-Grip Front Lat Pulldown",
   "Straight-Arm Pulldown",
   "Bent Over Two-Dumbbell Row",
-  "Leverage High Row",
+  ["Leverage High Row", "Machine High Row", "leverage-high-row"],
   ["Hyperextensions (Back Extensions)", "Back Extension"],
   "Barbell Shrug",
   "Dumbbell Shrug",
   // Shoulders
   ["Standing Military Press", "Overhead Press"],
-  "Dumbbell Shoulder Press",
   ["Side Lateral Raise", "Lateral Raise"],
+  "Dumbbell Shoulder Press",
   "Arnold Dumbbell Press",
   "Face Pull",
   "Front Dumbbell Raise",
   ["Reverse Flyes", "Rear Delt Fly"],
   "Machine Shoulder (Military) Press",
   ["Upright Barbell Row", "Upright Row"],
-  "Cable Seated Lateral Raise",
+  [
+    "Cable Seated Lateral Raise",
+    "Seated Cable Lateral Raise",
+    "cable-seated-lateral-raise",
+  ],
   "Reverse Machine Flyes",
   // Biceps
   "Barbell Curl",
@@ -178,14 +183,14 @@ if (missing.length || unmapped.size) {
   process.exit(1);
 }
 
-const library = PICKS.map(([src, name]) => {
+const library = PICKS.map(([src, name, id]) => {
   const e = byName.get(src);
   const primary = MAP[e.primaryMuscles[0]];
   const secondary = [...new Set(e.secondaryMuscles.map((m) => MAP[m]))].filter(
     (m) => m !== primary,
   );
   return {
-    id: slug(name),
+    id: id ?? slug(name),
     name,
     primary,
     secondary,

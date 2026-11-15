@@ -85,7 +85,7 @@
   },
   {
     "id": "leverage-chest-press",
-    "name": "Leverage Chest Press",
+    "name": "Machine Chest Press",
     "primary": "Chest",
     "secondary": [
       "Shoulders",
@@ -134,6 +134,28 @@
     "images": 2
   },
   {
+    "id": "bent-over-barbell-row",
+    "name": "Bent Over Barbell Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "barbell",
+    "images": 2
+  },
+  {
+    "id": "seated-cable-row",
+    "name": "Seated Cable Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2
+  },
+  {
     "id": "wide-grip-lat-pulldown",
     "name": "Wide-Grip Lat Pulldown",
     "primary": "Back",
@@ -156,28 +178,6 @@
       "Quads"
     ],
     "equipment": "barbell",
-    "images": 2
-  },
-  {
-    "id": "bent-over-barbell-row",
-    "name": "Bent Over Barbell Row",
-    "primary": "Back",
-    "secondary": [
-      "Biceps",
-      "Shoulders"
-    ],
-    "equipment": "barbell",
-    "images": 2
-  },
-  {
-    "id": "seated-cable-row",
-    "name": "Seated Cable Row",
-    "primary": "Back",
-    "secondary": [
-      "Biceps",
-      "Shoulders"
-    ],
-    "equipment": "cable",
     "images": 2
   },
   {
@@ -244,7 +244,7 @@
   },
   {
     "id": "leverage-high-row",
-    "name": "Leverage High Row",
+    "name": "Machine High Row",
     "primary": "Back",
     "secondary": [],
     "equipment": "machine",
@@ -288,20 +288,20 @@
     "images": 2
   },
   {
+    "id": "lateral-raise",
+    "name": "Lateral Raise",
+    "primary": "Shoulders",
+    "secondary": [],
+    "equipment": "dumbbell",
+    "images": 2
+  },
+  {
     "id": "dumbbell-shoulder-press",
     "name": "Dumbbell Shoulder Press",
     "primary": "Shoulders",
     "secondary": [
       "Triceps"
     ],
-    "equipment": "dumbbell",
-    "images": 2
-  },
-  {
-    "id": "lateral-raise",
-    "name": "Lateral Raise",
-    "primary": "Shoulders",
-    "secondary": [],
     "equipment": "dumbbell",
     "images": 2
   },
@@ -363,7 +363,7 @@
   },
   {
     "id": "cable-seated-lateral-raise",
-    "name": "Cable Seated Lateral Raise",
+    "name": "Seated Cable Lateral Raise",
     "primary": "Shoulders",
     "secondary": [
       "Back"

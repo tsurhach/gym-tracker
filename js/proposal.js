@@ -1,4 +1,4 @@
-import { MUSCLES } from "./constants.js";
+import { MUSCLES, MAJOR_MUSCLES } from "./constants.js";
 import { newItem } from "./session.js";
 
 export const PRESETS = [
@@ -50,12 +50,20 @@ export function blankWorkouts(n) {
   }));
 }
 
+const MINOR_SOLO = ["Forearms", "Calves", "Abs"];
+
+// How many exercises one muscle gets, given how many muscles are ticked.
+function countFor(m, n) {
+  if (n >= 7) return 1;
+  if (n >= 4) return MAJOR_MUSCLES.includes(m) ? 2 : 1;
+  return MINOR_SOLO.includes(m) && n > 1 ? 1 : 2;
+}
+
 export function proposeItems(muscles, library, goalKey) {
-  const per = muscles.length <= 3 ? 2 : 1;
   const seen = new Set();
   const items = [];
   for (const m of muscles) {
-    for (const ex of library.filter((e) => e.primary === m).slice(0, per)) {
+    for (const ex of library.filter((e) => e.primary === m).slice(0, countFor(m, muscles.length))) {
       if (seen.has(ex.id)) continue;
       seen.add(ex.id);
       items.push(newItem(ex.id, goalKey));
