@@ -70,3 +70,15 @@ export function deleteSession(state, sessionId) {
   state.sessions = state.sessions.filter((s) => s.id !== sessionId);
   return state;
 }
+
+// Delete one logged set. An entry left with no sets is removed; a session left with
+// no entries is deleted. Unknown ids or indexes change nothing.
+export function removeSet(state, sessionId, entryIndex, setIndex) {
+  const ses = state.sessions.find((s) => s.id === sessionId);
+  const entry = ses?.entries[entryIndex];
+  if (!entry?.sets[setIndex]) return state;
+  entry.sets.splice(setIndex, 1);
+  if (entry.sets.length === 0) ses.entries.splice(entryIndex, 1);
+  if (ses.entries.length === 0) deleteSession(state, sessionId);
+  return state;
+}
