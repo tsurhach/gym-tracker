@@ -1,5 +1,8 @@
 // Caches static files only. Never touches localStorage or user data.
-const CACHE = "gym-tracker-v1";
+// VERSION is stamped by `npm run stamp` (content hash of the precached files); a release is a new VERSION.
+const VERSION = "695cbbd64c31";
+const SHELL = `gym-tracker-shell-${VERSION}`;
+const IMAGES = "gym-tracker-img-v1"; // photos never change per id, so not tied to VERSION
 
 const PRECACHE = [
   "./",
@@ -27,52 +30,61 @@ const PRECACHE = [
   "./js/screens/workout.js",
 ];
 
-const NETWORK_TIMEOUT_MS = 3000;
 const IMAGE_BATCH = 6;
 
+// The whole shell is cached atomically; if any file fails, install fails and the old worker stays in charge.
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
-      .open(CACHE)
-      .then((c) => c.addAll(PRECACHE))
+      .open(SHELL)
+      .then((c) =>
+        c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" }))),
+      )
       .then(() => self.skipWaiting()),
   );
 });
 
+// Only touch our own old shell caches; the origin may be shared with other apps.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
+        Promise.all(
+          keys
+            .filter((k) => k.startsWith("gym-tracker-shell-") && k !== SHELL)
+            .map((k) => caches.delete(k)),
+        ),
       )
       .then(() => self.clients.claim()),
   );
 });
 
-async function store(request, response) {
-  if (response.ok) (await caches.open(CACHE)).put(request, response.clone());
-  return response;
+async function imageFirst(event) {
+  const cache = await caches.open(IMAGES);
+  const cached = await cache.match(event.request);
+  if (cached) return cached;
+  const res = await fetch(event.request);
+  if (res.ok)
+    event.waitUntil(cache.put(event.request, res.clone()).catch(() => {}));
+  return res;
 }
 
-// Shell files: network first (so updates arrive), cache when offline or slow.
-async function networkFirst(request) {
+// One version of every file: serve the shell from the cache, never mix with the network.
+async function shellFirst(event) {
+  const { request } = event;
+  const shell = await caches.open(SHELL);
+  const cached = await shell.match(request, { ignoreSearch: true });
+  if (cached) return cached;
   try {
-    return await store(
-      request,
-      await fetch(request, { signal: AbortSignal.timeout(NETWORK_TIMEOUT_MS) }),
-    );
-  } catch {
-    const cached =
-      (await caches.match(request)) ||
-      (request.mode === "navigate" ? await caches.match("./index.html") : null);
-    return cached || Response.error();
+    return await fetch(request);
+  } catch (err) {
+    if (request.mode === "navigate") {
+      const index = await shell.match("./index.html");
+      if (index) return index;
+    }
+    throw err;
   }
-}
-
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
-  return cached || store(request, await fetch(request));
 }
 
 self.addEventListener("fetch", (event) => {
@@ -80,22 +92,27 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== location.origin) return;
-  const isImage = /\/(img\/ex|icons)\//.test(url.pathname);
-  const isShell =
+  if (/\/(img\/ex|icons)\//.test(url.pathname))
+    event.respondWith(imageFirst(event));
+  else if (
     request.mode === "navigate" ||
-    /\.(html|css|js|json|webmanifest)$/.test(url.pathname);
-  if (isImage) event.respondWith(cacheFirst(request));
-  else if (isShell) event.respondWith(networkFirst(request));
+    /\.(html|css|js|json|webmanifest)$/.test(url.pathname)
+  )
+    event.respondWith(shellFirst(event));
 });
 
 // The page sends one message once the worker is active: fetch every exercise photo.
 self.addEventListener("message", (event) => {
-  event.waitUntil(cacheExerciseImages());
+  event.waitUntil(cacheExerciseImages().catch(() => {}));
 });
 
 async function cacheExerciseImages() {
-  const cache = await caches.open(CACHE);
-  const library = await (await fetch("./data/exercises.json")).json();
+  const cache = await caches.open(IMAGES);
+  const shell = await caches.open(SHELL);
+  const res =
+    (await shell.match("./data/exercises.json")) ||
+    (await fetch("./data/exercises.json"));
+  const library = await res.json();
   const urls = library
     .filter((e) => e.images === 2)
     .flatMap((e) => [`./img/ex/${e.id}/0.jpg`, `./img/ex/${e.id}/1.jpg`]);
@@ -104,8 +121,8 @@ async function cacheExerciseImages() {
       urls.slice(i, i + IMAGE_BATCH).map(async (u) => {
         try {
           if (await cache.match(u)) return;
-          const res = await fetch(u);
-          if (res.ok) await cache.put(u, res);
+          const r = await fetch(u);
+          if (r.ok) await cache.put(u, r);
         } catch {
           // ignore individual failures
         }
