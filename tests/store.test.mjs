@@ -121,3 +121,23 @@ test("load reports kept: false when the corrupt copy cannot be written", () => {
   });
   assert.deepEqual(store.load(), { state: emptyState(), recovered: true, kept: false });
 });
+
+test("importJson rejects an unknown goal, a null workout and a string item field", () => {
+  const bad = [
+    { ...sample(), settings: { ...sample().settings, goal: "bulk" } },
+    { ...sample(), workouts: [null] },
+    (() => {
+      const s = sample();
+      s.workouts[0].items[0].sets = "3";
+      return s;
+    })(),
+    { ...sample(), customExercises: [{ id: "c1", name: "X" }] },
+  ];
+  for (const s of bad) assert.throws(() => importJson(JSON.stringify(s)), { message: MSG });
+});
+
+test("a full valid state with custom exercises still round-trips", () => {
+  const s = sample();
+  s.customExercises.push({ id: "custom-1", name: "Zottman", primary: "Biceps", secondary: [], images: 0 });
+  assert.deepEqual(importJson(exportJson(s)), s);
+});
