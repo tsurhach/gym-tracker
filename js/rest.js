@@ -43,7 +43,10 @@ export const adjust = (rest, delta, now) => ({
 export const MAX_SOUND_SECONDS = 6;
 // How long a custom sound plays: its own length, at most 6 s.
 export const playSeconds = (duration) =>
-  Math.min(MAX_SOUND_SECONDS, Number.isFinite(duration) && duration > 0 ? duration : 0);
+  Math.min(
+    MAX_SOUND_SECONDS,
+    Number.isFinite(duration) && duration > 0 ? duration : 0,
+  );
 
 // ---- DOM part (only runs in the browser) ----
 let ctx = null;
@@ -153,7 +156,9 @@ function unlock() {
 export async function setCustomSound(blob) {
   try {
     // Decode first: an unplayable file must not replace a working sound.
-    const buf = blob ? await context().decodeAudioData(await blob.arrayBuffer()) : null;
+    const buf = blob
+      ? await context().decodeAudioData(await blob.arrayBuffer())
+      : null;
     if (blob) await putBlob(SOUND_KEY, blob);
     else await deleteBlob(SOUND_KEY);
     loadId++; // a load still in flight must not overwrite this
@@ -198,9 +203,10 @@ function play() {
         const src = audio.createBufferSource();
         const g = audio.createGain();
         src.buffer = custom;
-        g.gain.setValueAtTime(1, t);
+        const vol = 1.15; // owner-tuned: recordings come out quiet
+        g.gain.setValueAtTime(vol, t);
         if (custom.duration > d) {
-          g.gain.setValueAtTime(1, t + d - 0.2); // cut at 6 s with a short fade
+          g.gain.setValueAtTime(vol, t + d - 0.2); // cut at 6 s with a short fade
           g.gain.linearRampToValueAtTime(0, t + d);
         }
         src.connect(g).connect(audio.destination);
