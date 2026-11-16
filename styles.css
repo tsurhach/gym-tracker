@@ -527,8 +527,7 @@ input[type="checkbox"] {
 .pick-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
   min-height: 52px;
   text-align: left;
@@ -539,7 +538,16 @@ input[type="checkbox"] {
   border-radius: 12px;
   transition: transform 100ms ease-out;
 }
-.pick-row > span:first-child {
+.pick-thumb {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--line);
+}
+.pick-name {
+  flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }

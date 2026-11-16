@@ -5,7 +5,13 @@ import { esc } from "./ui.js";
 // primary muscle, with a form to create a custom exercise. Not tied to any screen.
 // onPick(exerciseId) is called once, then the picker closes.
 // opts.exclude: Set of exercise ids shown as already added and not selectable.
-export function openPicker(ctx, onPick, { exclude = new Set() } = {}) {
+// opts.muscles: the workout's muscle groups; by default only exercises whose primary is one of them are listed.
+export function pickerExercises(all, muscles, showAll) {
+  return showAll || !muscles?.length ? all : all.filter((e) => muscles.includes(e.primary));
+}
+
+export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [] } = {}) {
+  let showAll = false;
   const el = document.createElement("div");
   el.className = "overlay";
   el.setAttribute("role", "dialog");
@@ -35,6 +41,7 @@ export function openPicker(ctx, onPick, { exclude = new Set() } = {}) {
           <button class="btn btn-primary" type="submit">Create and add</button>
         </form>
       </details>
+      ${muscles.length ? `<button type="button" class="btn" data-act="toggle-all" aria-pressed="false" style="margin-top:12px">Show all muscle groups</button>` : ""}
       <div data-list></div>
     </div>`;
 
@@ -44,7 +51,7 @@ export function openPicker(ctx, onPick, { exclude = new Set() } = {}) {
   function draw() {
     const q = search.value.trim().toLowerCase();
     const custom = new Set(ctx.state.customExercises.map((c) => c.id));
-    const all = [...ctx.library, ...ctx.state.customExercises].filter((e) =>
+    const all = pickerExercises([...ctx.library, ...ctx.state.customExercises], muscles, showAll).filter((e) =>
       e.name.toLowerCase().includes(q),
     );
     let html = "";
@@ -54,13 +61,19 @@ export function openPicker(ctx, onPick, { exclude = new Set() } = {}) {
       html += `<h3>${esc(m)}</h3>`;
       for (const e of rows) {
         const added = exclude.has(e.id);
+        const thumb = e.images
+          ? `<img class="pick-thumb" src="./img/ex/${encodeURIComponent(e.id)}/0.jpg" alt="" width="56" height="56" loading="lazy" decoding="async" />`
+          : `<span class="pick-thumb"></span>`;
         html += `<button class="pick-row" data-id="${esc(e.id)}"${added ? " disabled" : ""}>
-          <span>${esc(e.name)}</span>
+          ${thumb}
+          <span class="pick-name">${esc(e.name)}</span>
           <span class="tag">${added ? "Added" : custom.has(e.id) ? "Custom" : ""}</span>
         </button>`;
       }
     }
-    list.innerHTML = html || `<p class="muted">No exercises match.</p>`;
+    list.innerHTML =
+      html ||
+      `<p class="muted">${q ? "No exercises match." : "No exercises for these muscle groups."}${showAll ? "" : ` Tap "Show all muscle groups" above.`}</p>`;
   }
 
   function close() {
@@ -78,6 +91,13 @@ export function openPicker(ctx, onPick, { exclude = new Set() } = {}) {
   search.addEventListener("input", draw);
   el.addEventListener("click", (e) => {
     if (e.target.closest("[data-act=close]")) return close();
+    const tog = e.target.closest("[data-act=toggle-all]");
+    if (tog) {
+      showAll = !showAll;
+      tog.setAttribute("aria-pressed", String(showAll));
+      tog.textContent = showAll ? "Show only this workout's muscles" : "Show all muscle groups";
+      return draw();
+    }
     const row = e.target.closest(".pick-row");
     if (row) return pick(row.dataset.id);
     const chip = e.target.closest("[data-secondary] .chip");

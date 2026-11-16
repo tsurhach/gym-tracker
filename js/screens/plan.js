@@ -151,7 +151,7 @@ export function render(root, ctx) {
             w.items.push(newItem(id, settings.goal));
             ctx.save();
           },
-          { exclude: new Set(w.items.map((it) => it.exerciseId)) },
+          { exclude: new Set(w.items.map((it) => it.exerciseId)), muscles: w.muscles },
         );
         return;
       case "x-up":
