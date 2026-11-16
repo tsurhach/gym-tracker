@@ -116,17 +116,20 @@ function beep() {
   try {
     navigator.vibrate?.(200);
     if (!audio) return;
-    // Loud on purpose: it has to cut through music. Square wave at full gain, three long beeps.
-    for (const at of [0, 0.4, 0.8]) {
+    // Owner-tuned: a square wave was irritating, a quiet beep was lost under music.
+    // A rising three-note chime of pure tones with a soft start and a fading tail.
+    [784, 988, 1175].forEach((hz, i) => {
+      const t = audio.currentTime + i * 0.4;
       const o = audio.createOscillator();
       const g = audio.createGain();
-      o.type = "square";
-      o.frequency.value = 1320;
-      g.gain.value = 0.55; // owner-tuned: full gain was too harsh, 0.2 was lost under music
+      o.frequency.value = hz; // sine by default
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.85, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
       o.connect(g).connect(audio.destination);
-      o.start(audio.currentTime + at);
-      o.stop(audio.currentTime + at + 0.28);
-    }
+      o.start(t);
+      o.stop(t + 0.52);
+    });
   } catch {}
 }
 
