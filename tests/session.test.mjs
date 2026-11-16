@@ -4,6 +4,7 @@ import { emptyState } from "../js/store.js";
 import { muscleTally } from "../js/logic.js";
 import {
   newItem,
+  applyGoal,
   startSession,
   addEntry,
   finishSession,
@@ -209,4 +210,28 @@ test("removeSet ignores unknown targets", () => {
   removeSet(s, "s1", 5, 0);
   removeSet(s, "s1", 0, 9);
   assert.equal(s.sessions[0].entries[0].sets.length, 2);
+});
+
+const planState = () => {
+  const s = emptyState();
+  s.workouts = [
+    { id: "w1", name: "A", muscles: [], items: [{ exerciseId: "e1", sets: 5, repMin: 1, repMax: 2, step: 5 }] },
+    { id: "w2", name: "B", muscles: [], items: [{ exerciseId: "e2", sets: 2, repMin: 3, repMax: 4, step: 1.25 }] },
+  ];
+  return s;
+};
+
+test("applyGoal with applyToAll rewrites sets and reps everywhere and keeps step", () => {
+  const s = applyGoal(planState(), "strength", true);
+  assert.equal(s.settings.goal, "strength");
+  assert.deepEqual(s.workouts.flatMap((w) => w.items), [
+    { exerciseId: "e1", sets: 3, repMin: 4, repMax: 6, step: 5 },
+    { exerciseId: "e2", sets: 3, repMin: 4, repMax: 6, step: 1.25 },
+  ]);
+});
+
+test("applyGoal without applyToAll changes only the goal", () => {
+  const s = applyGoal(planState(), "endurance", false);
+  assert.equal(s.settings.goal, "endurance");
+  assert.deepEqual(s.workouts, planState().workouts);
 });

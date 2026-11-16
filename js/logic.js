@@ -9,7 +9,8 @@ export function parseNum(text) {
     .trim()
     .replace(",", ".");
   if (!/^\d+(\.\d+)?$|^\.\d+$/.test(t)) return null;
-  return Number(t);
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
 }
 
 export const validSet = (weight, reps) =>

@@ -1,6 +1,6 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files); a release is a new VERSION.
-const VERSION = "532547b99860";
+const VERSION = "09a25546c4fd";
 const SHELL = `gym-tracker-shell-${VERSION}`;
 const IMAGES = "gym-tracker-img-v1"; // photos never change per id, so not tied to VERSION
 
@@ -39,8 +39,7 @@ self.addEventListener("install", (event) => {
       .open(SHELL)
       .then((c) =>
         c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" }))),
-      )
-      .then(() => self.skipWaiting()),
+      ),
   );
 });
 
@@ -92,11 +91,10 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== location.origin) return;
-  if (/\/(img\/ex|icons)\//.test(url.pathname))
-    event.respondWith(imageFirst(event));
+  if (/\/img\/ex\//.test(url.pathname)) event.respondWith(imageFirst(event));
   else if (
     request.mode === "navigate" ||
-    /\.(html|css|js|json|webmanifest)$/.test(url.pathname)
+    /\.(html|css|js|json|webmanifest)$|\/icons\//.test(url.pathname)
   )
     event.respondWith(shellFirst(event));
 });

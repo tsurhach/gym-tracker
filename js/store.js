@@ -23,7 +23,40 @@ export function isValidState(o) {
   if (!Object.hasOwn(GOALS, o.settings.goal)) return false;
   const str = (x) => typeof x === "string";
   const num = (x) => typeof x === "number";
-  if (!o.customExercises.every((c) => isObj(c) && [c.id, c.name, c.primary].every(str)))
+  if (
+    !o.customExercises.every(
+      (c) =>
+        isObj(c) &&
+        [c.id, c.name, c.primary].every(str) &&
+        (c.secondary === undefined || Array.isArray(c.secondary)),
+    )
+  )
+    return false;
+  // In-progress sets may hold null while being typed (weight not chosen yet, reps cleared).
+  const entriesOk = (entries, draft) =>
+    Array.isArray(entries) &&
+    entries.every(
+      (e) =>
+        isObj(e) &&
+        str(e.exerciseId) &&
+        Array.isArray(e.sets) &&
+        e.sets.every(
+          (t) =>
+            isObj(t) &&
+            (num(t.weight) || (draft && t.weight === null)) &&
+            (num(t.reps) || (draft && t.reps === null)),
+        ),
+    );
+  const a = o.active;
+  if (
+    a !== null &&
+    !(
+      isObj(a) &&
+      str(a.workoutName) &&
+      num(a.startedAt) &&
+      entriesOk(a.entries, true)
+    )
+  )
     return false;
   if (
     !o.workouts.every(
@@ -43,19 +76,7 @@ export function isValidState(o) {
     return false;
   return o.sessions.every(
     (s) =>
-      isObj(s) &&
-      Array.isArray(s.entries) &&
-      s.entries.every(
-        (e) =>
-          isObj(e) &&
-          Array.isArray(e.sets) &&
-          e.sets.every(
-            (t) =>
-              isObj(t) &&
-              typeof t.weight === "number" &&
-              typeof t.reps === "number",
-          ),
-      ),
+      isObj(s) && str(s.id) && num(s.startedAt) && entriesOk(s.entries, false),
   );
 }
 
@@ -66,12 +87,15 @@ export function createStore(storage) {
       try {
         raw = storage.getItem(KEY);
       } catch {
-        return { state: emptyState(), recovered: false, kept: true };
+        // Unreadable: the shell blocks saving until the user confirms, so unseen data is not overwritten.
+        return { state: emptyState(), recovered: true, kept: false };
       }
-      if (raw == null) return { state: emptyState(), recovered: false, kept: true };
+      if (raw == null)
+        return { state: emptyState(), recovered: false, kept: true };
       try {
         const parsed = JSON.parse(raw);
-        if (isValidState(parsed)) return { state: parsed, recovered: false, kept: true };
+        if (isValidState(parsed))
+          return { state: parsed, recovered: false, kept: true };
       } catch {}
       let kept = true;
       try {

@@ -6,6 +6,17 @@ export function newItem(exerciseId, goalKey) {
   return { exerciseId, sets, repMin, repMax, step: DEFAULT_STEP };
 }
 
+// Set the goal; with applyToAll, also give every plan item the goal's sets and reps (step is kept).
+export function applyGoal(state, goalKey, applyToAll) {
+  state.settings.goal = goalKey;
+  if (applyToAll) {
+    const { sets, repMin, repMax } = GOALS[goalKey];
+    for (const w of state.workouts)
+      for (const it of w.items) Object.assign(it, { sets, repMin, repMax });
+  }
+  return state;
+}
+
 function makeEntry(state, item, lookup) {
   const ex = lookup(item.exerciseId);
   if (!ex) return null;

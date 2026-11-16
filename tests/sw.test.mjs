@@ -80,7 +80,6 @@ function boot({ failOn } = {}) {
   const ctx = {
     self: {
       addEventListener: (t, f) => (listeners[t] = f),
-      skipWaiting: async () => {},
       clients: { claim: async () => {} },
     },
     location: { origin: "http://x.test" },
@@ -156,4 +155,17 @@ test("images are cached on first fetch in the unversioned image cache", async ()
   assert.ok(w.stores.get("gym-tracker-img-v1").size === 1);
   await w.fire("fetch", { request: req("img/ex/a/0.jpg") });
   assert.equal(w.net.length, 1);
+});
+
+test("a new worker never skips waiting", () => {
+  assert.ok(!sw.includes("skipWaiting"));
+});
+
+test("icons come from the versioned shell cache, not the image cache", async () => {
+  const w = boot();
+  await w.fire("install");
+  const res = await w.fire("fetch", { request: req("icons/icon-192.png") });
+  assert.match(await res.text(), /icons\/icon-192\.png/);
+  assert.deepEqual(w.net, []);
+  assert.equal(w.stores.has("gym-tracker-img-v1"), false);
 });

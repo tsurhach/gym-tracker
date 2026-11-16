@@ -124,7 +124,11 @@ async function main() {
   function render() {
     const route = parseHash(location.hash);
     if (!route) return location.replace("#/today");
-    if (route.name === "today" && !ctx.state.workouts.length)
+    if (
+      route.name === "today" &&
+      !ctx.state.workouts.length &&
+      !ctx.state.active
+    )
       return location.replace("#/setup");
     ctx.params = { id: route.id };
     const y = route.key === lastKey ? window.scrollY : 0;
@@ -169,6 +173,10 @@ async function main() {
 
   window.addEventListener("hashchange", render);
   render();
+  // Ask the browser not to evict our data; the answer does not matter.
+  try {
+    navigator.storage?.persist?.()?.catch?.(() => {});
+  } catch {}
 }
 
 // Offline support: https always; localhost only with ?sw=1 so dev servers never serve a stale shell.
