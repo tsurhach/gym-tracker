@@ -77,10 +77,17 @@ function boot({ failOn } = {}) {
     };
   };
   const listeners = {};
+  const shown = [];
+  const clients = { list: [], opened: [] };
   const ctx = {
     self: {
       addEventListener: (t, f) => (listeners[t] = f),
-      clients: { claim: async () => {} },
+      clients: {
+        claim: async () => {},
+        matchAll: async () => clients.list,
+        openWindow: async (u) => void clients.opened.push(u),
+      },
+      registration: { showNotification: async (t, o) => void shown.push([t, o]) },
     },
     location: { origin: "http://x.test" },
     caches: {
@@ -105,7 +112,7 @@ function boot({ failOn } = {}) {
     await Promise.all(waits);
     return response && (await response);
   };
-  return { stores, net, fire, listeners, setOffline: (v) => (offline = v) };
+  return { stores, net, fire, listeners, shown, clients, setOffline: (v) => (offline = v) };
 }
 const VERSION = sw.match(/const VERSION = "([^"]*)";/)[1];
 const req = (path, mode = "no-cors", method = "GET") => ({ url: "http://x.test/app/" + path, method, mode });
@@ -168,4 +175,29 @@ test("icons come from the versioned shell cache, not the image cache", async () 
   assert.match(await res.text(), /icons\/icon-192\.png/);
   assert.deepEqual(w.net, []);
   assert.equal(w.stores.has("gym-tracker-img-v1"), false);
+});
+
+test("a push shows one 'Rest over' notification, replacing the last", async () => {
+  const w = boot();
+  await w.fire("push");
+  assert.equal(w.shown.length, 1);
+  const [title, opts] = w.shown[0];
+  assert.equal(title, "Rest over");
+  assert.equal(opts.tag, "rest");
+  assert.equal(opts.renotify, true);
+  assert.equal(opts.icon, "./icons/icon-192.png");
+});
+
+test("tapping the notification closes it and focuses the app, or opens it", async () => {
+  const w = boot();
+  let closed = 0;
+  const n = { close: () => closed++ };
+  await w.fire("notificationclick", { notification: n });
+  assert.equal(closed, 1);
+  assert.deepEqual(w.clients.opened, ["./"]);
+  let focused = 0;
+  w.clients.list = [{ focus: async () => focused++ }];
+  await w.fire("notificationclick", { notification: n });
+  assert.equal(focused, 1);
+  assert.deepEqual(w.clients.opened, ["./"]);
 });

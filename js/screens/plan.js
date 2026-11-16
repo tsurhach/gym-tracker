@@ -6,6 +6,7 @@ import { exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
 import { deleteMedia } from "../media.js";
 import { parseRest, restLength } from "../rest.js";
+import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 
 function move(arr, i, d) {
@@ -107,6 +108,10 @@ export function render(root, ctx) {
         </span>
       </div>
       <p class="muted small">0:00 turns the timer off</p>
+      <label class="setting">Notify me when rest is over
+        <input type="checkbox" data-field="notifyRest"${settings.notifyRest ? " checked" : ""}${push.supported() ? "" : " disabled"} />
+      </label>
+      ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
       <button class="btn" data-act="export">Export backup</button>
       <p class="muted small">Photos and videos you added to custom exercises are not part of the backup.</p>
       <label class="btn file-btn">Import backup
@@ -232,6 +237,19 @@ export function render(root, ctx) {
     if (!field) return;
 
     if (field === "showPhotos") settings.showPhotos = t.checked;
+    else if (field === "notifyRest") {
+      // enable() must start inside this tap, so nothing is awaited before it.
+      if (t.checked) {
+        settings.notifyRest = await push.enable();
+        if (!settings.notifyRest)
+          showBanner(
+            "Notifications are blocked for this app. Allow them in iPhone Settings → Notifications.",
+          );
+      } else {
+        settings.notifyRest = false;
+        push.disable();
+      }
+    }
     else if (field === "restMin" || field === "restSec") syncRest(ctx);
     else if (field === "import") return importFile(t, ctx);
     else {
