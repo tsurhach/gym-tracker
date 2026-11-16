@@ -420,6 +420,17 @@ input[type="checkbox"] {
   width: auto;
   min-width: 110px;
 }
+.rest-in {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.rest-in input {
+  width: 56px;
+  text-align: center;
+  padding: 8px 4px;
+}
 
 /* Rest timer: fixed above the home indicator, outside the screen root */
 #rest {

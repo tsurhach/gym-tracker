@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { adjust, fmtRest, remaining, restLength } from "../js/rest.js";
+import { adjust, fmtRest, overDeadline, parseRest, remaining, restLength } from "../js/rest.js";
 import { emptyState, isValidState } from "../js/store.js";
 import { finishSession, startSession } from "../js/session.js";
 
@@ -43,4 +43,21 @@ test("state validates with and without the rest field, and a finished session dr
   s.active.entries[0].sets[0].done = true;
   finishSession(s, 9);
   assert.equal(s.sessions[0].rest, undefined);
+});
+
+test("typed minutes and seconds become seconds, clamped 0..3600", () => {
+  assert.equal(parseRest("1", "30"), 90);
+  assert.equal(parseRest("0", "90"), 90);
+  assert.equal(parseRest("0", "0"), 0);
+  assert.equal(parseRest("7", "05"), 425);
+  assert.equal(parseRest("", ""), 0);
+  assert.equal(parseRest("abc", "-5"), 0);
+  assert.equal(parseRest(" 2 ", undefined), 120);
+  assert.equal(parseRest("99", "0"), 3600);
+  assert.equal(parseRest("60", "59"), 3600);
+});
+
+test("Rest over lasts 5s after the end, or 5s from now when noticed late", () => {
+  assert.equal(overDeadline(10_000, 11_000), 15_000);
+  assert.equal(overDeadline(10_000, 100_000), 105_000);
 });
