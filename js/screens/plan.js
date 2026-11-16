@@ -92,6 +92,7 @@ export function render(root, ctx) {
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
       </label>
       <button class="btn" data-act="export">Export backup</button>
+      <p class="muted small">Photos and videos you added to custom exercises are not part of the backup.</p>
       <label class="btn file-btn">Import backup
         <input type="file" data-field="import" accept="application/json,.json" />
       </label>

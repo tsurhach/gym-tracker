@@ -1,5 +1,6 @@
 import { advice, exerciseHistory, parseNum, validSet } from "../logic.js";
 import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
+import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
 
 // Pure: a set plus the two input texts gives the updated set. A confirmed set whose
@@ -54,6 +55,14 @@ if (typeof window !== "undefined") {
   });
 }
 
+// Object URL of the custom exercise's photo or video; revoked when replaced or the screen goes.
+let mediaUrl = null;
+const revokeMedia = () => {
+  if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+  mediaUrl = null;
+};
+if (typeof window !== "undefined") window.addEventListener("hashchange", revokeMedia);
+
 // The set just confirmed: a second tap within 400 ms is a double-tap, not an undo.
 let justConfirmed = null;
 
@@ -94,15 +103,18 @@ export function render(root, ctx) {
   const tags = ex
     ? [ex.primary, ...ex.secondary]
     : [entry.primary].filter(Boolean);
+  const isCustom = entry.exerciseId.startsWith("custom-");
+  revokeMedia();
   const base = `./img/ex/${encodeURIComponent(entry.exerciseId)}`;
 
   root.innerHTML = `<div class="row topbar">
       <a class="back" href="#/workout">‹ ${esc(a.workoutName)}</a>
-      ${hasPhotos ? `<button class="link-btn" data-act="photos">${showPhotos ? "Hide picture" : "Show picture"}</button>` : ""}
+      ${hasPhotos || isCustom ? `<button class="link-btn" data-act="photos"${hasPhotos ? "" : " hidden"}>${state.settings.showPhotos ? "Hide picture" : "Show picture"}</button>` : ""}
     </div>
     <h1 class="title">${esc(entry.name)}</h1>
     <div class="tags">${tags.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ")}</div>
     ${showPhotos ? `<div class="photo"><img class="a" src="${base}/0.jpg" alt="" loading="lazy" /><img class="b" src="${base}/1.jpg" alt="" loading="lazy" /></div>` : ""}
+    ${isCustom ? `<div data-media></div>` : ""}
     <section class="card">
       <h3 style="margin-top:0">Last time${hist.length ? ` · ${esc(fmtDate(hist[hist.length - 1].startedAt))}` : ""}</h3>
       ${prev ? `<div class="last-sets">${esc(lastText(prev))}</div>` : ""}
@@ -113,8 +125,34 @@ export function render(root, ctx) {
 
   current = { root, entry, ctx };
 
+  // Only the media area is redrawn, so typed set values are never disturbed.
+  const mediaBox = root.querySelector("[data-media]");
+  let mediaGen = 0;
+  async function drawMedia() {
+    const gen = ++mediaGen;
+    const m = await getMedia(entry.exerciseId);
+    if (gen !== mediaGen || !root.isConnected) return;
+    revokeMedia();
+    if (m) mediaUrl = URL.createObjectURL(m.blob);
+    root.querySelector('.topbar [data-act="photos"]').hidden = !m;
+    const shown = m && state.settings.showPhotos;
+    mediaBox.innerHTML = `${shown ? `<div class="photo">${m.kind === "video" ? `<video src="${mediaUrl}" controls playsinline muted loop preload="metadata"></video>` : `<img src="${mediaUrl}" alt="" />`}</div>` : ""}
+      <div class="row media-ctl">
+        <label class="btn file-btn grow">${m ? "Change" : "Add photo or video"}<input type="file" data-media accept="image/*,video/*" /></label>
+        ${m ? `<button class="btn grow" data-act="media-remove">Remove</button>` : ""}
+      </div>`;
+  }
+  if (mediaBox) drawMedia();
+
   // Typing saves on change without redrawing, so a tap that blurred the field is never lost.
-  root.addEventListener("change", (e) => {
+  root.addEventListener("change", async (e) => {
+    if (e.target.dataset.media !== undefined) {
+      syncAll();
+      ctx.save({ render: false });
+      const f = e.target.files[0];
+      if (f && (await saveMedia(entry.exerciseId, f))) drawMedia();
+      return;
+    }
     if (!e.target.dataset.f) return;
     syncAll();
     ctx.save({ render: false });
@@ -134,6 +172,13 @@ export function render(root, ctx) {
     const s = entry.sets[i];
     if (act === "photos") {
       state.settings.showPhotos = !state.settings.showPhotos;
+    } else if (act === "media-remove") {
+      if (await confirmSheet("Remove this photo or video?", "Remove")) {
+        await deleteMedia(entry.exerciseId);
+        drawMedia();
+      }
+      ctx.save({ render: false });
+      return;
     } else if (act === "add") {
       const last = entry.sets[entry.sets.length - 1];
       entry.sets.push(

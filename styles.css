@@ -703,13 +703,20 @@ a.btn-primary {
   overflow: hidden;
   margin-bottom: var(--gap);
 }
-.photo img {
+.photo img,
+.photo video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   animation: 2.4s ease-in-out infinite;
+}
+.media-ctl {
+  margin-bottom: var(--gap);
+}
+.media-ctl .btn {
+  margin-bottom: 0;
 }
 .photo .a {
   animation-name: flip-a;
