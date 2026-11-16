@@ -83,7 +83,10 @@ export function render(root, ctx) {
           addEntry(state, id, ctx.lookup);
           ctx.save();
         },
-        { exclude: new Set(a.entries.map((e) => e.exerciseId)) },
+        {
+          exclude: new Set(a.entries.map((e) => e.exerciseId)),
+          muscles: state.workouts.find((x) => x.id === state.active?.workoutId)?.muscles,
+        },
       );
       return;
     }
