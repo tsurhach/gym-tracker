@@ -5,7 +5,13 @@ import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
 import { checkSound, deleteMedia, getBlob, SOUND_KEY } from "../media.js";
-import { MAX_SOUND_SECONDS, parseRest, restLength, setCustomSound, testSound } from "../rest.js";
+import {
+  MAX_SOUND_SECONDS,
+  parseRest,
+  restLength,
+  setCustomSound,
+  testSound,
+} from "../rest.js";
 import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 import { runningVersion } from "../update.js";
@@ -92,13 +98,21 @@ export function render(root, ctx) {
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
     <button class="btn" data-act="redo">Redo setup</button>
-    ${state.customExercises.length ? `<section class="card">
+    ${
+      state.customExercises.length
+        ? `<section class="card">
       <h2>Your exercises</h2>
-      <ul class="items">${state.customExercises.map((c) => `<li class="item"><div class="row">
+      <ul class="items">${state.customExercises
+        .map(
+          (c) => `<li class="item"><div class="row">
         <div class="grow"><div class="ex-name">${esc(c.name)}</div><span class="tag">${esc(c.primary)}</span></div>
         <button class="btn" data-act="cx-del" data-id="${esc(c.id)}" aria-label="Delete ${esc(c.name)}">Delete</button>
-      </div></li>`).join("")}</ul>
-    </section>` : ""}
+      </div></li>`,
+        )
+        .join("")}</ul>
+    </section>`
+        : ""
+    }
     <section class="card">
       <h2>Settings</h2>
       <label class="setting">Show exercise photos
@@ -187,7 +201,10 @@ export function render(root, ctx) {
             w.items.push(newItem(id, settings.goal));
             ctx.save();
           },
-          { exclude: new Set(w.items.map((it) => it.exerciseId)), muscles: w.muscles },
+          {
+            exclude: new Set(w.items.map((it) => it.exerciseId)),
+            muscles: w.muscles,
+          },
         );
         return;
       case "x-up":
@@ -273,8 +290,7 @@ export function render(root, ctx) {
         settings.notifyRest = false;
         push.disable();
       }
-    }
-    else if (field === "restMin" || field === "restSec") syncRest(ctx);
+    } else if (field === "restMin" || field === "restSec") syncRest(ctx);
     else if (field === "import") return importFile(t, ctx);
     else {
       const msg = applyField(ctx, t);
@@ -363,11 +379,19 @@ if (typeof window !== "undefined") {
 }
 
 // ---- Rest-over sound: updates only its own group, never the whole screen ----
-const snd = { custom: false, rec: null, secs: 0, discard: false, tick: 0, cap: 0 };
+const snd = {
+  custom: false,
+  rec: null,
+  secs: 0,
+  discard: false,
+  tick: 0,
+  cap: 0,
+};
 const MIC_MSG =
   "Recording is not available. Allow the microphone for this app, or choose a saved audio file.";
 const canRecord = () =>
-  typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+  typeof MediaRecorder !== "undefined" &&
+  !!navigator.mediaDevices?.getUserMedia;
 
 function soundHtml() {
   return `<div class="row"><b class="grow">Rest-over sound</b><span class="muted small">${snd.custom ? "Your sound" : "Default chime"}</span></div>
@@ -402,7 +426,12 @@ function chooseSound(input) {
 }
 
 async function removeSound() {
-  if (await confirmSheet("Go back to the default chime? Your sound will be deleted.", "Use default chime"))
+  if (
+    await confirmSheet(
+      "Go back to the default chime? Your sound will be deleted.",
+      "Use default chime",
+    )
+  )
     useSound(null);
 }
 
@@ -426,6 +455,10 @@ async function toggleRec() {
   if (snd.rec) return snd.rec.stop();
   let stream;
   try {
+    try {
+      // The chime sets "ambient" (mix with music), a mode iOS cannot record in. The next tick or Test sets it back.
+      if (navigator.audioSession) navigator.audioSession.type = "auto";
+    } catch {}
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const rec = new MediaRecorder(stream);
     const chunks = [];
@@ -452,7 +485,10 @@ async function toggleRec() {
       snd.secs++;
       paintSound();
     }, 1000);
-    snd.cap = setTimeout(() => rec.state !== "inactive" && rec.stop(), MAX_SOUND_SECONDS * 1000);
+    snd.cap = setTimeout(
+      () => rec.state !== "inactive" && rec.stop(),
+      MAX_SOUND_SECONDS * 1000,
+    );
     paintSound();
   } catch {
     stream?.getTracks().forEach((t) => t.stop());
