@@ -149,3 +149,45 @@ test("backupNudgeDismissedAt is optional in settings", async () => {
   s.settings.backupNudgeDismissedAt = Date.now();
   assert.equal(isValidState(s), true);
 });
+
+test("load treats a throwing getItem as unreadable and blocks overwrite", () => {
+  const store = createStore({
+    getItem() {
+      throw new Error("denied");
+    },
+    setItem() {},
+  });
+  assert.deepEqual(store.load(), { state: emptyState(), recovered: true, kept: false });
+});
+
+test("isValidState accepts empty, fresh-plan and in-progress states (null prefilled weight)", async () => {
+  const { isValidState } = await import("../js/store.js");
+  assert.equal(isValidState(emptyState()), true);
+  assert.equal(isValidState(sample()), true);
+  const s = sample();
+  s.active = {
+    id: "a1",
+    workoutId: "w1",
+    workoutName: "A",
+    startedAt: 5,
+    finishedAt: null,
+    entries: [
+      { exerciseId: "e1", name: "Bench", primary: "Chest", sets: [{ weight: null, reps: 8, done: false }] },
+    ],
+  };
+  assert.equal(isValidState(s), true);
+  s.customExercises.push({ id: "c1", name: "Z", primary: "Biceps" }); // no secondary
+  assert.equal(isValidState(s), true);
+});
+
+test("importJson rejects a bad active, a session without id and a string secondary", () => {
+  const noId = sample();
+  delete noId.sessions[0].id;
+  const bad = [
+    { ...sample(), active: 5 },
+    { ...sample(), active: { entries: "x" } },
+    noId,
+    { ...sample(), customExercises: [{ id: "c1", name: "X", primary: "Chest", secondary: "Chest" }] },
+  ];
+  for (const s of bad) assert.throws(() => importJson(JSON.stringify(s)), { message: MSG });
+});

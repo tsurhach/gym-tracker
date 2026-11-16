@@ -1,7 +1,7 @@
 import { GOALS, MUSCLES } from "../constants.js";
 import { parseNum } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
-import { newItem } from "../session.js";
+import { applyGoal, newItem } from "../session.js";
 import { exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
@@ -81,7 +81,7 @@ export function render(root, ctx) {
             `<button class="chip" data-act="goal" data-goal="${key}" aria-pressed="${settings.goal === key}">${esc(g.label)}</button>`,
         )
         .join("")}</div>
-      <p class="muted small" style="margin-top:8px">New exercises use ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps. Existing ones keep their own.</p>
+      <p class="muted small" style="margin-top:8px">New exercises use ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps.</p>
     </section>
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
@@ -97,28 +97,29 @@ export function render(root, ctx) {
       </label>
     </section>`;
 
-  const find = (el) => {
-    const w = state.workouts.find(
-      (x) => x.id === el.closest("[data-w]")?.dataset.w,
-    );
-    const xid = el.closest("[data-x]")?.dataset.x;
-    return {
-      w,
-      xi:
-        w && xid != null
-          ? w.items.findIndex((it) => it.exerciseId === xid)
-          : -1,
-    };
-  };
+  current = { root, ctx };
+  const find = (el) => findIn(state, el);
 
   root.addEventListener("click", async (e) => {
+    syncAll(); // iOS taps do not blur the field, so no change event can be relied on
     const t = e.target.closest("[data-act]");
     if (!t) return;
     const { w, xi } = find(t);
     switch (t.dataset.act) {
-      case "goal":
-        settings.goal = t.dataset.goal;
+      case "goal": {
+        const g = t.dataset.goal;
+        if (g === settings.goal) return;
+        const hasItems = state.workouts.some((x) => x.items.length);
+        const all =
+          hasItems &&
+          (await confirmSheet(
+            `Apply ${GOALS[g].repMin}–${GOALS[g].repMax} reps × ${GOALS[g].sets} sets to every exercise in your plan?`,
+            "Apply to all",
+            "Only new exercises",
+          ));
+        applyGoal(state, g, all);
         break;
+      }
       case "w-up":
       case "w-down":
         move(
@@ -186,42 +187,91 @@ export function render(root, ctx) {
         return;
     }
     const saved = await ctx.save();
-    if (saved && t.dataset.act === "export") showBanner("Backup file created.", { kind: "ok" });
+    if (saved && t.dataset.act === "export")
+      showBanner("Backup file created.", { kind: "ok" });
   });
 
   root.addEventListener("change", async (e) => {
     const t = e.target;
     const field = t.dataset.field;
     if (!field) return;
-    const { w, xi } = find(t);
 
     if (field === "showPhotos") settings.showPhotos = t.checked;
-    else if (field === "wname") w.name = t.value.trim() || w.name;
     else if (field === "import") return importFile(t, ctx);
     else {
-      const it = w.items[xi];
-      const v = parseNum(t.value);
-      const whole = Number.isInteger(v) && v >= 1;
-      let ok = true;
-      if (field === "step") {
-        ok = v !== null && v > 0;
-        if (ok) it.step = v;
-      } else if (!whole) ok = false;
-      else if (field === "sets") it.sets = v;
-      else if (field === "repMin" && v <= it.repMax) it.repMin = v;
-      else if (field === "repMax" && v >= it.repMin) it.repMax = v;
-      else ok = false;
-      if (!ok) {
-        showBanner(
-          field === "step"
-            ? "Step must be a number above 0, like 2.5 or 1,25."
-            : field === "sets"
-              ? "Sets must be a whole number, 1 or more."
-              : "Reps must be whole numbers, 1 or more, with min no higher than max.",
-        );
-      }
+      const msg = applyField(ctx, t);
+      if (msg) showBanner(msg);
     }
     ctx.save(); // re-renders, which also puts the old value back after a rejected edit
+  });
+}
+
+// The screen currently showing; the page-hide listeners below read it.
+let current = null;
+
+const findIn = (state, el) => {
+  const w = state.workouts.find(
+    (x) => x.id === el.closest("[data-w]")?.dataset.w,
+  );
+  const xid = el.closest("[data-x]")?.dataset.x;
+  return {
+    w,
+    xi:
+      w && xid != null ? w.items.findIndex((it) => it.exerciseId === xid) : -1,
+  };
+};
+
+// Copy one editable field into the state. Returns an error message when the value is
+// rejected (the stored value is then kept), otherwise null.
+function applyField(ctx, t) {
+  const field = t.dataset.field;
+  const { w, xi } = findIn(ctx.state, t);
+  if (!w) return null;
+  if (field === "wname") {
+    w.name = t.value.trim() || w.name;
+    return null;
+  }
+  const it = w.items[xi];
+  if (!it) return null;
+  const v = parseNum(t.value);
+  const whole = Number.isInteger(v) && v >= 1;
+  let ok = true;
+  if (field === "step") {
+    ok = v !== null && v > 0;
+    if (ok) it.step = v;
+  } else if (!whole) ok = false;
+  else if (field === "sets") it.sets = v;
+  else if (field === "repMin" && v <= it.repMax) it.repMin = v;
+  else if (field === "repMax" && v >= it.repMin) it.repMax = v;
+  else ok = false;
+  if (ok) return null;
+  return field === "step"
+    ? "Step must be a number above 0, like 2.5 or 1,25."
+    : field === "sets"
+      ? "Sets must be a whole number, 1 or more."
+      : "Reps must be whole numbers, 1 or more, with min no higher than max.";
+}
+
+const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step"]);
+
+function syncAll() {
+  if (!current?.root.isConnected) return;
+  for (const el of current.root.querySelectorAll("input[data-field]"))
+    if (EDITABLE.has(el.dataset.field)) applyField(current.ctx, el);
+}
+
+function flush() {
+  if (!current?.root.isConnected) return;
+  syncAll();
+  current.ctx.save({ render: false });
+}
+// Registered once for the page, not per render.
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flush);
+  // Capture phase: must run before the shell's render listener on hashchange, while the old screen is still connected.
+  window.addEventListener("hashchange", flush, true);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
   });
 }
 
@@ -238,11 +288,13 @@ async function importFile(input, ctx) {
   }
   if (
     !(await confirmSheet(
-      "Replace all your data with this backup? This cannot be undone.",
+      "Replace all your data with this backup? This cannot be undone." +
+        (ctx.state.active ? " The workout in progress will be lost." : ""),
       "Replace everything",
     ))
   )
     return;
+  current = null; // the old screen's fields must not be copied into the imported data
   const previous = ctx.state;
   ctx.state = imported;
   if (await ctx.save({ render: false })) {

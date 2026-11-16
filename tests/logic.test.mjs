@@ -183,3 +183,7 @@ test("muscleTally", () => {
   assert.equal(t.Back, 1);
   assert.equal(t.Calves, 0);
 });
+
+test("parseNum returns null for a number too large to be finite", () => {
+  assert.equal(parseNum("9".repeat(309)), null);
+});
