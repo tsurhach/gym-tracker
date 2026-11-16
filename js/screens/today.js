@@ -1,7 +1,8 @@
 import { MUSCLES } from "../constants.js";
 import { muscleTally, nextWorkoutId } from "../logic.js";
 import { discardSession, startSession } from "../session.js";
-import { confirmSheet, esc } from "../ui.js";
+import { confirmSheet, esc, fmtKg } from "../ui.js";
+import { dayNum, localDate } from "../weight.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -11,6 +12,15 @@ function startBtn(w, primary) {
 
 const tags = (w) =>
   w.muscles.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ");
+
+// "82.4 kg · 3 days ago", "Not logged yet"
+function weightText(list) {
+  const e = list?.at(-1);
+  if (!e) return "Not logged yet";
+  const d = dayNum(localDate()) - dayNum(e.date);
+  const ago = d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
+  return `${fmtKg(e.kg)} kg · ${ago}`;
+}
 
 export function render(root, ctx) {
   const { state } = ctx;
@@ -84,7 +94,8 @@ export function render(root, ctx) {
           ? `<p class="muted small" style="margin:8px 0 6px">Not trained yet</p><div class="tags">${missing.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ")}</div>`
           : `<p class="muted small">Every muscle group trained.</p>`
       }
-    </section>`;
+    </section>
+    <a class="card weight-card" href="#/weight"><span class="muted small">Body weight</span> <span>${weightText(state.bodyWeights)}</span></a>`;
 
   root.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-act]");

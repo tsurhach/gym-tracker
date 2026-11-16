@@ -7,6 +7,7 @@ import * as workout from "./screens/workout.js";
 import * as exercise from "./screens/exercise.js";
 import * as history from "./screens/history.js";
 import * as muscles from "./screens/muscles.js";
+import * as weight from "./screens/weight.js";
 import * as rest from "./rest.js";
 import { checkOnForeground, reloadOnUpdate } from "./update.js";
 
@@ -17,6 +18,7 @@ const screens = {
   history,
   progress: { render: history.renderProgress },
   muscles,
+  weight,
   plan,
   setup,
 };
@@ -26,6 +28,7 @@ const TAB_OF = {
   workout: "today",
   exercise: "today",
   progress: "history",
+  weight: "today",
   setup: "plan",
 };
 
