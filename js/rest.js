@@ -2,8 +2,23 @@
 // State lives in state.active.rest = { endsAt, total } (ms timestamp, seconds) so it survives a kill.
 
 export const DEFAULT_REST = 90;
-export const REST_OPTIONS = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 const OVER_MS = 5000; // how long "Rest over" stays
+const MAX_REST = 3600; // longest rest you can set: 60 minutes
+
+// Minutes and seconds as typed -> whole seconds, 0..3600. Blank or junk counts as 0;
+// seconds above 59 carry into minutes simply by being added.
+export const parseRest = (minText, secText) => {
+  const n = (t) => {
+    const v = parseInt(String(t ?? "").trim(), 10);
+    return v > 0 ? v : 0;
+  };
+  return Math.min(MAX_REST, n(minText) * 60 + n(secText));
+};
+
+// When "Rest over" goes away: normally OVER_MS after it ended; if we only notice later
+// (back from the background), OVER_MS from now.
+export const overDeadline = (endsAt, now) =>
+  now >= endsAt + OVER_MS ? now + OVER_MS : endsAt + OVER_MS;
 
 // Seconds to rest from settings: missing -> 90, 0 -> off.
 export const restLength = (settings) =>
@@ -29,6 +44,8 @@ let timer = 0;
 let lock = null;
 let audio = null;
 let beepedFor = 0; // endsAt that already beeped (or must not beep)
+let graceFor = 0; // endsAt whose "Rest over" was first seen late, on return
+let graceUntil = 0;
 
 const SHOWN_ON = new Set(["workout", "exercise"]);
 const rest = () => ctx?.state.active?.rest;
@@ -106,8 +123,9 @@ function stop() {
 function tick() {
   const r = rest();
   if (!r) return stop();
+  if (document.hidden) return; // away: keep the rest so the return can show it
   const now = Date.now();
-  if (now >= r.endsAt + OVER_MS) {
+  if (now >= (graceFor === r.endsAt ? graceUntil : r.endsAt + OVER_MS)) {
     clear();
     return save();
   }
@@ -140,17 +158,35 @@ function run() {
   wake(true);
 }
 
-// Called by the shell after every render, and when the app comes back to the foreground.
+// Back in the foreground (visibilitychange, pageshow, focus): re-read the clock and repaint now.
+// A rest that ended while away shows "Rest over" for OVER_MS from now, without a late beep.
+function resume() {
+  const r = rest();
+  if (!r) return;
+  const now = Date.now();
+  if (now >= r.endsAt) beepedFor = r.endsAt;
+  if (graceFor !== r.endsAt && now >= r.endsAt + OVER_MS) {
+    graceFor = r.endsAt;
+    graceUntil = overDeadline(r.endsAt, now);
+  }
+  clearInterval(timer); // a frozen interval may never fire again: start a fresh one
+  timer = 0;
+  run();
+  tick();
+}
+
+// Called by the shell after every render.
 export function sync(name, shellCtx) {
   ctx = shellCtx;
   route = name;
   if (!bar) {
     build();
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState !== "visible" || !rest()) return;
-      tick();
-      wake(true);
+      if (document.visibilityState === "visible") resume();
     });
+    // iOS standalone does not always fire visibilitychange.
+    window.addEventListener("pageshow", (e) => e.persisted && resume());
+    window.addEventListener("focus", resume);
   }
   const r = rest();
   if (r && !timer) {
@@ -166,6 +202,10 @@ export function startRest(shellCtx) {
   ctx = shellCtx;
   const len = restLength(ctx.state.settings);
   if (!len || !ctx.state.active) return;
+  try {
+    // iOS 17+: let the beep mix with the user's music instead of pausing it.
+    if (navigator.audioSession) navigator.audioSession.type = "ambient";
+  } catch {}
   try {
     audio ??= new (window.AudioContext || window.webkitAudioContext)();
     audio.resume?.();

@@ -5,7 +5,7 @@ import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
 import { deleteMedia } from "../media.js";
-import { REST_OPTIONS, fmtRest, restLength } from "../rest.js";
+import { parseRest, restLength } from "../rest.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 
 function move(arr, i, d) {
@@ -100,9 +100,13 @@ export function render(root, ctx) {
       <label class="setting">Show exercise photos
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
       </label>
-      <label class="setting">Rest between sets
-        <select data-field="restSeconds" aria-label="Rest between sets">${REST_OPTIONS.map((s) => `<option value="${s}"${s === restLength(settings) ? " selected" : ""}>${s ? fmtRest(s) : "Off"}</option>`).join("")}</select>
-      </label>
+      <div class="setting" role="group" aria-label="Rest between sets">Rest between sets
+        <span class="rest-in">
+          <input data-field="restMin" inputmode="numeric" aria-label="Rest minutes" value="${Math.floor(restLength(settings) / 60)}" /> min
+          <input data-field="restSec" inputmode="numeric" aria-label="Rest seconds" value="${restLength(settings) % 60}" /> sec
+        </span>
+      </div>
+      <p class="muted small">0:00 turns the timer off</p>
       <button class="btn" data-act="export">Export backup</button>
       <p class="muted small">Photos and videos you added to custom exercises are not part of the backup.</p>
       <label class="btn file-btn">Import backup
@@ -228,7 +232,7 @@ export function render(root, ctx) {
     if (!field) return;
 
     if (field === "showPhotos") settings.showPhotos = t.checked;
-    else if (field === "restSeconds") settings.restSeconds = Number(t.value);
+    else if (field === "restMin" || field === "restSec") syncRest(ctx);
     else if (field === "import") return importFile(t, ctx);
     else {
       const msg = applyField(ctx, t);
@@ -286,8 +290,16 @@ function applyField(ctx, t) {
 
 const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step"]);
 
+// Rest length from its two fields (blank counts as 0).
+function syncRest(ctx) {
+  const v = (f) => current.root.querySelector(`[data-field="${f}"]`)?.value;
+  if (v("restMin") === undefined) return;
+  ctx.state.settings.restSeconds = parseRest(v("restMin"), v("restSec"));
+}
+
 function syncAll() {
   if (!current?.root.isConnected) return;
+  syncRest(current.ctx);
   for (const el of current.root.querySelectorAll("input[data-field]"))
     if (EDITABLE.has(el.dataset.field)) applyField(current.ctx, el);
 }
