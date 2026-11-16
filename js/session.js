@@ -70,6 +70,7 @@ export function addEntry(state, exerciseId, lookup) {
 export function finishSession(state, now) {
   const a = state.active;
   if (!a) return state;
+  delete a.rest; // the rest timer is not part of a saved session
   a.entries = a.entries
     .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))
     .filter((e) => e.sets.length > 0);

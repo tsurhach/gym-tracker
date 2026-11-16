@@ -2,6 +2,7 @@ import { advice, exerciseHistory, parseNum, validSet } from "../logic.js";
 import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
 import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
+import { cancelRest, startRest } from "../rest.js";
 
 // Pure: a set plus the two input texts gives the updated set. A confirmed set whose
 // values are no longer valid becomes unconfirmed; weight may stay null while unconfirmed.
@@ -200,9 +201,11 @@ export function render(root, ctx) {
         return;
       if (s.done) {
         s.done = false;
+        cancelRest(ctx);
       } else if (validSet(s.weight, s.reps)) {
         s.done = true;
         justConfirmed = { s, at: Date.now() };
+        startRest(ctx);
       } else {
         row.classList.add("bad");
         row.classList.remove("shake");
