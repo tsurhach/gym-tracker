@@ -7,6 +7,7 @@ import * as workout from "./screens/workout.js";
 import * as exercise from "./screens/exercise.js";
 import * as history from "./screens/history.js";
 import * as muscles from "./screens/muscles.js";
+import * as rest from "./rest.js";
 
 const screens = {
   today,
@@ -152,6 +153,7 @@ async function main() {
       else a.removeAttribute("aria-current");
     }
     window.scrollTo(0, y);
+    rest.sync(route.name, ctx);
   }
 
   if (loaded.recovered && loaded.kept) {

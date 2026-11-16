@@ -5,6 +5,7 @@ import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
 import { deleteMedia } from "../media.js";
+import { REST_OPTIONS, fmtRest, restLength } from "../rest.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 
 function move(arr, i, d) {
@@ -98,6 +99,9 @@ export function render(root, ctx) {
       <h2>Settings</h2>
       <label class="setting">Show exercise photos
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
+      </label>
+      <label class="setting">Rest between sets
+        <select data-field="restSeconds" aria-label="Rest between sets">${REST_OPTIONS.map((s) => `<option value="${s}"${s === restLength(settings) ? " selected" : ""}>${s ? fmtRest(s) : "Off"}</option>`).join("")}</select>
       </label>
       <button class="btn" data-act="export">Export backup</button>
       <p class="muted small">Photos and videos you added to custom exercises are not part of the backup.</p>
@@ -224,6 +228,7 @@ export function render(root, ctx) {
     if (!field) return;
 
     if (field === "showPhotos") settings.showPhotos = t.checked;
+    else if (field === "restSeconds") settings.restSeconds = Number(t.value);
     else if (field === "import") return importFile(t, ctx);
     else {
       const msg = applyField(ctx, t);
