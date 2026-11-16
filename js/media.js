@@ -104,7 +104,8 @@ async function videoThumb(file) {
     v.muted = true;
     v.playsInline = true;
     v.preload = "auto";
-    await loadEl(v, url, "loadeddata");
+    // iOS does not fire loadeddata for a video that is not playing; metadata is enough to seek.
+    await loadEl(v, url, "loadedmetadata");
     const seeked = new Promise((res, rej) => {
       v.addEventListener("seeked", res, { once: true });
       v.addEventListener("error", rej, { once: true });
