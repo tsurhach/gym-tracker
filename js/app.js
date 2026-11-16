@@ -8,6 +8,7 @@ import * as exercise from "./screens/exercise.js";
 import * as history from "./screens/history.js";
 import * as muscles from "./screens/muscles.js";
 import * as rest from "./rest.js";
+import { checkOnForeground, reloadOnUpdate } from "./update.js";
 
 const screens = {
   today,
@@ -187,9 +188,13 @@ if (
   (location.protocol === "https:" ||
     (location.hostname === "localhost" && location.search.includes("sw=1")))
 ) {
+  reloadOnUpdate(!!navigator.serviceWorker.controller);
   navigator.serviceWorker
     .register("./sw.js")
-    .then(() => navigator.serviceWorker.ready)
+    .then((reg) => {
+      checkOnForeground(reg);
+      return navigator.serviceWorker.ready;
+    })
     .then((reg) => reg.active.postMessage("cache-images"))
     .catch(() => {});
 }
