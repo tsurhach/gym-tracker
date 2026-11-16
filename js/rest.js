@@ -1,8 +1,11 @@
 // Rest timer: one bar fixed to the bottom of the page, outside the per-render screen root.
+import * as push from "./push.js";
+
 // State lives in state.active.rest = { endsAt, total } (ms timestamp, seconds) so it survives a kill.
 
 export const DEFAULT_REST = 90;
 const OVER_MS = 5000; // how long "Rest over" stays
+const PUSH_CUT_MS = 3000; // visible this close to the end: the bar is enough, drop the push
 const MAX_REST = 3600; // longest rest you can set: 60 minutes
 
 // Minutes and seconds as typed -> whole seconds, 0..3600. Blank or junk counts as 0;
@@ -46,10 +49,25 @@ let audio = null;
 let beepedFor = 0; // endsAt that already beeped (or must not beep)
 let graceFor = 0; // endsAt whose "Rest over" was first seen late, on return
 let graceUntil = 0;
+let pushed = false; // a "Rest over" push is scheduled on the server for the current rest
 
 const SHOWN_ON = new Set(["workout", "exercise"]);
 const rest = () => ctx?.state.active?.rest;
 const save = () => ctx.save({ render: false });
+const notify = () => ctx?.state.settings?.notifyRest === true;
+
+// Keep the server's alert in step with the rest. Never redraws or waits.
+function schedulePush(r) {
+  if (!notify()) return;
+  if (r.endsAt - Date.now() <= PUSH_CUT_MS) return cancelPush();
+  pushed = true;
+  push.schedule(r.endsAt);
+}
+function cancelPush() {
+  if (!pushed) return;
+  pushed = false;
+  push.cancel();
+}
 
 function build() {
   bar = document.createElement("div");
@@ -71,8 +89,10 @@ function build() {
     const b = e.target.closest("button");
     if (!b || !rest()) return;
     const d = Number(b.dataset.d);
-    if (d) ctx.state.active.rest = adjust(rest(), d, Date.now());
-    else clear();
+    if (d) {
+      ctx.state.active.rest = adjust(rest(), d, Date.now());
+      schedulePush(rest());
+    } else clear();
     save();
     tick();
   });
@@ -116,6 +136,7 @@ function clear() {
 function stop() {
   clearInterval(timer);
   timer = 0;
+  cancelPush();
   wake(false);
   paint();
 }
@@ -125,6 +146,7 @@ function tick() {
   if (!r) return stop();
   if (document.hidden) return; // away: keep the rest so the return can show it
   const now = Date.now();
+  if (pushed && r.endsAt - now <= PUSH_CUT_MS) cancelPush(); // page is visible: no alert
   if (now >= (graceFor === r.endsAt ? graceUntil : r.endsAt + OVER_MS)) {
     clear();
     return save();
@@ -189,7 +211,9 @@ export function sync(name, shellCtx) {
     window.addEventListener("focus", resume);
   }
   const r = rest();
+  if (pushed && (!notify() || !restLength(ctx.state.settings))) cancelPush();
   if (r && !timer) {
+    pushed = notify(); // reloaded mid-rest: a push may be waiting on the server; cancel is harmless
     if (Date.now() >= r.endsAt) beepedFor = r.endsAt; // finished while away: no late beep
     run();
   }
@@ -211,6 +235,7 @@ export function startRest(shellCtx) {
     audio.resume?.();
   } catch {}
   ctx.state.active.rest = { endsAt: Date.now() + len * 1000, total: len };
+  schedulePush(rest());
   run();
   paint();
 }

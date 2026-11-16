@@ -61,3 +61,10 @@ test("Rest over lasts 5s after the end, or 5s from now when noticed late", () =>
   assert.equal(overDeadline(10_000, 11_000), 15_000);
   assert.equal(overDeadline(10_000, 100_000), 105_000);
 });
+
+test("settings.notifyRest is optional in a backup", () => {
+  const s = emptyState();
+  assert.ok(isValidState(s));
+  s.settings.notifyRest = true;
+  assert.ok(isValidState(s));
+});

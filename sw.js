@@ -1,6 +1,6 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files); a release is a new VERSION.
-const VERSION = "1ec053d1142e";
+const VERSION = "14feba8d748e";
 const SHELL = `gym-tracker-shell-${VERSION}`;
 const IMAGES = "gym-tracker-img-v1"; // photos never change per id, so not tied to VERSION
 
@@ -19,6 +19,7 @@ const PRECACHE = [
   "./js/media.js",
   "./js/picker.js",
   "./js/proposal.js",
+  "./js/push.js",
   "./js/rest.js",
   "./js/session.js",
   "./js/store.js",
@@ -99,6 +100,27 @@ self.addEventListener("fetch", (event) => {
     /\.(html|css|js|json|webmanifest)$|\/icons\//.test(url.pathname)
   )
     event.respondWith(shellFirst(event));
+});
+
+// The server sends an empty push when a rest ends and the app is not open.
+self.addEventListener("push", (event) => {
+  event.waitUntil(
+    self.registration.showNotification("Rest over", {
+      body: "Time for your next set.",
+      tag: "rest",
+      renotify: true,
+      icon: "./icons/icon-192.png",
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((all) => (all[0] ? all[0].focus() : self.clients.openWindow("./"))),
+  );
 });
 
 // The page sends one message once the worker is active: fetch every exercise photo.
