@@ -17,6 +17,15 @@ export function applyGoal(state, goalKey, applyToAll) {
   return state;
 }
 
+// Remove a custom exercise and every plan item that uses it. Sessions and the active
+// workout keep their entries (name and primary are copied into each entry).
+export function deleteCustomExercise(state, id) {
+  state.customExercises = state.customExercises.filter((c) => c.id !== id);
+  for (const w of state.workouts)
+    w.items = w.items.filter((it) => it.exerciseId !== id);
+  return state;
+}
+
 function makeEntry(state, item, lookup) {
   const ex = lookup(item.exerciseId);
   if (!ex) return null;

@@ -1,9 +1,10 @@
 import { GOALS, MUSCLES } from "../constants.js";
 import { parseNum } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
-import { applyGoal, newItem } from "../session.js";
+import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
+import { deleteMedia } from "../media.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 
 function move(arr, i, d) {
@@ -86,6 +87,13 @@ export function render(root, ctx) {
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
     <button class="btn" data-act="redo">Redo setup</button>
+    ${state.customExercises.length ? `<section class="card">
+      <h2>Your exercises</h2>
+      <ul class="items">${state.customExercises.map((c) => `<li class="item"><div class="row">
+        <div class="grow"><div class="ex-name">${esc(c.name)}</div><span class="tag">${esc(c.primary)}</span></div>
+        <button class="btn" data-act="cx-del" data-id="${esc(c.id)}" aria-label="Delete ${esc(c.name)}">Delete</button>
+      </div></li>`).join("")}</ul>
+    </section>` : ""}
     <section class="card">
       <h2>Settings</h2>
       <label class="setting">Show exercise photos
@@ -162,6 +170,24 @@ export function render(root, ctx) {
       case "x-del":
         w.items.splice(xi, 1);
         break;
+      case "cx-del": {
+        const id = t.dataset.id;
+        const c = state.customExercises.find((x) => x.id === id);
+        if (!c) return;
+        const n = state.workouts.filter((x) =>
+          x.items.some((it) => it.exerciseId === id),
+        ).length;
+        if (
+          !(await confirmSheet(
+            `Delete "${c.name}"? It will be removed from ${n ? `${n} ${n === 1 ? "workout" : "workouts"} in your plan` : "your exercises"}, and any photo or video you added will be deleted. Past workouts keep their records. This cannot be undone.`,
+            "Delete",
+          ))
+        )
+          return;
+        deleteCustomExercise(state, id);
+        if (await ctx.save()) await deleteMedia(id);
+        return;
+      }
       case "add-workout":
         state.workouts.push({
           id: crypto.randomUUID(),

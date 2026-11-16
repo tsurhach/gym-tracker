@@ -11,6 +11,7 @@ import {
   discardSession,
   deleteSession,
   removeSet,
+  deleteCustomExercise,
 } from "../js/session.js";
 
 const LIB = {
@@ -234,4 +235,34 @@ test("applyGoal without applyToAll changes only the goal", () => {
   const s = applyGoal(planState(), "endurance", false);
   assert.equal(s.settings.goal, "endurance");
   assert.deepEqual(s.workouts, planState().workouts);
+});
+
+test("deleteCustomExercise removes it and its plan items only", () => {
+  const s = emptyState();
+  s.customExercises = [
+    { id: "custom-1", name: "Mine", primary: "Chest", secondary: [] },
+    { id: "custom-2", name: "Other", primary: "Back", secondary: [] },
+  ];
+  s.workouts = [
+    { id: "a", name: "A", muscles: [], items: [item("custom-1"), item("bench")] },
+    { id: "b", name: "B", muscles: [], items: [item("custom-1"), item("custom-2")] },
+  ];
+  const entries = [{ exerciseId: "custom-1", name: "Mine", primary: "Chest", sets: [] }];
+  s.sessions = [{ id: "s", entries }];
+  s.active = { id: "x", entries: [...entries] };
+  const before = JSON.stringify([s.sessions, s.active]);
+  deleteCustomExercise(s, "custom-1");
+  assert.deepEqual(s.customExercises.map((c) => c.id), ["custom-2"]);
+  assert.deepEqual(s.workouts[0].items.map((i) => i.exerciseId), ["bench"]);
+  assert.deepEqual(s.workouts[1].items.map((i) => i.exerciseId), ["custom-2"]);
+  assert.equal(JSON.stringify([s.sessions, s.active]), before);
+});
+
+test("deleteCustomExercise with an unknown id changes nothing", () => {
+  const s = emptyState();
+  s.customExercises = [{ id: "custom-1", name: "Mine", primary: "Chest", secondary: [] }];
+  s.workouts = [{ id: "a", name: "A", muscles: [], items: [item("bench")] }];
+  const before = JSON.stringify(s);
+  deleteCustomExercise(s, "custom-nope");
+  assert.equal(JSON.stringify(s), before);
 });
