@@ -116,14 +116,16 @@ function beep() {
   try {
     navigator.vibrate?.(200);
     if (!audio) return;
-    for (const at of [0, 0.25]) {
+    // Loud on purpose: it has to cut through music. Square wave at full gain, three long beeps.
+    for (const at of [0, 0.4, 0.8]) {
       const o = audio.createOscillator();
       const g = audio.createGain();
-      o.frequency.value = 880;
-      g.gain.value = 0.2;
+      o.type = "square";
+      o.frequency.value = 1320;
+      g.gain.value = 1;
       o.connect(g).connect(audio.destination);
       o.start(audio.currentTime + at);
-      o.stop(audio.currentTime + at + 0.15);
+      o.stop(audio.currentTime + at + 0.28);
     }
   } catch {}
 }
