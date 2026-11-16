@@ -129,7 +129,15 @@ export async function putMedia(id, file) {
   const rec =
     chk.kind === "image"
       ? await prepareImage(file)
-      : { kind: "video", blob: file, thumb: await videoThumb(file) };
+      : {
+          kind: "video",
+          blob: file,
+          // Never let a stuck thumbnail stop the video itself from saving.
+          thumb: await Promise.race([
+            videoThumb(file),
+            new Promise((res) => setTimeout(res, 6000, null)),
+          ]),
+        };
   await tx("readwrite", (s) => s.put(rec, id));
 }
 
