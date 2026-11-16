@@ -23,3 +23,16 @@ test("other types are rejected", () => {
   assert.equal(checkFile({ type: "", size: 1 }).ok, false);
   assert.equal(checkFile(null).ok, false);
 });
+
+import { checkSound, MAX_SOUND_BYTES } from "../js/media.js";
+test("rest sound: audio accepted, mislabelled iOS audio only with an audio extension", () => {
+  assert.deepEqual(checkSound({ type: "audio/mpeg", name: "a.mp3", size: 1000 }), { ok: true });
+  assert.equal(checkSound({ type: "video/mp4", name: "a.M4A", size: 1000 }).ok, true);
+  assert.equal(checkSound({ type: "video/quicktime", name: "a.mov", size: 1000 }).ok, false);
+  assert.equal(checkSound({ type: "image/png", name: "a.png", size: 10 }).ok, false);
+  assert.equal(checkSound({ type: "", name: "a.mp3", size: 10 }).ok, false);
+});
+test("rest sound: over 3 MB is rejected", () => {
+  assert.equal(checkSound({ type: "audio/wav", name: "a.wav", size: MAX_SOUND_BYTES }).ok, true);
+  assert.match(checkSound({ type: "audio/wav", name: "a.wav", size: MAX_SOUND_BYTES + 1 }).message, /too large/);
+});
