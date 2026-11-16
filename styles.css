@@ -1030,3 +1030,14 @@ a.card.block {
 .spark circle {
   fill: var(--accent);
 }
+
+#rest-sound {
+  margin-top: var(--gap);
+}
+#rest-sound .row {
+  margin-bottom: var(--gap);
+}
+#rest-sound .row .btn {
+  margin-bottom: 0;
+  padding-inline: 8px;
+}

@@ -25,6 +25,22 @@ export function checkFile(file) {
   return { ok: false, message: "Choose a photo or a video." };
 }
 
+export const SOUND_KEY = "rest-sound"; // fixed key in the same store; exercise ids are uuids
+export const MAX_SOUND_BYTES = 3 * 1024 * 1024;
+const SOUND_EXT = /\.(m4a|mp3|wav|aac|caf)$/i;
+
+// Pure: { ok: true } or { ok: false, message } for a chosen "rest over" sound.
+export function checkSound(file) {
+  const type = file?.type ?? "";
+  const named = SOUND_EXT.test(file?.name ?? "");
+  // iOS sometimes labels saved audio as video/mp4 or video/quicktime.
+  const audio = type.startsWith("audio/") || (/^video\/(mp4|quicktime)$/.test(type) && named);
+  if (!audio) return { ok: false, message: "Choose an audio file." };
+  if (file.size > MAX_SOUND_BYTES)
+    return { ok: false, message: "That sound is too large. Choose one under 3 MB." };
+  return { ok: true };
+}
+
 const DB = "gym-media";
 const STORE = "media";
 
@@ -170,3 +186,14 @@ export async function saveMedia(id, file) {
     return false;
   }
 }
+
+// Generic blob helpers (the rest-over sound). putBlob throws; the others fail soft.
+export const putBlob = (key, blob) => tx("readwrite", (s) => s.put(blob, key));
+export async function getBlob(key) {
+  try {
+    return (await tx("readonly", (s) => s.get(key))) ?? null;
+  } catch {
+    return null;
+  }
+}
+export const deleteBlob = deleteMedia;

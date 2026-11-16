@@ -4,8 +4,8 @@ import { blankWorkouts } from "../proposal.js";
 import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
-import { deleteMedia } from "../media.js";
-import { parseRest, restLength } from "../rest.js";
+import { checkSound, deleteMedia, getBlob, SOUND_KEY } from "../media.js";
+import { MAX_SOUND_SECONDS, parseRest, restLength, setCustomSound, testSound } from "../rest.js";
 import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 import { runningVersion } from "../update.js";
@@ -115,6 +115,7 @@ export function render(root, ctx) {
         <input type="checkbox" data-field="notifyRest"${settings.notifyRest ? " checked" : ""}${push.supported() ? "" : " disabled"} />
       </label>
       ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
+      <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
       <button class="btn" data-act="export">Export backup</button>
       <p class="muted small">Photos and videos you added to custom exercises are not part of the backup.</p>
       <label class="btn file-btn">Import backup
@@ -129,6 +130,10 @@ export function render(root, ctx) {
   });
 
   current = { root, ctx };
+  getBlob(SOUND_KEY).then((b) => {
+    snd.custom = !!b;
+    paintSound();
+  });
   const find = (el) => findIn(state, el);
 
   root.addEventListener("click", async (e) => {
@@ -240,8 +245,18 @@ export function render(root, ctx) {
       showBanner("Backup file created.", { kind: "ok" });
   });
 
+  root.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-snd]");
+    if (!b || b.tagName !== "BUTTON") return;
+    const k = b.dataset.snd;
+    if (k === "test") testSound();
+    else if (k === "rec") toggleRec();
+    else if (k === "default") removeSound();
+  });
+
   root.addEventListener("change", async (e) => {
     const t = e.target;
+    if (t.dataset.snd === "file") return chooseSound(t);
     const field = t.dataset.field;
     if (!field) return;
 
@@ -332,6 +347,7 @@ function syncAll() {
 }
 
 function flush() {
+  abortRec();
   if (!current?.root.isConnected) return;
   syncAll();
   current.ctx.save({ render: false });
@@ -344,6 +360,105 @@ if (typeof window !== "undefined") {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") flush();
   });
+}
+
+// ---- Rest-over sound: updates only its own group, never the whole screen ----
+const snd = { custom: false, rec: null, secs: 0, discard: false, tick: 0, cap: 0 };
+const MIC_MSG =
+  "Recording is not available. Allow the microphone for this app, or choose a saved audio file.";
+const canRecord = () =>
+  typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+
+function soundHtml() {
+  return `<div class="row"><b class="grow">Rest-over sound</b><span class="muted small">${snd.custom ? "Your sound" : "Default chime"}</span></div>
+    <div class="row">
+      <button type="button" class="btn" data-snd="test">Test</button>
+      <label class="btn file-btn">Choose audio<input type="file" accept="audio/*" data-snd="file" /></label>
+      ${canRecord() ? `<button type="button" class="btn" data-snd="rec">${snd.rec ? `Stop ${snd.secs}s` : "Record"}</button>` : ""}
+    </div>
+    ${snd.custom ? `<button type="button" class="btn" data-snd="default">Use default chime</button>` : ""}
+    <p class="muted small">Your sound plays while the app is open. Notifications use the iPhone's own sound. It is not part of the backup.</p>`;
+}
+
+function paintSound() {
+  const g = current?.root.querySelector("#rest-sound");
+  if (g) g.innerHTML = soundHtml();
+}
+
+async function useSound(blob) {
+  if (!(await setCustomSound(blob)))
+    showBanner("Could not use that audio. Choose another file.");
+  snd.custom = !!(await getBlob(SOUND_KEY));
+  paintSound();
+}
+
+function chooseSound(input) {
+  const file = input.files[0];
+  input.value = ""; // allow choosing the same file again
+  if (!file) return;
+  const chk = checkSound(file);
+  if (!chk.ok) return showBanner(chk.message);
+  return useSound(file);
+}
+
+async function removeSound() {
+  if (await confirmSheet("Go back to the default chime? Your sound will be deleted.", "Use default chime"))
+    useSound(null);
+}
+
+function endRec() {
+  clearInterval(snd.tick);
+  clearTimeout(snd.cap);
+  snd.rec = null;
+  paintSound();
+}
+
+// Leaving the screen mid-recording: stop and throw the recording away.
+function abortRec() {
+  if (!snd.rec) return;
+  snd.discard = true;
+  try {
+    snd.rec.stop();
+  } catch {}
+}
+
+async function toggleRec() {
+  if (snd.rec) return snd.rec.stop();
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const rec = new MediaRecorder(stream);
+    const chunks = [];
+    const release = () => stream.getTracks().forEach((t) => t.stop()); // clears the iOS mic indicator
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onerror = () => {
+      release();
+      endRec();
+      showBanner(MIC_MSG);
+    };
+    rec.onstop = () => {
+      release();
+      const discard = snd.discard;
+      snd.discard = false;
+      endRec();
+      if (!discard && chunks.length)
+        useSound(new Blob(chunks, { type: rec.mimeType || chunks[0].type }));
+    };
+    snd.rec = rec;
+    snd.secs = 0;
+    snd.discard = false;
+    rec.start();
+    snd.tick = setInterval(() => {
+      snd.secs++;
+      paintSound();
+    }, 1000);
+    snd.cap = setTimeout(() => rec.state !== "inactive" && rec.stop(), MAX_SOUND_SECONDS * 1000);
+    paintSound();
+  } catch {
+    stream?.getTracks().forEach((t) => t.stop());
+    snd.rec = null;
+    showBanner(MIC_MSG);
+  }
 }
 
 async function importFile(input, ctx) {

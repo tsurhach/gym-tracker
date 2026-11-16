@@ -68,3 +68,11 @@ test("settings.notifyRest is optional in a backup", () => {
   s.settings.notifyRest = true;
   assert.ok(isValidState(s));
 });
+
+import { playSeconds } from "../js/rest.js";
+test("custom sound plays at most 6 seconds", () => {
+  assert.equal(playSeconds(2.5), 2.5);
+  assert.equal(playSeconds(30), 6);
+  assert.equal(playSeconds(NaN), 0);
+  assert.equal(playSeconds(-1), 0);
+});

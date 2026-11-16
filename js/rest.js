@@ -1,5 +1,6 @@
 // Rest timer: one bar fixed to the bottom of the page, outside the per-render screen root.
 import * as push from "./push.js";
+import { deleteBlob, getBlob, putBlob, SOUND_KEY } from "./media.js";
 
 // State lives in state.active.rest = { endsAt, total } (ms timestamp, seconds) so it survives a kill.
 
@@ -38,6 +39,11 @@ export const adjust = (rest, delta, now) => ({
   endsAt: Math.max(now, rest.endsAt + delta * 1000),
   total: Math.max(1, rest.total + delta),
 });
+
+export const MAX_SOUND_SECONDS = 6;
+// How long a custom sound plays: its own length, at most 6 s.
+export const playSeconds = (duration) =>
+  Math.min(MAX_SOUND_SECONDS, Number.isFinite(duration) && duration > 0 ? duration : 0);
 
 // ---- DOM part (only runs in the browser) ----
 let ctx = null;
@@ -112,25 +118,106 @@ async function wake(on) {
   } catch {} // unsupported or refused: the screen may sleep, nothing else changes
 }
 
+// Chime context. Creating it is allowed anywhere; resuming needs a tap (see unlock).
+function context() {
+  return (audio ??= new (window.AudioContext || window.webkitAudioContext)());
+}
+
+// The user's own sound, decoded; null -> play the chime.
+let custom = null;
+let loadId = 0;
+async function loadCustom() {
+  const id = ++loadId;
+  custom = null;
+  try {
+    const blob = await getBlob(SOUND_KEY);
+    if (!blob) return;
+    const buf = await context().decodeAudioData(await blob.arrayBuffer());
+    if (id === loadId) custom = buf;
+  } catch {} // undecodable or no IndexedDB: the chime plays
+}
+
+// Call inside a tap: iOS only lets audio start from one.
+function unlock() {
+  try {
+    // iOS 17+: let the sound mix with the user's music instead of pausing it.
+    if (navigator.audioSession) navigator.audioSession.type = "ambient";
+  } catch {}
+  try {
+    context().resume?.();
+    if (!custom) loadCustom();
+  } catch {}
+}
+
+// Save (blob) or remove (null) the custom sound. Resolves true when it is saved and playable.
+export async function setCustomSound(blob) {
+  try {
+    // Decode first: an unplayable file must not replace a working sound.
+    const buf = blob ? await context().decodeAudioData(await blob.arrayBuffer()) : null;
+    if (blob) await putBlob(SOUND_KEY, blob);
+    else await deleteBlob(SOUND_KEY);
+    loadId++; // a load still in flight must not overwrite this
+    custom = buf;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Tap on "Test": plays the current sound, like the end of a rest.
+export async function testSound() {
+  unlock();
+  if (!custom) await loadCustom();
+  play();
+}
+
+function chime() {
+  // Owner-tuned: a square wave was irritating, a quiet beep was lost under music.
+  // A rising three-note chime of pure tones with a soft start and a fading tail.
+  [784, 988, 1175].forEach((hz, i) => {
+    const t = audio.currentTime + i * 0.4;
+    const o = audio.createOscillator();
+    const g = audio.createGain();
+    o.frequency.value = hz; // sine by default
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.93, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    o.connect(g).connect(audio.destination);
+    o.start(t);
+    o.stop(t + 0.52);
+  });
+}
+
+function play() {
+  try {
+    if (!audio) return;
+    if (custom) {
+      try {
+        const d = playSeconds(custom.duration);
+        const t = audio.currentTime;
+        const src = audio.createBufferSource();
+        const g = audio.createGain();
+        src.buffer = custom;
+        g.gain.setValueAtTime(1, t);
+        if (custom.duration > d) {
+          g.gain.setValueAtTime(1, t + d - 0.2); // cut at 6 s with a short fade
+          g.gain.linearRampToValueAtTime(0, t + d);
+        }
+        src.connect(g).connect(audio.destination);
+        src.start(t);
+        src.stop(t + d);
+        return;
+      } catch {} // fall through to the chime
+    }
+    chime();
+  } catch {}
+}
+
 function beep() {
   try {
     navigator.vibrate?.(200);
-    if (!audio) return;
-    // Owner-tuned: a square wave was irritating, a quiet beep was lost under music.
-    // A rising three-note chime of pure tones with a soft start and a fading tail.
-    [784, 988, 1175].forEach((hz, i) => {
-      const t = audio.currentTime + i * 0.4;
-      const o = audio.createOscillator();
-      const g = audio.createGain();
-      o.frequency.value = hz; // sine by default
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.85, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-      o.connect(g).connect(audio.destination);
-      o.start(t);
-      o.stop(t + 0.52);
-    });
   } catch {}
+  play();
 }
 
 // Drop the rest from state (the caller saves) and stop everything that runs for it.
@@ -231,14 +318,7 @@ export function startRest(shellCtx) {
   ctx = shellCtx;
   const len = restLength(ctx.state.settings);
   if (!len || !ctx.state.active) return;
-  try {
-    // iOS 17+: let the beep mix with the user's music instead of pausing it.
-    if (navigator.audioSession) navigator.audioSession.type = "ambient";
-  } catch {}
-  try {
-    audio ??= new (window.AudioContext || window.webkitAudioContext)();
-    audio.resume?.();
-  } catch {}
+  unlock();
   ctx.state.active.rest = { endsAt: Date.now() + len * 1000, total: len };
   schedulePush(rest());
   run();
