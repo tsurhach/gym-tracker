@@ -74,6 +74,20 @@ export function isValidState(o) {
     )
   )
     return false;
+  if (
+    o.bodyWeights !== undefined &&
+    !(
+      Array.isArray(o.bodyWeights) &&
+      o.bodyWeights.every(
+        (w) =>
+          isObj(w) &&
+          str(w.id) &&
+          /^\d{4}-\d{2}-\d{2}$/.test(w.date) &&
+          Number.isFinite(w.kg),
+      )
+    )
+  )
+    return false;
   return o.sessions.every(
     (s) =>
       isObj(s) && str(s.id) && num(s.startedAt) && entriesOk(s.entries, false),
