@@ -1,6 +1,6 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files); a release is a new VERSION.
-const VERSION = "14feba8d748e";
+const VERSION = "b325a2c0bc2c";
 const SHELL = `gym-tracker-shell-${VERSION}`;
 const IMAGES = "gym-tracker-img-v1"; // photos never change per id, so not tied to VERSION
 
@@ -24,6 +24,7 @@ const PRECACHE = [
   "./js/session.js",
   "./js/store.js",
   "./js/ui.js",
+  "./js/update.js",
   "./js/screens/exercise.js",
   "./js/screens/history.js",
   "./js/screens/muscles.js",
@@ -42,7 +43,9 @@ self.addEventListener("install", (event) => {
       .open(SHELL)
       .then((c) =>
         c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" }))),
-      ),
+      )
+      // A new version takes over on its own; the page reloads itself on controllerchange.
+      .then(() => self.skipWaiting()),
   );
 });
 

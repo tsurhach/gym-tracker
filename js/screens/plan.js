@@ -8,6 +8,7 @@ import { deleteMedia } from "../media.js";
 import { parseRest, restLength } from "../rest.js";
 import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
+import { runningVersion } from "../update.js";
 
 function move(arr, i, d) {
   const j = i + d;
@@ -69,6 +70,8 @@ function workoutHtml(w, ctx, i, n) {
   </section>`;
 }
 
+let versionText = ""; // last known, so a redraw does not blank the line
+
 export function render(root, ctx) {
   const { state } = ctx;
   const { settings } = state;
@@ -117,7 +120,13 @@ export function render(root, ctx) {
       <label class="btn file-btn">Import backup
         <input type="file" data-field="import" accept="application/json,.json" />
       </label>
+      <p class="muted small" id="app-version">${versionText}</p>
     </section>`;
+  runningVersion().then((v) => {
+    versionText = v ? `Version ${v}` : "Version: not installed";
+    const el = root.querySelector("#app-version");
+    if (el) el.textContent = versionText; // no redraw: typed values stay put
+  });
 
   current = { root, ctx };
   const find = (el) => findIn(state, el);

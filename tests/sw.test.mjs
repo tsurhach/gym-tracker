@@ -78,6 +78,7 @@ function boot({ failOn } = {}) {
   };
   const listeners = {};
   const shown = [];
+  const skipped = { n: 0 };
   const clients = { list: [], opened: [] };
   const ctx = {
     self: {
@@ -87,6 +88,7 @@ function boot({ failOn } = {}) {
         matchAll: async () => clients.list,
         openWindow: async (u) => void clients.opened.push(u),
       },
+      skipWaiting: async () => void skipped.n++,
       registration: { showNotification: async (t, o) => void shown.push([t, o]) },
     },
     location: { origin: "http://x.test" },
@@ -112,7 +114,7 @@ function boot({ failOn } = {}) {
     await Promise.all(waits);
     return response && (await response);
   };
-  return { stores, net, fire, listeners, shown, clients, setOffline: (v) => (offline = v) };
+  return { skipped, stores, net, fire, listeners, shown, clients, setOffline: (v) => (offline = v) };
 }
 const VERSION = sw.match(/const VERSION = "([^"]*)";/)[1];
 const req = (path, mode = "no-cors", method = "GET") => ({ url: "http://x.test/app/" + path, method, mode });
@@ -164,8 +166,13 @@ test("images are cached on first fetch in the unversioned image cache", async ()
   assert.equal(w.net.length, 1);
 });
 
-test("a new worker never skips waiting", () => {
-  assert.ok(!sw.includes("skipWaiting"));
+test("a new worker skips waiting only after the whole shell is cached", async () => {
+  const w = boot();
+  await w.fire("install");
+  assert.equal(w.skipped.n, 1);
+  const bad = boot({ failOn: "/js/store.js" });
+  await assert.rejects(bad.fire("install"));
+  assert.equal(bad.skipped.n, 0);
 });
 
 test("icons come from the versioned shell cache, not the image cache", async () => {
