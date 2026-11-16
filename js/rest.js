@@ -122,7 +122,7 @@ function beep() {
       const g = audio.createGain();
       o.type = "square";
       o.frequency.value = 1320;
-      g.gain.value = 1;
+      g.gain.value = 0.55; // owner-tuned: full gain was too harsh, 0.2 was lost under music
       o.connect(g).connect(audio.destination);
       o.start(audio.currentTime + at);
       o.stop(audio.currentTime + at + 0.28);
