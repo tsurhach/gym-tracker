@@ -521,3 +521,24 @@ test("applyPlan keeps plate settings of exercises in both plans, never duplicate
   assert.equal(st.customExercises.length, 1);
   assert.ok(isValidState(st));
 });
+
+test("fileKind: json/text, ai documents, unsupported, iOS empty type, uppercase", async () => {
+  const { fileKind } = await import("../js/planfile.js");
+  const k = fileKind;
+  assert.equal(k("plan.json", "application/json"), "json");
+  assert.equal(k("plan.json", ""), "json");
+  assert.equal(k("notes.TXT", ""), "json");
+  assert.equal(k("x", "text/plain"), "json");
+  assert.equal(k("Plan.PDF", ""), "ai");
+  assert.equal(k("plan", "application/pdf"), "ai");
+  assert.equal(k("IMG_1.HEIC", ""), "ai");
+  assert.equal(k("a.jpeg", "image/jpeg"), "ai");
+  assert.equal(k("a", "image/heic"), "ai");
+  assert.equal(k("p.docx", ""), "ai");
+  assert.equal(k("p", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"), "ai");
+  assert.equal(k("p.doc", "application/msword"), "ai");
+  assert.equal(k("my.plan.v2.pdf", ""), "ai");
+  assert.equal(k("a.zip", "application/zip"), "unsupported");
+  assert.equal(k("", ""), "unsupported");
+  assert.equal(k(), "unsupported");
+});
