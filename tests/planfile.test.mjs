@@ -1,0 +1,384 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { MUSCLES } from "../js/constants.js";
+import {
+  ALIAS_LIST,
+  PLAN_FILE_SCHEMA,
+  applyPlan,
+  buildAiPrompt,
+  matchExercise,
+  needsMuscle,
+  parsePlanText,
+  planFromFile,
+  validatePlanFile,
+} from "../js/planfile.js";
+import { emptyState, isValidState } from "../js/store.js";
+
+const lib = JSON.parse(
+  fs.readFileSync(new URL("../data/exercises.json", import.meta.url)),
+);
+const programs = JSON.parse(
+  fs.readFileSync(new URL("../data/programs.json", import.meta.url)),
+);
+
+const good = () => ({
+  format: "gym-tracker-plan",
+  version: 1,
+  name: "Test",
+  goal: "strength",
+  notes: "n",
+  days: [
+    {
+      name: "A",
+      exercises: [{ name: "Barbell Squat", sets: 5, reps: [5, 5], step: 2.5 }],
+    },
+  ],
+});
+const bad = (mut) => {
+  const p = good();
+  mut(p);
+  return validatePlanFile(p);
+};
+const ex0 = (p) => p.days[0].exercises[0];
+
+test("valid file passes; unknown fields ignored", () => {
+  const p = good();
+  p.extra = { a: 1 };
+  ex0(p).foo = 1;
+  assert.deepEqual(validatePlanFile(p), { ok: true, errors: [] });
+});
+
+test("each kind of invalid input gives a plain error", () => {
+  const cases = [
+    (p) => (p.format = "x"),
+    (p) => (p.version = 2),
+    (p) => (p.name = ""),
+    (p) => (p.name = "x".repeat(81)),
+    (p) => (p.goal = "bulk"),
+    (p) => (p.goal = "__proto__"),
+    (p) => (p.notes = 5),
+    (p) => (p.days = []),
+    (p) => (p.days = Array(15).fill(p.days[0])),
+    (p) => (p.days[0].name = ""),
+    (p) => (p.days[0].exercises = []),
+    (p) =>
+      (p.days[0].exercises = Array(21).fill({
+        name: "a",
+        sets: 1,
+        reps: [1, 1],
+      })),
+    (p) => (ex0(p).sets = 0),
+    (p) => (ex0(p).sets = 11),
+    (p) => (ex0(p).sets = 2.5),
+    (p) => (ex0(p).reps = [8, 5]),
+    (p) => (ex0(p).reps = [0, 5]),
+    (p) => (ex0(p).reps = [1, 101]),
+    (p) => (ex0(p).reps = "8-12"),
+    (p) => (ex0(p).step = 0.1),
+    (p) => (ex0(p).step = 26),
+    (p) => (ex0(p).step = "2.5"),
+    (p) => (ex0(p).muscle = "Neck"),
+    (p) => (ex0(p).name = "y".repeat(81)),
+    (p) =>
+      p.days[0].exercises.push({
+        name: "barbell  squat",
+        sets: 3,
+        reps: [5, 5],
+      }),
+    (p) => p.days[0].exercises.push({ name: "Squat", sets: 3, reps: [5, 5] }), // alias of the same exercise
+  ];
+  for (const [i, c] of cases.entries()) {
+    const r = bad(c);
+    assert.equal(r.ok, false, `case ${i}`);
+    assert.ok(
+      r.errors.length &&
+        r.errors.every((e) => typeof e === "string" && e.length > 5),
+      `case ${i}`,
+    );
+  }
+});
+
+test("hostile input never throws", () => {
+  const evil = {
+    get name() {
+      throw new Error("x");
+    },
+  };
+  const deep = {};
+  let c = deep;
+  for (let i = 0; i < 5000; i++) c = c.a = {};
+  const inputs = [
+    null,
+    undefined,
+    5,
+    "s",
+    [],
+    () => 1,
+    evil,
+    deep,
+    { days: "x" },
+    { days: [null, 1, "a", [], { exercises: 5 }] },
+    {
+      ...good(),
+      days: [
+        {
+          name: "A",
+          exercises: [null, [], "x", { name: {}, sets: {}, reps: {} }],
+        },
+      ],
+    },
+    { ...good(), days: Array(1e6).fill(0) },
+    {
+      ...good(),
+      name: {
+        toString() {
+          throw 1;
+        },
+      },
+    },
+  ];
+  for (const i of inputs) {
+    assert.doesNotThrow(() => validatePlanFile(i));
+    assert.equal(validatePlanFile(i).ok, false);
+    assert.doesNotThrow(() => planFromFile(i, lib, []));
+  }
+  assert.ok(validatePlanFile({ days: [] }).errors.length <= 20);
+});
+
+test("matching: names, spacing, punctuation, aliases", () => {
+  const id = (n) => matchExercise(n, lib)?.id;
+  assert.equal(id("barbell squat"), "barbell-squat");
+  assert.equal(id("  Pull  Up "), "pull-up");
+  assert.equal(id("Pull-up"), "pull-up");
+  assert.equal(id("Pullup"), "pull-up");
+  assert.equal(id("Push-Up"), "push-up");
+  assert.equal(id("Bench Press"), "bench-press");
+  assert.equal(id("Barbell Bench Press"), "bench-press");
+  assert.equal(id("OHP"), "overhead-press");
+  assert.equal(id("Overhead Press"), "overhead-press");
+  assert.equal(id("RDL"), "romanian-deadlift");
+  assert.equal(id("Romanian Deadlift"), "romanian-deadlift");
+  assert.equal(id("Deadlift"), "barbell-deadlift");
+  assert.equal(id("Lat Pulldown"), "wide-grip-lat-pulldown");
+  assert.equal(id("EZ Bar Curl"), "ez-bar-curl");
+  for (const aid of Object.keys(ALIAS_LIST))
+    assert.ok(
+      lib.some((e) => e.id === aid),
+      `alias target ${aid}`,
+    );
+});
+
+test("matching: no guessing", () => {
+  for (const n of [
+    "Squats",
+    "Bench",
+    "Leg Curl",
+    "Row",
+    "Shoulder Press",
+    "Curl",
+    "",
+    "   ",
+    null,
+    5,
+    {},
+    "Cable Hip Abduction",
+  ])
+    assert.equal(matchExercise(n, lib), null, String(n));
+  assert.equal(matchExercise("Barbell Squat", null), null);
+});
+
+test("preview marks library, existing and new exercises", () => {
+  const p = good();
+  p.days[0].exercises.push(
+    { name: "My Special Move", sets: 3, reps: [8, 12], muscle: "calves" },
+    { name: "Mystery", sets: 3, reps: [8, 12] },
+    { name: "Mine", sets: 3, reps: [8, 12] },
+  );
+  const r = planFromFile(p, lib, [{ id: "c1", name: "mine", primary: "Abs" }]);
+  assert.equal(r.ok, true);
+  assert.deepEqual(
+    r.days[0].exercises.map((x) => x.kind),
+    ["library", "new", "new", "existing"],
+  );
+  assert.equal(r.days[0].exercises[3].id, "c1");
+  assert.deepEqual(
+    r.newExercises.map((n) => n.muscle),
+    ["Calves", null],
+  );
+  assert.equal(needsMuscle(r), true);
+  assert.equal(r.days[0].exercises[0].step, 2.5);
+  assert.equal(planFromFile({}, lib, []).ok, false);
+});
+
+test("applyPlan: creates customs, replaces plan, keeps history, guards", () => {
+  const p = good();
+  p.days.push({
+    name: "B",
+    exercises: [
+      { name: "Mystery", sets: 3, reps: [8, 12] },
+      { name: "Barbell Squat", sets: 3, reps: [8, 12] },
+    ],
+  });
+  const prev = planFromFile(p, lib, []);
+  const st = emptyState();
+  st.workouts = [{ id: "old", name: "Old", muscles: [], items: [] }];
+  st.sessions = [
+    {
+      id: "s",
+      startedAt: 1,
+      workoutId: "old",
+      workoutName: "Old",
+      entries: [],
+    },
+  ];
+  const before = JSON.stringify(st);
+  assert.equal(applyPlan(st, prev).ok, false); // muscle missing
+  assert.equal(JSON.stringify(st), before);
+  prev.newExercises[0].muscle = "Chest";
+  st.active = { id: "a", workoutName: "x", startedAt: 1, entries: [] };
+  const blocked = JSON.stringify(st);
+  assert.equal(applyPlan(st, prev).ok, false); // workout in progress
+  assert.equal(JSON.stringify(st), blocked);
+  st.active = null;
+  assert.equal(applyPlan(st, prev).ok, true);
+  assert.equal(st.customExercises.length, 1);
+  assert.equal(st.customExercises[0].primary, "Chest");
+  assert.deepEqual(
+    st.workouts.map((w) => w.name),
+    ["A", "B"],
+  );
+  assert.deepEqual(st.workouts[1].muscles, ["Chest", "Quads"]);
+  assert.equal(st.workouts[1].items[0].exerciseId, st.customExercises[0].id);
+  assert.equal(st.settings.goal, "strength");
+  assert.equal(st.sessions.length, 1);
+  assert.ok(isValidState(st));
+});
+
+test("schema export is a plain object describing the format", () => {
+  assert.equal(PLAN_FILE_SCHEMA.properties.format.const, "gym-tracker-plan");
+  assert.deepEqual(PLAN_FILE_SCHEMA.properties.goal.enum, [
+    "strength",
+    "muscle",
+    "endurance",
+  ]);
+  JSON.stringify(PLAN_FILE_SCHEMA);
+});
+
+// ---- bundled programs ----
+test("all five programs validate, match the library, and apply to valid state", () => {
+  assert.equal(programs.length, 5);
+  for (const pr of programs) {
+    assert.deepEqual(validatePlanFile(pr), { ok: true, errors: [] }, pr.name);
+    assert.ok(pr.notes);
+    assert.ok(
+      !/stronglifts|starting strength|5\/3\/1|phul|phat/i.test(
+        pr.name + pr.notes,
+      ),
+    );
+    const r = planFromFile(pr, lib, []);
+    for (const d of r.days)
+      for (const x of d.exercises)
+        assert.equal(x.kind, "library", `${pr.name}: ${x.name}`);
+    const st = emptyState();
+    assert.ok(applyPlan(st, r).ok);
+    assert.ok(isValidState(st));
+  }
+  const names = programs.map((p) => p.days.map((d) => d.name).join("/"));
+  assert.deepEqual(names, [
+    "A/B",
+    "A/B",
+    "Upper A/Lower A/Upper B/Lower B",
+    "Push/Pull/Legs",
+    "Chest/Back/Shoulders/Legs/Arms",
+  ]);
+  const dl = programs[1].days[1].exercises.find(
+    (x) => x.name === "Barbell Deadlift",
+  );
+  assert.deepEqual([dl.sets, dl.reps, dl.step], [1, [5, 5], 5]);
+});
+
+// ---- reading pasted text ----
+const planText = JSON.stringify(good(), null, 2);
+const read = (t) => {
+  const r = parsePlanText(t);
+  return r.ok && validatePlanFile(r.obj).ok;
+};
+
+test("paste: plain, fenced, chatter, BOM", () => {
+  assert.ok(read(planText));
+  assert.ok(read("```json\n" + planText + "\n```"));
+  assert.ok(
+    read(
+      "Sure! Here is your plan:\n\n```\n" +
+        planText +
+        "\n```\nEnjoy, and tell me if you want changes {really}.",
+    ),
+  );
+  assert.ok(read("Here you go: " + planText + " Hope that helps"));
+  assert.ok(read("﻿" + planText));
+});
+
+test("paste: two blocks take the first that validates", () => {
+  const broken = JSON.stringify({ ...good(), goal: "bulk" });
+  assert.ok(
+    read(
+      "```json\n" + broken + "\n```\nfixed:\n```json\n" + planText + "\n```",
+    ),
+  );
+  assert.ok(read('example {"a":1} then ' + planText));
+  const r = parsePlanText("```json\n" + broken + "\n```");
+  assert.equal(r.ok, true);
+  assert.equal(validatePlanFile(r.obj).ok, false); // validator's plain errors will show
+});
+
+test("paste: smart quotes and garbage are not repaired", () => {
+  const smart = planText.replaceAll('"', "“");
+  const r = parsePlanText(smart);
+  assert.equal(r.ok, false);
+  assert.match(r.errors[0], /straight quotes/);
+  for (const g of [
+    "",
+    "   ",
+    "hello",
+    "{",
+    "}{",
+    "[1,2]",
+    "{{{{",
+    null,
+    5,
+    "x".repeat(300000),
+  ])
+    assert.equal(parsePlanText(g).ok, false);
+});
+
+// ---- AI prompt ----
+test("buildAiPrompt: both modes, request, format, all names, size", () => {
+  const custom = [{ id: "c", name: "Zercher Carry", primary: "Back" }];
+  for (const mode of ["describe", "convert"]) {
+    const t = buildAiPrompt({
+      request: "3 days, bad knees",
+      library: lib,
+      custom,
+      mode,
+    });
+    assert.ok(t.includes("3 days, bad knees"));
+    assert.ok(
+      t.includes("gym-tracker-plan") &&
+        t.includes('"reps"') &&
+        t.includes("ONLY the JSON"),
+    );
+    for (const e of lib) assert.ok(t.includes(e.name), e.name);
+    assert.ok(t.includes("Zercher Carry"));
+    for (const m of MUSCLES) assert.ok(t.includes(m));
+    assert.ok(/strength, muscle, endurance/.test(t));
+    assert.ok(t.length < 9000, `${mode} ${t.length}`);
+    console.log(`prompt ${mode}: ${t.length} chars`);
+  }
+  assert.match(buildAiPrompt({ library: lib, mode: "convert" }), /faithful/i);
+  assert.match(
+    buildAiPrompt({ library: lib, mode: "describe" }),
+    /Design a sound/,
+  );
+  assert.doesNotThrow(() => buildAiPrompt());
+});
