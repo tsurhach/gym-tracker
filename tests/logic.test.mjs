@@ -9,6 +9,7 @@ import {
   prefill,
   beats,
   isStuck,
+  isPersonalBest,
   nextWorkoutId,
   muscleTally,
 } from "../js/logic.js";
@@ -186,4 +187,13 @@ test("muscleTally", () => {
 
 test("parseNum returns null for a number too large to be finite", () => {
   assert.equal(parseNum("9".repeat(309)), null);
+});
+
+test("isPersonalBest: heavier, same weight more reps, same or lower, no history", () => {
+  const past = [{ weight: 50, reps: 8 }, { weight: 50, reps: 10 }, { weight: 40, reps: 15 }];
+  assert.equal(isPersonalBest(past, { weight: 52.5, reps: 1 }), true);
+  assert.equal(isPersonalBest(past, { weight: 50, reps: 11 }), true);
+  assert.equal(isPersonalBest(past, { weight: 50, reps: 10 }), false);
+  assert.equal(isPersonalBest(past, { weight: 45, reps: 20 }), false);
+  assert.equal(isPersonalBest([], { weight: 50, reps: 10 }), false);
 });

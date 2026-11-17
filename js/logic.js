@@ -93,6 +93,15 @@ export function beats(curr, prev) {
   return total(curr) > total(prev);
 }
 
+// True when a set beats every set in pastSets: heavier than the heaviest, or the same
+// weight with more reps than the best at that weight. No past sets, no record.
+export function isPersonalBest(pastSets, { weight, reps }) {
+  if (!pastSets.length) return false;
+  const W = topWeight(pastSets);
+  if (weight !== W) return weight > W;
+  return reps > Math.max(...pastSets.filter((x) => x.weight === W).map((x) => x.reps));
+}
+
 export function isStuck(history) {
   if (history.length < 3) return false;
   const [a, b, c] = history.slice(-3);
