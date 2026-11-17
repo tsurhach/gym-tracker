@@ -50,6 +50,40 @@ export function progressText(r) {
 const setsText = (sets) =>
   sets.map((s) => `${fmtKg(s.weight)} × ${s.reps}`).join(", ");
 
+const CW = 320;
+const CH = 120;
+const CPAD = 28;
+
+// Pure: values (oldest first) to chart coordinates. Sessions are spaced evenly, not by date.
+// One point sits in the middle; equal values give a flat line in the middle.
+export function chartPoints(values, w = CW, h = CH, pad = CPAD) {
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  return values.map((v, i) => ({
+    x: values.length === 1 ? w / 2 : pad + (i * (w - 2 * pad)) / (values.length - 1),
+    y: hi === lo ? h / 2 : pad + ((hi - v) / (hi - lo)) * (h - 2 * pad),
+  }));
+}
+
+// Inline SVG of the heaviest weight per session, for looking back only.
+export function chartHtml(values) {
+  const pts = chartPoints(values);
+  const n = values.length;
+  const first = pts[0];
+  const last = pts[n - 1];
+  const label = (p, v, anchor) =>
+    `<text x="${p.x}" y="${p.y - 9}" text-anchor="${anchor}" fill="var(--muted)" font-size="12">${esc(fmtKg(v))} kg</text>`;
+  const desc =
+    n === 1
+      ? `Heaviest weight: ${fmtKg(values[0])} kg in 1 session.`
+      : `Heaviest weight per session: ${fmtKg(values[0])} kg first, ${fmtKg(values[n - 1])} kg latest, over ${n} sessions.`;
+  return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="${esc(desc)}">
+    ${n > 1 ? `<polyline points="${pts.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />` : ""}
+    ${n <= 30 ? pts.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--accent)" />`).join("") : ""}
+    ${label(first, values[0], n === 1 ? "middle" : "start")}${n > 1 ? label(last, values[n - 1], "end") : ""}
+  </svg>${n === 1 ? `<p class="muted small">Needs two sessions to draw a line.</p>` : ""}`;
+}
+
 function listHtml(state) {
   const sessions = [...state.sessions].sort(
     (a, b) => b.startedAt - a.startedAt,
@@ -263,6 +297,7 @@ export function renderProgress(root, ctx) {
   root.innerHTML = `<div class="row topbar"><a class="back" href="#/history">‹ History</a></div>
     <h1 class="title">${esc(name)}</h1>
     <p class="${stuck ? "stuck" : "muted"}" style="margin-bottom:var(--gap)">${esc(note)}</p>
+    <section class="card">${chartHtml(hist.map((h) => heaviest(h.sets)))}</section>
     ${[...hist]
       .reverse()
       .map((h) => {
