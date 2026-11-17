@@ -195,6 +195,10 @@ input[type="checkbox"] {
   flex: 1;
   min-width: 0;
 }
+h2,
+.btn {
+  overflow-wrap: anywhere;
+}
 .items .row > .btn {
   width: auto;
   flex: none;
@@ -876,6 +880,9 @@ a.btn-primary {
 }
 .set-head {
   font-size: var(--fs-sm);
+}
+.row + .set-head {
+  margin-top: 8px;
 }
 .set:not(.set-head):not(.done) input {
   color: var(--muted);
