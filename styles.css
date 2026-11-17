@@ -195,6 +195,10 @@ input[type="checkbox"] {
   flex: 1;
   min-width: 0;
 }
+.items .row > .btn {
+  width: auto;
+  flex: none;
+}
 .stack > * + * {
   margin-top: var(--gap);
 }
