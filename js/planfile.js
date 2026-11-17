@@ -516,7 +516,7 @@ export function parsePlanText(text) {
       try {
         obj = JSON.parse(s);
       } catch (e) {
-        if (n === STAGES.length - 1 && s.includes("{") && (!failed || s.length > failed.src.length))
+        if (n === STAGES.length - 1 && s.trimStart().startsWith("{") && (!failed || s.length > failed.src.length))
           failed = { msg: String(e.message), src: s };
         continue;
       }
