@@ -74,9 +74,36 @@ function itemHtml(it, ctx, i, n) {
   </li>`;
 }
 
+// Which sections are open is a per-viewer preference kept in localStorage (never in the plan data), so a redraw
+// while editing keeps them open. Toggling only records the choice: it does not redraw.
+const OPEN_KEY = "gymtracker.planOpen";
+const openSet = (() => {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPEN_KEY));
+    return new Set(Array.isArray(v) ? v.filter((k) => typeof k === "string") : []);
+  } catch {
+    return new Set();
+  }
+})();
+function rememberOpen(key, on) {
+  if (on) openSet.add(key);
+  else openSet.delete(key);
+  try {
+    localStorage.setItem(OPEN_KEY, JSON.stringify([...openSet]));
+  } catch {}
+}
+const section = (key, title, body, { count = "", attrs = "", force = false } = {}) =>
+  `<details class="card sec" data-sec="${esc(key)}"${attrs}${force || openSet.has(key) ? " open" : ""}>
+    <summary><span class="sec-title">${esc(title)}</span>${count ? `<span class="sec-count muted">· ${esc(count)}</span>` : ""}</summary>
+    <div class="sec-body">${body}</div>
+  </details>`;
+
 function workoutHtml(w, ctx, i, n) {
-  return `<section class="card" data-w="${esc(w.id)}">
-    <div class="row">
+  const k = w.items.length;
+  return section(
+    `w:${w.id}`,
+    w.name,
+    `<div class="row">
       <input class="name-input grow" data-field="wname" value="${esc(w.name)}" aria-label="Workout name" maxlength="40" />
       <button class="icon-btn" data-act="w-up" aria-label="Move workout up"${i === 0 ? " disabled" : ""}>↑</button>
       <button class="icon-btn" data-act="w-down" aria-label="Move workout down"${i === n - 1 ? " disabled" : ""}>↓</button>
@@ -86,9 +113,13 @@ function workoutHtml(w, ctx, i, n) {
       (m) =>
         `<button class="chip" data-act="w-muscle" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(m)}</button>`,
     ).join("")}</div>
-    <ul class="items">${w.items.map((it, k) => itemHtml(it, ctx, k, w.items.length)).join("") || `<li class="empty muted">No exercises yet. Add one below.</li>`}</ul>
-    <button class="btn" data-act="add-ex">+ Add exercise</button>
-  </section>`;
+    <ul class="items">${w.items.map((it, j) => itemHtml(it, ctx, j, k)).join("") || `<li class="empty muted">No exercises yet. Add one below.</li>`}</ul>
+    <button class="btn" data-act="add-ex">+ Add exercise</button>`,
+    {
+      count: k ? `${k} ${k === 1 ? "exercise" : "exercises"}` : "no exercises",
+      attrs: ` data-w="${esc(w.id)}"`,
+    },
+  );
 }
 
 let versionText = ""; // last known, so a redraw does not blank the line
@@ -97,43 +128,51 @@ export function render(root, ctx) {
   const { state } = ctx;
   const { settings } = state;
 
+  const none = !state.workouts.length;
+  // With no plan yet, the way to get one starts open; otherwise everything starts closed.
+  const goalHtml = `<div class="seg" role="group" aria-label="Training goal">${Object.entries(
+    GOALS,
+  )
+    .map(
+      ([key, g]) =>
+        `<button class="chip" data-act="goal" data-goal="${key}" aria-pressed="${settings.goal === key}">${esc(g.label)}</button>`,
+    )
+    .join("")}</div>
+      <p class="muted small" style="margin-top:8px">New exercises use ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps.</p>`;
   root.innerHTML = `<h1 class="title">Plan</h1>
-    <section class="card">
-      <h2>Goal</h2>
-      <div class="seg" role="group" aria-label="Training goal">${Object.entries(
-        GOALS,
-      )
-        .map(
-          ([key, g]) =>
-            `<button class="chip" data-act="goal" data-goal="${key}" aria-pressed="${settings.goal === key}">${esc(g.label)}</button>`,
-        )
-        .join("")}</div>
-      <p class="muted small" style="margin-top:8px">New exercises use ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps.</p>
-    </section>
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
-    <button class="btn" data-act="redo">Redo setup</button>
-    <a class="btn" href="#/import/programs">Ready-made programs</a>
-    <a class="btn" href="#/import/file">Load a plan from a file</a>
-    <a class="btn" href="#/import/ai">Build a plan with AI</a>
+    ${section("g:goal", "Goal", goalHtml)}
+    ${section(
+      "g:change",
+      "Change the whole plan",
+      `<button class="btn" data-act="redo">Redo setup</button>
+      <a class="btn" href="#/import/programs">Ready-made programs</a>
+      <a class="btn" href="#/import/file">Load a plan from a file</a>
+      <a class="btn" href="#/import/ai">Build a plan with AI</a>`,
+      { force: none },
+    )}
     ${
       state.customExercises.length
-        ? `<section class="card">
-      <h2>Your exercises</h2>
-      <ul class="items">${state.customExercises
-        .map(
-          (c) => `<li class="item"><div class="row">
+        ? section(
+            "g:own",
+            "Your exercises",
+            `<ul class="items">${state.customExercises
+              .map(
+                (c) => `<li class="item"><div class="row">
         <div class="grow"><div class="ex-name">${esc(c.name)}</div><span class="tag">${esc(c.primary)}</span></div>
         <button class="btn" data-act="cx-del" data-id="${esc(c.id)}" aria-label="Delete ${esc(c.name)}">Delete</button>
       </div></li>`,
-        )
-        .join("")}</ul>
-    </section>`
+              )
+              .join("")}</ul>`,
+            { count: String(state.customExercises.length) },
+          )
         : ""
     }
-    <section class="card">
-      <h2>Settings</h2>
-      <label class="setting">Show exercise photos
+    ${section(
+      "g:settings",
+      "Settings",
+      `<label class="setting">Show exercise photos
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
       </label>
       <div class="setting" role="group" aria-label="Rest between sets">Rest between sets
@@ -143,16 +182,24 @@ export function render(root, ctx) {
         </span>
       </div>
       <p class="muted small">0:00 turns the timer off</p>
-      <div class="setting-group" role="group" aria-label="Plates the gym has">
-        <div class="muted small">Plates the gym has (kg, pairs)</div>
-        <div class="plate-pick">${PLATE_SIZES.map((k) => `<label><input type="checkbox" data-field="plate" data-kg="${k}"${gymPlates(settings).includes(k) ? " checked" : ""} /> ${k}</label>`).join("")}</div>
-      </div>
       <label class="setting">Notify me when rest is over
         <input type="checkbox" data-field="notifyRest"${settings.notifyRest ? " checked" : ""}${push.supported() ? "" : " disabled"} />
       </label>
       ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
-      <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
-      <button class="btn" data-act="export">Export backup</button>
+      <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>`,
+    )}
+    ${section(
+      "g:plates",
+      "Plate sizes",
+      `<div class="setting-group" role="group" aria-label="Plates the gym has">
+        <div class="muted small">Plates the gym has (kg, pairs)</div>
+        <div class="plate-pick">${PLATE_SIZES.map((k) => `<label><input type="checkbox" data-field="plate" data-kg="${k}"${gymPlates(settings).includes(k) ? " checked" : ""} /> ${k}</label>`).join("")}</div>
+      </div>`,
+    )}
+    ${section(
+      "g:backup",
+      "Backup and export",
+      `<button class="btn" data-act="export">Export backup</button>
       <button class="btn" data-act="export-full">Full backup (with your photos and sound)</button>
       <p class="muted small">The full backup also holds the photos, videos and sound you added. Videos can make the file large.</p>
       <button class="btn" data-act="export-csv">Export to spreadsheet (CSV)</button>
@@ -160,8 +207,8 @@ export function render(root, ctx) {
       <label class="btn file-btn">Import backup
         <input type="file" data-field="import" accept="application/json,.json" />
       </label>
-      <p class="muted small" id="app-version">${versionText}</p>
-    </section>`;
+      <p class="muted small" id="app-version">${versionText}</p>`,
+    )}`;
   runningVersion().then((v) => {
     versionText = v ? `Version ${v}` : "Version: not installed";
     const el = root.querySelector("#app-version");
@@ -174,6 +221,16 @@ export function render(root, ctx) {
     paintSound();
   });
   const find = (el) => findIn(state, el);
+
+  // "toggle" does not bubble, so listen in the capture phase. Only remembers; never redraws.
+  root.addEventListener(
+    "toggle",
+    (e) => {
+      const k = e.target.dataset?.sec;
+      if (k) rememberOpen(k, e.target.open);
+    },
+    true,
+  );
 
   root.addEventListener("click", async (e) => {
     syncAll(); // iOS taps do not blur the field, so no change event can be relied on
