@@ -531,7 +531,7 @@ export function parsePlanText(text) {
   return {
     ok: false,
     errors: [
-      `No plan could be read from this text.${why} Nothing was changed. You can send this text as it is to your helper.`,
+      `No plan could be read from this text.${why} You can send this text as it is to your helper.`,
     ],
   };
 }
