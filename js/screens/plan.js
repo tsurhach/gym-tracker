@@ -2,7 +2,7 @@ import { GOALS, MUSCLES } from "../constants.js";
 import { parseNum } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
 import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
-import { exportJson, importJson } from "../store.js";
+import { exportCsv, exportJson, importJson } from "../store.js";
 import { openPicker } from "../picker.js";
 import { checkSound, deleteMedia, getBlob, SOUND_KEY } from "../media.js";
 import {
@@ -25,10 +25,8 @@ function move(arr, i, d) {
 const isoDay = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-function download(filename, text) {
-  const url = URL.createObjectURL(
-    new Blob([text], { type: "application/json" }),
-  );
+function download(filename, text, type = "application/json") {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -131,6 +129,7 @@ export function render(root, ctx) {
       ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
       <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
       <button class="btn" data-act="export">Export backup</button>
+      <button class="btn" data-act="export-csv">Export to spreadsheet (CSV)</button>
       <p class="muted small">Photos and videos you added to custom exercises are not part of the backup.</p>
       <label class="btn file-btn">Import backup
         <input type="file" data-field="import" accept="application/json,.json" />
@@ -254,6 +253,9 @@ export function render(root, ctx) {
         download(`gym-tracker-backup-${isoDay()}.json`, exportJson(state));
         break;
       }
+      case "export-csv":
+        download(`gym-tracker-sets-${isoDay()}.csv`, exportCsv(state), "text/csv");
+        return;
       default:
         return;
     }

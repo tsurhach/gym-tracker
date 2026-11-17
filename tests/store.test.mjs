@@ -191,3 +191,21 @@ test("importJson rejects a bad active, a session without id and a string seconda
   ];
   for (const s of bad) assert.throws(() => importJson(JSON.stringify(s)), { message: MSG });
 });
+
+test("exportCsv: header, one row per confirmed set, quoting", async () => {
+  const { exportCsv } = await import("../js/store.js");
+  const s = emptyState();
+  s.sessions.push({
+    id: "a",
+    workoutName: 'Push, "A"',
+    startedAt: new Date(2026, 10, 5, 0, 30).getTime(),
+    entries: [
+      { exerciseId: "x", name: "Bench\nPress", sets: [{ weight: 50, reps: 8, done: true }, { weight: 52.5, reps: 6, done: false }, { weight: 55, reps: 5, done: true }] },
+    ],
+  });
+  assert.equal(
+    exportCsv(s),
+    'date,workout,exercise,set,weight_kg,reps\r\n2026-11-05,"Push, ""A""","Bench\nPress",1,50,8\r\n2026-11-05,"Push, ""A""","Bench\nPress",2,55,5\r\n',
+  );
+  assert.equal(exportCsv(emptyState()), "date,workout,exercise,set,weight_kg,reps\r\n");
+});
