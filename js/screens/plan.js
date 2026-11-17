@@ -113,6 +113,9 @@ export function render(root, ctx) {
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
     <button class="btn" data-act="redo">Redo setup</button>
+    <a class="btn" href="#/import/programs">Ready-made programs</a>
+    <a class="btn" href="#/import/file">Load a plan from a file</a>
+    <a class="btn" href="#/import/ai">Build a plan with AI</a>
     ${
       state.customExercises.length
         ? `<section class="card">
