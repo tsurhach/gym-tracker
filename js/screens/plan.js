@@ -3,7 +3,7 @@ import { parseNum } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
 import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportCsv, exportJson } from "../store.js";
-import { encodeMedia, FULL_TAIL, fmtSize, fullHead, readBackup } from "../backup.js";
+import { buildFullBackup, fmtSize, readBackup } from "../backup.js";
 import { openPicker } from "../picker.js";
 import {
   allMediaKeys,
@@ -271,13 +271,9 @@ export function render(root, ctx) {
         settings.lastExportAt = Date.now(); // the file itself then records it, like the plain backup
         let size;
         try {
-          const parts = [fullHead(state)];
-          for (const [i, key] of (await allMediaKeys()).entries()) {
-            const item = await encodeMedia(key, await readMedia(key));
-            if (item) parts.push((i ? "," : "") + item);
-          }
-          parts.push(FULL_TAIL);
-          const blob = new Blob(parts, { type: "application/json" });
+          const blob = await buildFullBackup(state, await allMediaKeys(), readMedia);
+          // Check the file would import, unless it is too big to read back safely on a phone.
+          if (blob.size <= VERIFY_MAX) readBackup(await blob.text());
           size = blob.size;
           download(`gym-tracker-full-backup-${isoDay()}.json`, blob);
         } catch {
@@ -286,7 +282,8 @@ export function render(root, ctx) {
           showBanner("Could not read your photos and sound. Try the plain backup instead.");
           return;
         }
-        await ctx.save();
+        await ctx.save({ render: false }); // no redraw: the owner may have started typing meanwhile
+        t.disabled = false;
         showBanner(`Full backup created (${fmtSize(size)}).`, { kind: "ok" });
         return;
       }
@@ -536,10 +533,21 @@ async function toggleRec() {
   }
 }
 
+const VERIFY_MAX = 50e6; // bytes: bigger full backups are not re-read to check them
+const BIG_FILE = 150e6; // bytes: warn before reading a backup this big
+
 async function importFile(input, ctx) {
   const file = input.files[0];
   input.value = ""; // allow choosing the same file again
   if (!file) return;
+  if (
+    file.size > BIG_FILE &&
+    !(await confirmSheet(
+      `This backup file is very large (${fmtSize(file.size)}). Your phone may not manage to open it.`,
+      "Try anyway",
+    ))
+  )
+    return;
   let imported, media;
   try {
     ({ state: imported, media } = readBackup(await file.text()));
@@ -555,23 +563,27 @@ async function importFile(input, ctx) {
     ))
   )
     return;
-  try {
-    // Media first, in one transaction: if it fails nothing has been replaced yet.
-    if (media?.length) await restoreMedia(media);
-  } catch {
-    showBanner("Backup was not restored. Your data is unchanged.");
-    return;
-  }
-  loadCustom(); // pick up a restored rest-over sound
+  // Data first: it is the part that can fail on a full phone, and nothing else is touched until it is saved.
   current = null; // the old screen's fields must not be copied into the imported data
   const previous = ctx.state;
   ctx.state = imported;
-  if (await ctx.save({ render: false })) {
-    window.dispatchEvent(new HashChangeEvent("hashchange")); // app.js re-renders on this
-    showBanner("Backup restored.", { kind: "ok" });
-  } else {
+  if (!(await ctx.save({ render: false }))) {
     ctx.state = previous; // not saved: put the old data back so nothing later persists the import
     window.dispatchEvent(new HashChangeEvent("hashchange"));
-    showBanner("Backup was not restored. Your data is unchanged.");
+    showBanner("Backup was not restored. Nothing was changed.");
+    return;
   }
+  let mediaOk = true;
+  try {
+    if (media?.length) await restoreMedia(media); // one transaction: all or nothing
+  } catch {
+    mediaOk = false;
+  }
+  loadCustom(); // pick up a restored rest-over sound
+  window.dispatchEvent(new HashChangeEvent("hashchange")); // app.js re-renders on this
+  if (mediaOk) showBanner("Backup restored.", { kind: "ok" });
+  else
+    showBanner(
+      "Your data was restored, but the photos and sound from the backup could not be. Your earlier photos and sound were kept.",
+    );
 }

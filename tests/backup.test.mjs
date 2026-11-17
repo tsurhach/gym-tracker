@@ -74,3 +74,13 @@ test("file size text", () => {
   assert.equal(fmtSize(250000), "250 KB");
   assert.equal(fmtSize(12_340_000), "12.3 MB");
 });
+
+test("buildFullBackup: skipped first item leaves no stray comma and the file imports", async () => {
+  const { buildFullBackup } = await import("../js/backup.js");
+  const vals = { junk: "not media", a: new Blob([bytes(5)], { type: "audio/mp4" }), b: new Blob([bytes(3)], { type: "audio/mp4" }) };
+  const blob = await buildFullBackup(emptyState(), ["junk", "a", "b", "junk"], (k) => vals[k]);
+  const text = await blob.text();
+  assert.ok(!text.includes("[,"));
+  assert.deepEqual(readBackup(text).media.map((m) => m.key), ["a", "b"]);
+  assert.deepEqual(readBackup(await (await buildFullBackup(emptyState(), ["junk"], (k) => vals[k])).text()).media, []);
+});
