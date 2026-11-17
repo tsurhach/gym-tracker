@@ -55,6 +55,18 @@ export const fullHead = (state) =>
   );
 export const FULL_TAIL = "]}";
 
+// Builds the full backup file as a Blob of Blobs. Each item's text goes into its own Blob as soon as
+// it is made, so the strings can be freed. Skipped (null) items never leave a stray comma.
+export async function buildFullBackup(state, keys, read) {
+  const parts = [fullHead(state)];
+  for (const key of keys) {
+    const item = await encodeMedia(key, await read(key));
+    if (item) parts.push(new Blob([(parts.length > 1 ? "," : "") + item]));
+  }
+  parts.push(FULL_TAIL);
+  return new Blob(parts, { type: "application/json" });
+}
+
 const toBlob = (j) => {
   if (!isObj(j) || typeof j.type !== "string") throw new Error(BAD_MEDIA);
   return new Blob([base64ToBytes(j.data)], { type: j.type });
