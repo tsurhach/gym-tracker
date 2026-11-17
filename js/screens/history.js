@@ -152,7 +152,23 @@ function syncAll() {
   current.root.querySelector("[data-err]").textContent = bad
     ? BAD_MSG
     : "";
+  paintBadges(ses);
   return true;
+}
+
+// Edits can add or remove "New best" on any set. Only the badge elements change, never the inputs.
+function paintBadges(ses) {
+  for (const row of current.root.querySelectorAll(".set[data-e]")) {
+    const en = ses.entries[Number(row.dataset.e)];
+    const s = en?.sets[Number(row.dataset.i)];
+    if (!s) continue;
+    const badge = row.nextElementSibling?.classList.contains("pb")
+      ? row.nextElementSibling
+      : null;
+    const want = isPersonalBest(earlier(current.ctx.state.sessions, ses, en.exerciseId), s);
+    if (want && !badge) row.insertAdjacentHTML("afterend", pbHtml);
+    else if (!want && badge) badge.remove();
+  }
 }
 
 function flush() {
