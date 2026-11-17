@@ -31,7 +31,7 @@ function submit(text, ctx, box, backTo) {
     box.innerHTML = `<section class="card"><h3 style="margin-top:0">This plan cannot be used</h3><ul>${p.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul><p class="muted small">Nothing was changed.</p></section>`;
     return false;
   }
-  pending = { preview: p, back: backTo };
+  pending = { preview: p, back: backTo, fixes: read.fixes ?? [] };
   ctx.go("#/import/preview");
   return true;
 }
@@ -115,14 +115,20 @@ function docPanel(root, ctx, docs, out, f) {
     <p class="muted small">In your AI app, paste the instructions, send, then copy its whole answer and come back.</p>
     ${answerHtml}</section>`;
   const $ = (q) => docs.querySelector(q);
-  const hint = "Open your AI app, attach the file there, and paste the instructions.";
+  const hint =
+    "Open your AI app, attach the file there, and paste the instructions.";
   $("#copyDoc").onclick = () =>
     copyText(
-      buildAiPrompt({ library: ctx.library, custom: ctx.state.customExercises, mode: "convert" }),
+      buildAiPrompt({
+        library: ctx.library,
+        custom: ctx.state.customExercises,
+        mode: "convert",
+      }),
       $("#docFallback"),
     );
   $("#shareDoc").onclick = async () => {
-    if (!navigator.canShare?.({ files: [f] })) return ($("#shareMsg").textContent = hint);
+    if (!navigator.canShare?.({ files: [f] }))
+      return ($("#shareMsg").textContent = hint);
     try {
       await navigator.share({ files: [f] });
       $("#shareMsg").textContent = "";
@@ -213,11 +219,12 @@ function aiView(root, ctx) {
 
 function previewView(root, ctx) {
   if (!pending) return void (location.hash = "#/plan");
-  const { preview: p, back: backTo } = pending;
+  const { preview: p, back: backTo, fixes = [] } = pending;
   const active = !!ctx.state.active;
   root.innerHTML = `${head(p.name)}
     ${p.notes ? `<p class="muted">${esc(p.notes)}</p>` : ""}
     <p class="small"><b>Goal:</b> ${esc(GOALS[p.goal].label)} · ${p.days.length} ${p.days.length === 1 ? "workout" : "workouts"}</p>
+    ${fixes.length ? `<details class="card" id="fixes"><summary>Adjusted while reading (${fixes.length})</summary><ul>${fixes.map((f) => `<li class="small">${esc(f)}</li>`).join("")}</ul></details>` : ""}
     ${active ? `<section class="card"><p>A workout is in progress. Finish or discard it before using a new plan.</p></section>` : ""}
     ${
       p.newExercises.length

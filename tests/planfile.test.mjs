@@ -336,20 +336,32 @@ test("paste: each ChatGPT-style damage is repaired on its own", () => {
   const nb = JSON.stringify(good(), null, 2).replaceAll("  ", "\u00A0\u00A0");
   assert.ok(read(nb), "nbsp indent");
   for (const sp of ["\u2003", "\u202F", "\u3000", "\u2009"])
-    assert.ok(read(planText.replaceAll("  ", sp + sp)), "space " + sp.charCodeAt(0));
+    assert.ok(
+      read(planText.replaceAll("  ", sp + sp)),
+      "space " + sp.charCodeAt(0),
+    );
   assert.ok(read(planText.replace('"name"', '"na\u200Bme"')), "zero width");
   assert.ok(read(planText.replace("{", "{\u2060\u200D")), "word joiner");
   const curly = planText.replace(/"([^"]*)"/g, "\u201C$1\u201D");
   assert.ok(read(curly), "curly quotes");
   assert.ok(read(curly.replaceAll("\u201C", "\u201D")), "all closing curly");
-  assert.ok(read(planText.replace(/"([^"]*)"/g, "\u2018$1\u2019")), "curly single");
+  assert.ok(
+    read(planText.replace(/"([^"]*)"/g, "\u2018$1\u2019")),
+    "curly single",
+  );
   assert.ok(read(planText.replace(/\}(\s*)\]/g, "},$1]")), "trailing comma");
   assert.ok(read(planText.replaceAll("\n", "\n// note\n")), "line comments");
-  assert.ok(read(planText.replace('"name"', '/* x */ "name"')), "block comment");
+  assert.ok(
+    read(planText.replace('"name"', '/* x */ "name"')),
+    "block comment",
+  );
   assert.ok(read("json\n" + planText), "json label");
   assert.ok(read(planText.replaceAll("\n", "\r\n")), "CRLF");
   assert.ok(read(planText.replaceAll("\n", "\r")), "CR");
-  assert.ok(read("```JSON\n" + planText + "\n```\n```\nthanks\n```"), "two blocks");
+  assert.ok(
+    read("```JSON\n" + planText + "\n```\n```\nthanks\n```"),
+    "two blocks",
+  );
 });
 
 test("paste: realistic ChatGPT answer combining several problems", () => {
@@ -367,7 +379,11 @@ test("paste: // commas and curly quotes inside names stay intact", () => {
   const damaged = JSON.stringify(p, null, 2)
     .replace(/\n(\s*)\]/, ",\n$1]")
     .replaceAll("  ", "\u00A0");
-  for (const t of [JSON.stringify(p), damaged, "{ // hi\n" + JSON.stringify(p).slice(1)]) {
+  for (const t of [
+    JSON.stringify(p),
+    damaged,
+    "{ // hi\n" + JSON.stringify(p).slice(1),
+  ]) {
     const r = parsePlanText(t);
     assert.equal(r.ok, true);
     assert.equal(r.obj.name, "Plan // v2, \u201Cbest\u201D one");
@@ -381,14 +397,22 @@ test("paste: failure messages", () => {
   assert.match(r.errors[0], /No plan could be read/);
   assert.match(r.errors[0], /reader said/);
   assert.match(r.errors[0], /send this text/);
-  const v = parsePlanText("```json\n" + JSON.stringify({ ...good(), goal: "bulk" }) + "\n```");
+  const v = parsePlanText(
+    "```json\n" + JSON.stringify({ ...good(), goal: "bulk" }) + "\n```",
+  );
   assert.equal(v.ok, true); // parsed; the validator's plain errors show next
   assert.equal(validatePlanFile(v.obj).ok, false);
 });
 
 test("paste: garbage is rejected and huge input does not hang", () => {
   const t0 = Date.now();
-  for (const g of ["{,,,,}".repeat(30000), "\u00A0{".repeat(90000), "// {\n".repeat(30000), "\u201C{".repeat(90000), "```json\n".repeat(20000)])
+  for (const g of [
+    "{,,,,}".repeat(30000),
+    "\u00A0{".repeat(90000),
+    "// {\n".repeat(30000),
+    "\u201C{".repeat(90000),
+    "```json\n".repeat(20000),
+  ])
     assert.equal(parsePlanText(g).ok, false);
   assert.ok(Date.now() - t0 < 5000, "slow: " + (Date.now() - t0));
   for (const g of [
@@ -446,7 +470,7 @@ test("hostile pasted text: deep nesting, proto keys, Infinity, numbers as text",
   const g = JSON.stringify(good());
   assert.ok(g.includes('"sets":5'));
   const bad = [
-    g.replace('"sets":5', '"sets":"5"'),
+    g.replace('"sets":5', '"sets":"five"'),
     g.replace('"sets":5', '"sets":1e999'),
     g.replace('"goal":"strength"', '"goal":"__proto__"'),
     g.replace('"goal":"strength"', '"goal":"constructor"'),
@@ -501,18 +525,46 @@ test("applyPlan keeps plate settings of exercises in both plans, never duplicate
       name: "Old",
       muscles: [],
       items: [
-        { exerciseId: "smith-machine-squat", sets: 3, repMin: 8, repMax: 12, step: 2.5, emptyKg: 15, plates: true },
-        { exerciseId: "bench-press", sets: 3, repMin: 8, repMax: 12, step: 2.5, plates: false },
+        {
+          exerciseId: "smith-machine-squat",
+          sets: 3,
+          repMin: 8,
+          repMax: 12,
+          step: 2.5,
+          emptyKg: 15,
+          plates: true,
+        },
+        {
+          exerciseId: "bench-press",
+          sets: 3,
+          repMin: 8,
+          repMax: 12,
+          step: 2.5,
+          plates: false,
+        },
       ],
     },
   ];
   // made by hand after the preview was built
-  st.customExercises.push({ id: "own", name: "cable hip abduction", primary: "Glutes", secondary: [] });
+  st.customExercises.push({
+    id: "own",
+    name: "cable hip abduction",
+    primary: "Glutes",
+    secondary: [],
+  });
   assert.equal(applyPlan(st, prev).ok, true);
   const [smith, bench, abd] = st.workouts[0].items;
   assert.deepEqual(
     { ...smith },
-    { exerciseId: "smith-machine-squat", sets: 4, repMin: 6, repMax: 8, step: 2.5, emptyKg: 15, plates: true },
+    {
+      exerciseId: "smith-machine-squat",
+      sets: 4,
+      repMin: 6,
+      repMax: 8,
+      step: 2.5,
+      emptyKg: 15,
+      plates: true,
+    },
   );
   assert.equal(bench.plates, false);
   assert.equal(bench.emptyKg, undefined);
@@ -535,7 +587,13 @@ test("fileKind: json/text, ai documents, unsupported, iOS empty type, uppercase"
   assert.equal(k("a.jpeg", "image/jpeg"), "ai");
   assert.equal(k("a", "image/heic"), "ai");
   assert.equal(k("p.docx", ""), "ai");
-  assert.equal(k("p", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"), "ai");
+  assert.equal(
+    k(
+      "p",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ),
+    "ai",
+  );
   assert.equal(k("p.doc", "application/msword"), "ai");
   assert.equal(k("my.plan.v2.pdf", ""), "ai");
   assert.equal(k("a.zip", "application/zip"), "unsupported");
