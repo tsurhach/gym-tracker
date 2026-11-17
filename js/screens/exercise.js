@@ -37,8 +37,27 @@ function syncAll() {
       ),
     );
     row.classList.toggle("done", !!s.done);
-    if (!s.done && row.nextElementSibling?.matches(".pb")) row.nextElementSibling.remove();
     row.querySelector(".confirm").setAttribute("aria-pressed", String(!!s.done));
+  }
+  paintBadges();
+}
+
+// "New best" badges follow the typed values. Only the badge elements change, never the inputs.
+function paintBadges() {
+  if (!current?.root.isConnected) return;
+  const { root, entry, past } = current;
+  for (const row of root.querySelectorAll(".set[data-i]")) {
+    const s = entry.sets[Number(row.dataset.i)];
+    if (!s) continue;
+    const t = applyInputs(
+      s,
+      row.querySelector('[data-f="weight"]').value,
+      row.querySelector('[data-f="reps"]').value,
+    );
+    const badge = row.nextElementSibling?.matches(".pb") ? row.nextElementSibling : null;
+    const want = t.done && isPersonalBest(past, t);
+    if (want && !badge) row.insertAdjacentHTML("afterend", pbHtml);
+    else if (!want && badge) badge.remove();
   }
 }
 
@@ -128,7 +147,7 @@ export function render(root, ctx) {
     <section class="card" data-sets>${setsInner(entry, past)}</section>
     <a class="btn btn-primary" href="#/workout">Done, back to list</a>`;
 
-  current = { root, entry, ctx };
+  current = { root, entry, ctx, past };
 
   // Only the media area is redrawn, so typed set values are never disturbed.
   const mediaBox = root.querySelector("[data-media]");
@@ -148,6 +167,8 @@ export function render(root, ctx) {
       </div>`;
   }
   if (mediaBox) drawMedia();
+
+  root.addEventListener("input", (e) => e.target.dataset.f && paintBadges());
 
   // Typing saves on change without redrawing, so a tap that blurred the field is never lost.
   root.addEventListener("change", async (e) => {
