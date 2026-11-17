@@ -332,11 +332,65 @@ test("paste: two blocks take the first that validates", () => {
   assert.equal(validatePlanFile(r.obj).ok, false); // validator's plain errors will show
 });
 
-test("paste: smart quotes and garbage are not repaired", () => {
-  const smart = planText.replaceAll('"', "“");
-  const r = parsePlanText(smart);
+test("paste: each ChatGPT-style damage is repaired on its own", () => {
+  const nb = JSON.stringify(good(), null, 2).replaceAll("  ", "\u00A0\u00A0");
+  assert.ok(read(nb), "nbsp indent");
+  for (const sp of ["\u2003", "\u202F", "\u3000", "\u2009"])
+    assert.ok(read(planText.replaceAll("  ", sp + sp)), "space " + sp.charCodeAt(0));
+  assert.ok(read(planText.replace('"name"', '"na\u200Bme"')), "zero width");
+  assert.ok(read(planText.replace("{", "{\u2060\u200D")), "word joiner");
+  const curly = planText.replace(/"([^"]*)"/g, "\u201C$1\u201D");
+  assert.ok(read(curly), "curly quotes");
+  assert.ok(read(curly.replaceAll("\u201C", "\u201D")), "all closing curly");
+  assert.ok(read(planText.replace(/"([^"]*)"/g, "\u2018$1\u2019")), "curly single");
+  assert.ok(read(planText.replace(/\}(\s*)\]/g, "},$1]")), "trailing comma");
+  assert.ok(read(planText.replaceAll("\n", "\n// note\n")), "line comments");
+  assert.ok(read(planText.replace('"name"', '/* x */ "name"')), "block comment");
+  assert.ok(read("json\n" + planText), "json label");
+  assert.ok(read(planText.replaceAll("\n", "\r\n")), "CRLF");
+  assert.ok(read(planText.replaceAll("\n", "\r")), "CR");
+  assert.ok(read("```JSON\n" + planText + "\n```\n```\nthanks\n```"), "two blocks");
+});
+
+test("paste: realistic ChatGPT answer combining several problems", () => {
+  const body = JSON.stringify(good(), null, 2)
+    .replaceAll("  ", "\u00A0\u00A0")
+    .replace(/\n(\s*)\]/, ",\n$1]");
+  const t = `Here\u2019s your plan, ready to paste:\n\n\`\`\`json\n${body}\n\`\`\`\n\nWant me to tweak the volume? {just ask}`;
+  assert.ok(read(t));
+});
+
+test("paste: // commas and curly quotes inside names stay intact", () => {
+  const p = good();
+  p.name = "Plan // v2, \u201Cbest\u201D one";
+  p.days[0].name = "Push, pull";
+  const damaged = JSON.stringify(p, null, 2)
+    .replace(/\n(\s*)\]/, ",\n$1]")
+    .replaceAll("  ", "\u00A0");
+  for (const t of [JSON.stringify(p), damaged, "{ // hi\n" + JSON.stringify(p).slice(1)]) {
+    const r = parsePlanText(t);
+    assert.equal(r.ok, true);
+    assert.equal(r.obj.name, "Plan // v2, \u201Cbest\u201D one");
+    assert.equal(r.obj.days[0].name, "Push, pull");
+  }
+});
+
+test("paste: failure messages", () => {
+  const r = parsePlanText('{"a": 1, "b": [1, 2');
   assert.equal(r.ok, false);
-  assert.match(r.errors[0], /straight quotes/);
+  assert.match(r.errors[0], /No plan could be read/);
+  assert.match(r.errors[0], /reader said/);
+  assert.match(r.errors[0], /send this text/);
+  const v = parsePlanText("```json\n" + JSON.stringify({ ...good(), goal: "bulk" }) + "\n```");
+  assert.equal(v.ok, true); // parsed; the validator's plain errors show next
+  assert.equal(validatePlanFile(v.obj).ok, false);
+});
+
+test("paste: garbage is rejected and huge input does not hang", () => {
+  const t0 = Date.now();
+  for (const g of ["{,,,,}".repeat(30000), "\u00A0{".repeat(90000), "// {\n".repeat(30000), "\u201C{".repeat(90000), "```json\n".repeat(20000)])
+    assert.equal(parsePlanText(g).ok, false);
+  assert.ok(Date.now() - t0 < 5000, "slow: " + (Date.now() - t0));
   for (const g of [
     "",
     "   ",
