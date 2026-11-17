@@ -1,6 +1,6 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files); a release is a new VERSION.
-const VERSION = "6cb344bddd80";
+const VERSION = "02d452cbfa78";
 const SHELL = `gym-tracker-shell-${VERSION}`;
 const IMAGES = "gym-tracker-img-v1"; // photos never change per id, so not tied to VERSION
 
@@ -14,6 +14,7 @@ const PRECACHE = [
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
   "./js/app.js",
+  "./js/backup.js",
   "./js/constants.js",
   "./js/logic.js",
   "./js/media.js",

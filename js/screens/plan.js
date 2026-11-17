@@ -2,10 +2,20 @@ import { GOALS, MUSCLES } from "../constants.js";
 import { parseNum } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
 import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
-import { exportCsv, exportJson, importJson } from "../store.js";
+import { exportCsv, exportJson } from "../store.js";
+import { encodeMedia, FULL_TAIL, fmtSize, fullHead, readBackup } from "../backup.js";
 import { openPicker } from "../picker.js";
-import { checkSound, deleteMedia, getBlob, SOUND_KEY } from "../media.js";
 import {
+  allMediaKeys,
+  checkSound,
+  deleteMedia,
+  getBlob,
+  readMedia,
+  restoreMedia,
+  SOUND_KEY,
+} from "../media.js";
+import {
+  loadCustom,
   MAX_SOUND_SECONDS,
   parseRest,
   restLength,
@@ -25,8 +35,8 @@ function move(arr, i, d) {
 const isoDay = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-function download(filename, text, type = "application/json") {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+function download(filename, blob) {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -129,8 +139,10 @@ export function render(root, ctx) {
       ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
       <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
       <button class="btn" data-act="export">Export backup</button>
+      <button class="btn" data-act="export-full">Full backup (with your photos and sound)</button>
+      <p class="muted small">The full backup also holds the photos, videos and sound you added. Videos can make the file large.</p>
       <button class="btn" data-act="export-csv">Export to spreadsheet (CSV)</button>
-      <p class="muted small">Photos and videos you added to custom exercises are not part of the backup.</p>
+      <p class="muted small">The plain backup leaves out the photos, videos and sound you added.</p>
       <label class="btn file-btn">Import backup
         <input type="file" data-field="import" accept="application/json,.json" />
       </label>
@@ -250,11 +262,34 @@ export function render(root, ctx) {
         return;
       case "export": {
         settings.lastExportAt = Date.now();
-        download(`gym-tracker-backup-${isoDay()}.json`, exportJson(state));
+        download(`gym-tracker-backup-${isoDay()}.json`, new Blob([exportJson(state)], { type: "application/json" }));
         break;
       }
+      case "export-full": {
+        t.disabled = true;
+        let size;
+        try {
+          const parts = [fullHead(state)];
+          for (const [i, key] of (await allMediaKeys()).entries()) {
+            const item = await encodeMedia(key, await readMedia(key));
+            if (item) parts.push((i ? "," : "") + item);
+          }
+          parts.push(FULL_TAIL);
+          const blob = new Blob(parts, { type: "application/json" });
+          size = blob.size;
+          settings.lastExportAt = Date.now();
+          download(`gym-tracker-full-backup-${isoDay()}.json`, blob);
+        } catch {
+          t.disabled = false;
+          showBanner("Could not read your photos and sound. Try the plain backup instead.");
+          return;
+        }
+        await ctx.save();
+        showBanner(`Full backup created (${fmtSize(size)}).`, { kind: "ok" });
+        return;
+      }
       case "export-csv":
-        download(`gym-tracker-sets-${isoDay()}.csv`, exportCsv(state), "text/csv");
+        download(`gym-tracker-sets-${isoDay()}.csv`, new Blob([exportCsv(state)], { type: "text/csv" }));
         return;
       default:
         return;
@@ -403,7 +438,7 @@ function soundHtml() {
       ${canRecord() ? `<button type="button" class="btn" data-snd="rec">${snd.rec ? `Stop ${snd.secs}s` : "Record"}</button>` : ""}
     </div>
     ${snd.custom ? `<button type="button" class="btn" data-snd="default">Use default chime</button>` : ""}
-    <p class="muted small">Your sound plays while the app is open. Notifications use the iPhone's own sound. It is not part of the backup.</p>`;
+    <p class="muted small">Your sound plays while the app is open. Notifications use the iPhone's own sound. It is only in the full backup.</p>`;
 }
 
 function paintSound() {
@@ -503,9 +538,9 @@ async function importFile(input, ctx) {
   const file = input.files[0];
   input.value = ""; // allow choosing the same file again
   if (!file) return;
-  let imported;
+  let imported, media;
   try {
-    imported = importJson(await file.text());
+    ({ state: imported, media } = readBackup(await file.text()));
   } catch (err) {
     showBanner(err.message);
     return;
@@ -518,6 +553,14 @@ async function importFile(input, ctx) {
     ))
   )
     return;
+  try {
+    // Media first, in one transaction: if it fails nothing has been replaced yet.
+    if (media?.length) await restoreMedia(media);
+  } catch {
+    showBanner("Backup was not restored. Your data is unchanged.");
+    return;
+  }
+  loadCustom(); // pick up a restored rest-over sound
   current = null; // the old screen's fields must not be copied into the imported data
   const previous = ctx.state;
   ctx.state = imported;

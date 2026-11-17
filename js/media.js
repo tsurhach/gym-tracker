@@ -197,3 +197,12 @@ export async function getBlob(key) {
   }
 }
 export const deleteBlob = deleteMedia;
+
+// Full backup. These throw on failure (unlike the fail-soft helpers) so a backup never
+// silently leaves out media. restoreMedia writes everything in one transaction: all or nothing.
+export const allMediaKeys = () => tx("readonly", (s) => s.getAllKeys());
+export const readMedia = (key) => tx("readonly", (s) => s.get(key));
+export const restoreMedia = (items) =>
+  tx("readwrite", (s) => {
+    for (const { key, value } of items) s.put(value, key);
+  });

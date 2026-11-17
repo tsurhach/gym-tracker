@@ -129,7 +129,7 @@ function context() {
 // The user's own sound, decoded; null -> play the chime.
 let custom = null;
 let loadId = 0;
-async function loadCustom() {
+export async function loadCustom() {
   const id = ++loadId;
   custom = null;
   try {
