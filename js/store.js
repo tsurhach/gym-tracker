@@ -1,4 +1,5 @@
 import { GOALS } from "./constants.js";
+import { localDate } from "./weight.js";
 
 export const KEY = "gymtracker.v1";
 export const CORRUPT_KEY = "gymtracker.corrupt";
@@ -132,6 +133,31 @@ export function createStore(storage) {
 
 export function exportJson(state) {
   return JSON.stringify(state, null, 2);
+}
+
+const csvCell = (v) =>
+  /[",\r\n]/.test(String(v))
+    ? `"${String(v).replaceAll('"', '""')}"`
+    : String(v);
+
+// One row per confirmed set of finished workouts, for a spreadsheet.
+export function exportCsv(state) {
+  const rows = [["date", "workout", "exercise", "set", "weight_kg", "reps"]];
+  for (const s of state.sessions)
+    for (const e of s.entries)
+      e.sets
+        .filter((x) => x.done)
+        .forEach((x, i) =>
+          rows.push([
+            localDate(new Date(s.startedAt)),
+            s.workoutName,
+            e.name,
+            i + 1,
+            x.weight,
+            x.reps,
+          ]),
+        );
+  return rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
 
 export function importJson(text) {
