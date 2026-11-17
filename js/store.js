@@ -140,6 +140,9 @@ const csvCell = (v) =>
     ? `"${String(v).replaceAll('"', '""')}"`
     : String(v);
 
+// Names only: a leading = + - @ would run as a formula in a spreadsheet, so mark it as text.
+const txt = (v) => (/^[=+\-@]/.test(String(v)) ? `'${v}` : v);
+
 // One row per confirmed set of finished workouts, for a spreadsheet.
 export function exportCsv(state) {
   const rows = [["date", "workout", "exercise", "set", "weight_kg", "reps"]];
@@ -150,8 +153,8 @@ export function exportCsv(state) {
         .forEach((x, i) =>
           rows.push([
             localDate(new Date(s.startedAt)),
-            s.workoutName,
-            e.name,
+            txt(s.workoutName),
+            txt(e.name),
             i + 1,
             x.weight,
             x.reps,
