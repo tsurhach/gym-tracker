@@ -172,6 +172,16 @@ const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
 const int = (x, [lo, hi]) => Number.isInteger(x) && x >= lo && x <= hi;
 const plain = (s) => typeof s === "string" && s.trim().length > 0;
 const clean = (s) => s.trim().replace(/\s+/g, " ");
+// A short, readable copy of a value for messages: "AMRAP", [8], 8.5.
+const show = (v) => {
+  let t;
+  try {
+    t = JSON.stringify(v);
+  } catch {}
+  t ??= String(v);
+  return t.length > 30 ? t.slice(0, 29) + "…" : t;
+};
+const TIMED = /\b(secs?|seconds?|mins?|minutes?)\b|\d\s*[sm]\b/i;
 const muscleOf = (m) =>
   MUSCLES.find((x) => x.toLowerCase() === String(m).trim().toLowerCase()) ??
   null;
@@ -227,23 +237,24 @@ export function validatePlanFile(obj) {
           );
         const seen = new Set();
         ex.forEach((x, j) => {
-          const e = `${label}, exercise ${j + 1}`;
-          if (!isObj(x)) return errors.push(`${e} must be an object.`);
+          const pos = `${label}, exercise ${j + 1}`;
+          if (!isObj(x)) return errors.push(`${pos} must be an object.`);
+          const e = plain(x.name)
+            ? `${plain(d.name) ? clean(d.name).slice(0, 40) : at}, "${clean(x.name).slice(0, 40)}"`
+            : pos;
           if (!plain(x.name) || x.name.trim().length > LIMITS.name)
             errors.push(
-              `${e}: "name" must be text, 1 to ${LIMITS.name} characters.`,
+              `${pos}: "name" must be text, 1 to ${LIMITS.name} characters.`,
             );
           else {
             const key = canonicalKey(x.name);
             if (seen.has(key))
-              errors.push(
-                `${e}: "${clean(x.name)}" appears twice in the same workout.`,
-              );
+              errors.push(`${e}: appears twice in the same workout.`);
             seen.add(key);
           }
           if (!int(x.sets, LIMITS.sets))
             errors.push(
-              `${e}: "sets" must be a whole number from ${LIMITS.sets[0]} to ${LIMITS.sets[1]}.`,
+              `${e}: sets ${x.sets === undefined ? "is missing" : show(x.sets) + " can't be used"}. Use a whole number from ${LIMITS.sets[0]} to ${LIMITS.sets[1]}.`,
             );
           const r = x.reps;
           if (
@@ -252,11 +263,11 @@ export function validatePlanFile(obj) {
             !r.every((n) => int(n, LIMITS.reps))
           )
             errors.push(
-              `${e}: "reps" must be two whole numbers from ${LIMITS.reps[0]} to ${LIMITS.reps[1]}, like [8, 12].`,
+              `${e}: reps ${r === undefined ? "is missing" : show(r) + " can't be used"}. Use two numbers like [8, 12] (whole numbers from ${LIMITS.reps[0]} to ${LIMITS.reps[1]}).${typeof r === "string" && TIMED.test(r) ? " Timed exercises (seconds or minutes) are not supported; use sets and reps." : ""}`,
             );
           else if (r[0] > r[1])
             errors.push(
-              `${e}: the first "reps" number must not be higher than the second.`,
+              `${e}: reps ${show(r)} can't be used. The first number must not be higher than the second.`,
             );
           if (
             x.step !== undefined &&
@@ -267,14 +278,14 @@ export function validatePlanFile(obj) {
             )
           )
             errors.push(
-              `${e}: "step" must be a number from ${LIMITS.step[0]} to ${LIMITS.step[1]} (kg).`,
+              `${e}: step ${show(x.step)} can't be used. Use a number from ${LIMITS.step[0]} to ${LIMITS.step[1]} (kg).`,
             );
           if (
             x.muscle !== undefined &&
             !(typeof x.muscle === "string" && muscleOf(x.muscle))
           )
             errors.push(
-              `${e}: "muscle" must be one of: ${MUSCLES.join(", ")}.`,
+              `${e}: muscle ${show(x.muscle)} can't be used. It must be one of: ${MUSCLES.join(", ")}.`,
             );
         });
       });
@@ -282,6 +293,293 @@ export function validatePlanFile(obj) {
     return { ok: false, errors: ["This plan could not be read."] };
   }
   return { ok: errors.length === 0, errors: errors.slice(0, 20) };
+}
+
+// ---- leniency: read what AI chat apps write ----
+// Small, explicit tables. Anything not listed here is left alone for the validator to report.
+const DAY_LISTS = ["days", "workouts", "routines", "sessions", "plan"];
+const EX_LISTS = ["exercises", "movements", "lifts"];
+const DAY_NAMES = ["title", "day"];
+const EX_NAMES = ["exercise", "title"];
+const PLAN_NAMES = ["title", "plan_name", "planName", "program"];
+const GOAL_WORDS = {
+  hypertrophy: "muscle",
+  size: "muscle",
+  bodybuilding: "muscle",
+  power: "strength",
+  powerlifting: "strength",
+  conditioning: "endurance",
+  stamina: "endurance",
+};
+const REPS_TEXT = new RegExp(
+  "^(\\d{1,6})(?:\\s*(?:-|–|—|to)\\s*(\\d{1,6}))?" +
+    "(?:\\s*(?:reps?|times))?(?:\\s*(?:each|ea\\.?|per|/)\\s*(?:side|leg|arm|hand|direction|set)?)?$",
+);
+const SETS_TEXT = /^(\d{1,3})(?:\s*(?:-|–|—|to)\s*(\d{1,3}))?(?:\s*sets?)?$/;
+const own = (o, k) => Object.hasOwn(o, k);
+const toInt = (v) =>
+  Number.isInteger(v)
+    ? v
+    : typeof v === "string" && /^\s*\d{1,6}\s*$/.test(v)
+      ? +v
+      : null;
+
+// [lowest, highest] from 10, "8-12", "10 each side", {min,max}, ["8","12"] ... or null when unreadable
+// (AMRAP, "30 sec" and so on). A reversed range is swapped.
+function repsOf(v) {
+  let lo = null,
+    hi = null;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    const m = s.length <= 60 ? REPS_TEXT.exec(s) : null;
+    if (m) ((lo = +m[1]), (hi = m[2] === undefined ? lo : +m[2]));
+  } else if (Array.isArray(v)) {
+    if (v.length === 1) lo = hi = toInt(v[0]);
+    else if (v.length === 2) ((lo = toInt(v[0])), (hi = toInt(v[1])));
+  } else if (isObj(v))
+    ((lo = toInt(v.min ?? v.low)), (hi = toInt(v.max ?? v.high)));
+  else lo = hi = toInt(v);
+  if (lo === null || hi === null) return null;
+  return lo > hi ? [hi, lo] : [lo, hi];
+}
+
+const hasExerciseList = (d) =>
+  isObj(d) && EX_LISTS.some((k) => Array.isArray(d[k]));
+
+// Returns { obj, fixes }: the plan with the usual AI slips repaired, and short sentences saying what was
+// adjusted. Never throws and never changes its input; a plan that is already valid comes back equal, with no fixes.
+export function normalizePlanFile(input) {
+  const notes = new Map(); // kind -> { general, specific, n }: the same slip many times is one line
+  const fix = (kind, general, specific) => {
+    const f = notes.get(kind);
+    if (f) f.n++;
+    else notes.set(kind, { general, specific, n: 1 });
+  };
+  try {
+    const obj = run(input, fix);
+    if (obj === null) return { obj: input, fixes: [] };
+    const fixes = [...notes.values()]
+      .slice(0, 30)
+      .map((f) =>
+        f.n === 1
+          ? f.specific
+          : `${f.general} (${f.n} times; first: ${f.specific})`,
+      );
+    return { obj, fixes };
+  } catch {
+    return { obj: input, fixes: [] };
+  }
+}
+
+function run(input, fix) {
+  let top, key;
+  if (Array.isArray(input)) {
+    if (!input.some(hasExerciseList)) return null;
+    top = { days: input };
+    key = "days";
+    fix("wrap", "", "The list of workouts was wrapped into a plan.");
+  } else if (isObj(input)) {
+    top = { ...input };
+    key = DAY_LISTS.find((k) => Array.isArray(top[k]));
+    if (!key && isObj(top.plan)) {
+      const k = DAY_LISTS.find((n) => Array.isArray(top.plan[n]));
+      if (k) {
+        const { plan, ...rest } = top;
+        top = { ...plan, ...rest };
+        key = k;
+        fix("inner", "", 'The workouts were found inside "plan".');
+      }
+    }
+  } else return null;
+  if (!key || !top[key].some(hasExerciseList)) return null;
+  if (key !== "days") {
+    top.days = top[key];
+    delete top[key];
+    fix("days", "", `Used "${key}" as the list of days.`);
+  }
+  top.days = top.days.flatMap((d, i) => {
+    const r = day(d, i, fix);
+    return r === null ? [] : [r];
+  });
+  if (!plain(top.name))
+    for (const k of PLAN_NAMES)
+      if (plain(top[k])) {
+        top.name = top[k];
+        delete top[k];
+        fix("pname", "", `Used "${k}" as the plan name.`);
+        break;
+      }
+  // format and version carry no information once the days are there, so these two are filled in quietly.
+  if (top.format !== FORMAT) top.format = FORMAT;
+  if (!own(top, "version") || top.version === "1") top.version = VERSION;
+  if (top.goal === undefined || top.goal === null) {
+    top.goal = "muscle";
+    fix("goal", "", 'No goal was given, so "muscle" was used.');
+  } else if (typeof top.goal === "string") {
+    const g = top.goal.trim().toLowerCase();
+    const w = Object.hasOwn(GOALS, g)
+      ? g
+      : Object.hasOwn(GOAL_WORDS, g)
+        ? GOAL_WORDS[g]
+        : null;
+    if (w && w !== top.goal) {
+      fix("goalword", "", `Goal ${show(top.goal)} was read as "${w}".`);
+      top.goal = w;
+    }
+  }
+  return top;
+}
+
+function day(d, i, fix) {
+  if (!isObj(d)) return d;
+  const o = { ...d };
+  if (!plain(o.name))
+    for (const k of DAY_NAMES)
+      if (plain(o[k])) {
+        o.name = o[k];
+        delete o[k];
+        fix(
+          "dname",
+          `Used "${k}" as the workout name`,
+          `Day ${i + 1}: used "${k}" as the workout name.`,
+        );
+        break;
+      }
+  if (typeof o.name === "string") o.name = o.name.trim();
+  const at = plain(o.name) ? clean(o.name).slice(0, 40) : `Day ${i + 1}`;
+  if (!Array.isArray(o.exercises)) {
+    const k = EX_LISTS.find((n) => Array.isArray(o[n]));
+    if (k) {
+      o.exercises = o[k];
+      delete o[k];
+      fix(
+        "exlist",
+        `Used "${k}" as the list of exercises`,
+        `${at}: used "${k}" as the list of exercises.`,
+      );
+    }
+  }
+  if (!Array.isArray(o.exercises)) return o;
+  o.exercises = o.exercises.flatMap((x) => {
+    const r = exercise(x, at, fix);
+    return r === null ? [] : [r];
+  });
+  if (!o.exercises.length) {
+    fix(
+      "emptyday",
+      "Workouts without exercises were left out",
+      `${at} had no exercises, so it was left out.`,
+    );
+    return null;
+  }
+  return o;
+}
+
+function exercise(x, at, fix) {
+  const empty = () => {
+    fix(
+      "emptyex",
+      "Empty exercises were left out",
+      `${at}: an empty exercise was left out.`,
+    );
+    return null;
+  };
+  if (x === null || x === undefined || (isObj(x) && !Object.keys(x).length))
+    return empty();
+  if (!isObj(x)) return x;
+  const o = { ...x };
+  if (!plain(o.name))
+    for (const k of EX_NAMES)
+      if (plain(o[k])) {
+        o.name = o[k];
+        delete o[k];
+        fix(
+          "exname",
+          `Used "${k}" as the exercise name`,
+          `${at}: used "${k}" as the exercise name.`,
+        );
+        break;
+      }
+  if (typeof o.name === "string") {
+    o.name = o.name.trim();
+    if (!o.name) return empty();
+  }
+  const lab = plain(o.name) ? `${at}, "${clean(o.name).slice(0, 40)}"` : at;
+  const s = o.sets;
+  if (typeof s === "string") {
+    const m = SETS_TEXT.exec(s.trim().toLowerCase());
+    if (m) {
+      o.sets = +m[1];
+      if (m[2] !== undefined)
+        fix(
+          "setsrange",
+          "Sets given as a range use the lower number",
+          `${lab}: sets ${show(s)} became ${o.sets} (the lower number).`,
+        );
+      else
+        fix(
+          "setstext",
+          "Sets written as text were read as numbers",
+          `${lab}: sets ${show(s)} read as ${o.sets}.`,
+        );
+    }
+  } else if (Array.isArray(s) && s.length > 0 && s.length <= 50) {
+    const rs = s.map((e) => repsOf(isObj(e) ? e.reps : e));
+    if (rs.every(Boolean)) {
+      o.sets = s.length;
+      if (o.reps === undefined)
+        o.reps = [
+          Math.min(...rs.map((r) => r[0])),
+          Math.max(...rs.map((r) => r[1])),
+        ];
+      fix(
+        "setslist",
+        "Lists of sets were counted",
+        `${lab}: a list of ${s.length} sets was counted as sets: ${s.length}.`,
+      );
+    }
+  }
+  if (own(o, "reps")) {
+    const v = o.reps;
+    const r = repsOf(v);
+    if (
+      r &&
+      !(Array.isArray(v) && v.length === 2 && v[0] === r[0] && v[1] === r[1])
+    ) {
+      o.reps = r;
+      fix(
+        "reps",
+        "Reps were rewritten as a range",
+        `${lab}: reps ${show(v)} read as [${r[0]}, ${r[1]}].`,
+      );
+    }
+  }
+  if (own(o, "step")) {
+    const v = o.step;
+    const m =
+      typeof v === "string"
+        ? /^(\d+(?:\.\d+)?)\s*(?:kg)?$/.exec(v.trim().toLowerCase())
+        : null;
+    if (m) o.step = +m[1];
+    if (!(
+      typeof o.step === "number" &&
+      o.step >= LIMITS.step[0] &&
+      o.step <= LIMITS.step[1]
+    )) {
+      delete o.step;
+      fix(
+        "step",
+        "Unusable weight steps were dropped",
+        `${lab}: step ${show(v)} can't be used, so the default (${DEFAULT_STEP} kg) is used.`,
+      );
+    } else if (m)
+      fix(
+        "steptext",
+        "Steps written as text were read as numbers",
+        `${lab}: step ${show(v)} read as ${o.step}.`,
+      );
+  }
+  return o;
 }
 
 // ---- preview ----
@@ -522,9 +820,9 @@ export function parsePlanText(text) {
   for (const [n, stage] of STAGES.entries()) {
     for (const raw of candidatesOf(stage(text))) {
       const s = n ? stripJsonExtras(raw) : raw;
-      let obj;
+      let parsed;
       try {
-        obj = JSON.parse(s);
+        parsed = JSON.parse(s);
       } catch (e) {
         if (
           n === STAGES.length - 1 &&
@@ -534,13 +832,16 @@ export function parsePlanText(text) {
           failed = { msg: String(e.message), src: s };
         continue;
       }
+      if (!isObj(parsed) && !Array.isArray(parsed)) continue;
+      const { obj, fixes } = normalizePlanFile(parsed);
       if (!isObj(obj)) continue;
-      if (validatePlanFile(obj).ok) return { ok: true, obj };
-      if ("format" in obj || "days" in obj) planish ??= obj;
-      first ??= obj;
+      if (validatePlanFile(obj).ok) return { ok: true, obj, fixes };
+      if ("format" in obj || "days" in obj) planish ??= { obj, fixes };
+      first ??= { obj, fixes };
     }
   }
-  if (planish ?? first) return { ok: true, obj: planish ?? first };
+  const best = planish ?? first;
+  if (best) return { ok: true, ...best };
   const why = failed
     ? ` The reader said: ${failed.msg}.${around(failed.src, failed.msg)}`
     : "";
@@ -618,7 +919,7 @@ export function buildAiPrompt({
     "(nothing specific; use sensible defaults for a general trainee)";
   const task =
     mode === "convert"
-      ? `TASK: Convert the training plan I have attached (a file or photo) into this app's format. Be faithful: keep its days, its exercises, its sets and its reps exactly as written. Do not improve it, add to it or remove from it. Map each exercise to the closest name in the exercise list below. Only when nothing in the list fits, use the original name and add a "muscle". If the plan gives reps as a single number, use it twice, like [5, 5]. If it gives no weight steps, leave "step" out.`
+      ? `TASK: Convert the training plan I have attached (a file or photo) into this app's format. The file may hold more than workouts: use ONLY the weekly workout routines, and ignore nutrition, cardio, warm-ups, mobility and timed holds unless they are given as sets × reps. Be faithful: keep its days, exercises, sets and reps as written. Do not improve it, add to it or remove from it. Map each exercise to the closest name in the exercise list below. Only when nothing in the list fits, use the original name and add a "muscle". If reps are one number, use it twice, like [5, 5]. For "AMRAP" or "to failure", pick a sensible range and say so in "notes". If sets are a range like 3-4, use the lower number. If it gives no weight steps, leave "step" out.`
       : `TASK: Design a sound, conventional plan that matches my request: the number of days, the session length, my experience, my goal and any injuries or limits I mention. Balance the muscle groups across the week, put the big lifts first in each workout and keep to a sensible number of exercises per day. Choose exercises from the list below wherever possible. Only when nothing in the list fits, use another plain name and add a "muscle".`;
   return `You are a strength coach building a training plan for a personal gym-tracker app. The app reads one JSON object, so follow the format exactly.
 
@@ -633,6 +934,8 @@ RULES
 - Limits: ${LIMITS.days[0]} to ${LIMITS.days[1]} days; ${LIMITS.exercises[0]} to ${LIMITS.exercises[1]} exercises per day; sets ${LIMITS.sets[0]} to ${LIMITS.sets[1]}; reps ${LIMITS.reps[0]} to ${LIMITS.reps[1]} as [lowest, highest]; step ${LIMITS.step[0]} to ${LIMITS.step[1]}; names up to ${LIMITS.name} characters (day names up to ${LIMITS.dayName}); no exercise twice in one day.
 - "sets" and both "reps" numbers are whole numbers.
 - Use plain straight quotes. "notes" is optional: one or two sentences, at most ${LIMITS.notes} characters.
+
+IMPORTANT: copy the field names exactly: "format", "version", "name", "goal", "days", "exercises", "sets", "reps". Do not rename them or add other structure.
 
 FORMAT (example; yours will differ):
 ${JSON.stringify(EXAMPLE, null, 1)}
