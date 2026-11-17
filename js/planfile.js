@@ -439,36 +439,99 @@ function topObjects(t) {
   return out;
 }
 
-// JSON from a file or a chat paste: also finds it inside chatter or code fences. Takes the first
-// candidate that is a valid plan; if none is, the first that parses (so the plain errors show).
-// Smart quotes are not repaired.
+// Removes // and /* */ comments and trailing commas, but only OUTSIDE string literals.
+function stripJsonExtras(s) {
+  const out = [];
+  let inStr = false,
+    esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      out.push(c);
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') {
+      inStr = true;
+      out.push(c);
+    } else if (c === "/" && s[i + 1] === "/") {
+      while (i + 1 < s.length && s[i + 1] !== "\n") i++;
+    } else if (c === "/" && s[i + 1] === "*") {
+      const j = s.indexOf("*/", i + 2);
+      i = j < 0 ? s.length : j + 1;
+      out.push(" ");
+    } else {
+      if (c === "}" || c === "]") {
+        let k = out.length - 1;
+        while (k >= 0 && /\s/.test(out[k])) k--;
+        if (out[k] === ",") out.splice(k, 1);
+      }
+      out.push(c);
+    }
+  }
+  return out.join("");
+}
+
+// Clean-up stages, tried in order. The text as pasted always goes first; riskier repairs come last.
+const SPACES = /[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g;
+const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/g;
+const tidy = (t) => t.replace(SPACES, " ").replace(INVISIBLE, "");
+const STAGES = [
+  (t) => t.replace(/^\uFEFF/, ""),
+  (t) => tidy(t),
+  (t) => tidy(t).replace(/[\u201C-\u201F]/g, '"'),
+  (t) => tidy(t).replace(/[\u201C-\u201F\u2018\u2019]/g, '"'),
+];
+
+const candidatesOf = (t) => {
+  const fenced = [...t.matchAll(/```[a-z]*\s*([\s\S]*?)```/gi)].map((m) => m[1]);
+  return [t, ...fenced, ...topObjects(t), ...fenced.flatMap(topObjects)].slice(0, 60);
+};
+
+// A few characters around a parse error, when the engine says where it is.
+function around(src, msg) {
+  const m = /position (\d+)/.exec(msg);
+  if (!m) return "";
+  const at = +m[1];
+  const bit = src.slice(Math.max(0, at - 25), at + 25).replace(/\s+/g, " ").trim();
+  return bit ? ` Near: "${bit}".` : "";
+}
+
+// JSON from a file or a chat paste: also finds it inside chatter or code fences, and repairs what chat apps do
+// to code (odd spaces, invisible characters, curly quotes, trailing commas, comments). Each stage only runs
+// when the earlier ones found no valid plan. Returns the first candidate that is a valid plan; if none is, the
+// best one that parsed (so the validator's plain errors show); if nothing parsed, a short explanation.
 export function parsePlanText(text) {
   if (typeof text !== "string" || !text.trim())
     return { ok: false, errors: ["There is no text to read."] };
   if (text.length > MAX_PLAN_TEXT)
     return { ok: false, errors: ["This is too long to be a plan."] };
-  const t = text.replace(/^\uFEFF/, "");
-  const fenced = [...t.matchAll(/```[a-z]*\s*([\s\S]*?)```/gi)].map(
-    (m) => m[1],
-  );
-  const tries = [t, ...fenced, ...topObjects(t), ...fenced.flatMap(topObjects)];
-  let first = null;
-  for (const s of tries) {
-    let obj;
-    try {
-      obj = JSON.parse(s);
-    } catch {
-      continue;
+  let first = null,
+    planish = null,
+    failed = null;
+  for (const [n, stage] of STAGES.entries()) {
+    for (const raw of candidatesOf(stage(text))) {
+      const s = n ? stripJsonExtras(raw) : raw;
+      let obj;
+      try {
+        obj = JSON.parse(s);
+      } catch (e) {
+        if (n === STAGES.length - 1 && s.includes("{") && (!failed || s.length > failed.src.length))
+          failed = { msg: String(e.message), src: s };
+        continue;
+      }
+      if (!isObj(obj)) continue;
+      if (validatePlanFile(obj).ok) return { ok: true, obj };
+      if ("format" in obj || "days" in obj) planish ??= obj;
+      first ??= obj;
     }
-    if (!isObj(obj)) continue;
-    if (validatePlanFile(obj).ok) return { ok: true, obj };
-    first ??= obj;
   }
-  if (first) return { ok: true, obj: first };
+  if (planish ?? first) return { ok: true, obj: planish ?? first };
+  const why = failed ? ` The reader said: ${failed.msg}.${around(failed.src, failed.msg)}` : "";
   return {
     ok: false,
     errors: [
-      'No valid JSON was found. If the answer has curly quotes, ask the AI to "use straight quotes and reply with only the JSON".',
+      `No plan could be read from this text.${why} Nothing was changed. You can send this text as it is to your helper.`,
     ],
   };
 }
@@ -539,5 +602,5 @@ ${JSON.stringify(EXAMPLE, null, 1)}
 EXERCISE LIST (use these names exactly), grouped by main muscle:
 ${groups.join("\n")}
 
-Reply with ONLY the JSON object. No other text, no explanation, no code fence.`;
+Reply with ONLY the JSON object, in a single code block, with nothing before or after it. No comments and no trailing commas.`;
 }
