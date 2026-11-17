@@ -267,6 +267,8 @@ export function render(root, ctx) {
       }
       case "export-full": {
         t.disabled = true;
+        const before = settings.lastExportAt;
+        settings.lastExportAt = Date.now(); // the file itself then records it, like the plain backup
         let size;
         try {
           const parts = [fullHead(state)];
@@ -277,9 +279,9 @@ export function render(root, ctx) {
           parts.push(FULL_TAIL);
           const blob = new Blob(parts, { type: "application/json" });
           size = blob.size;
-          settings.lastExportAt = Date.now();
           download(`gym-tracker-full-backup-${isoDay()}.json`, blob);
         } catch {
+          settings.lastExportAt = before;
           t.disabled = false;
           showBanner("Could not read your photos and sound. Try the plain backup instead.");
           return;
