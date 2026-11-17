@@ -979,6 +979,12 @@ a.card.block {
   color: var(--warning);
   font-weight: 600;
 }
+.pb {
+  margin: -4px 0 8px 28px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
 .set.hist {
   grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 44px;
 }

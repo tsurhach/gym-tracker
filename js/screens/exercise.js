@@ -1,4 +1,4 @@
-import { advice, exerciseHistory, parseNum, validSet } from "../logic.js";
+import { advice, exerciseHistory, isPersonalBest, parseNum, validSet } from "../logic.js";
 import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
 import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
@@ -37,6 +37,7 @@ function syncAll() {
       ),
     );
     row.classList.toggle("done", !!s.done);
+    if (!s.done && row.nextElementSibling?.matches(".pb")) row.nextElementSibling.remove();
     row.querySelector(".confirm").setAttribute("aria-pressed", String(!!s.done));
   }
 }
@@ -69,19 +70,21 @@ let justConfirmed = null;
 
 const val = (n) => (n == null ? "" : fmtKg(n));
 
-function setHtml(s, i) {
+export const pbHtml = `<div class="pb" role="note"><span aria-hidden="true">★</span> New best</div>`;
+
+function setHtml(s, i, past) {
   return `<div class="set${s.done ? " done" : ""}" data-i="${i}">
     <span class="set-n">${i + 1}</span>
     <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="kg" aria-label="Set ${i + 1} weight in kg" value="${esc(val(s.weight))}" />
     <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="reps" aria-label="Set ${i + 1} reps" value="${esc(s.reps ?? "")}" />
     <button class="confirm" data-act="confirm" aria-pressed="${!!s.done}" aria-label="${s.done ? "Unconfirm" : "Confirm"} set ${i + 1}">✓</button>
     <button class="icon-btn" data-act="remove" aria-label="Remove set ${i + 1}">✕</button>
-  </div>`;
+  </div>${s.done && isPersonalBest(past, s) ? pbHtml : ""}`;
 }
 
 // Only this section is redrawn when sets change, so the photo is never touched.
-const setsInner = (entry) => `<div class="set set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span><span></span></div>
-      ${entry.sets.map(setHtml).join("")}
+const setsInner = (entry, past) => `<div class="set set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span><span></span></div>
+      ${entry.sets.map((s, i) => setHtml(s, i, past)).join("")}
       <button class="btn" data-act="add" style="margin:8px 0 0">+ Add set</button>`;
 
 export function render(root, ctx) {
@@ -101,6 +104,7 @@ export function render(root, ctx) {
   const hist = exerciseHistory(state.sessions, entry.exerciseId).filter(
     (x) => x.sets.length,
   );
+  const past = hist.flatMap((h) => h.sets);
   const tags = ex
     ? [ex.primary, ...ex.secondary]
     : [entry.primary].filter(Boolean);
@@ -121,7 +125,7 @@ export function render(root, ctx) {
       ${prev ? `<div class="last-sets">${esc(lastText(prev))}</div>` : ""}
       <div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>
     </section>
-    <section class="card" data-sets>${setsInner(entry)}</section>
+    <section class="card" data-sets>${setsInner(entry, past)}</section>
     <a class="btn btn-primary" href="#/workout">Done, back to list</a>`;
 
   current = { root, entry, ctx };
@@ -224,7 +228,7 @@ export function render(root, ctx) {
       ctx.save(); // the picture appears or disappears: redraw the whole screen
       return;
     }
-    root.querySelector("[data-sets]").innerHTML = setsInner(entry);
+    root.querySelector("[data-sets]").innerHTML = setsInner(entry, past);
     ctx.save({ render: false });
   });
 }

@@ -1,7 +1,7 @@
-import { exerciseHistory, isStuck, validSet } from "../logic.js";
+import { exerciseHistory, isPersonalBest, isStuck, validSet } from "../logic.js";
 import { deleteSession, removeSet } from "../session.js";
 import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
-import { applyInputs } from "./exercise.js";
+import { applyInputs, pbHtml } from "./exercise.js";
 
 // Whole minutes, at least 1.
 export const durationMin = (ses) =>
@@ -133,14 +133,18 @@ if (typeof window !== "undefined") {
   });
 }
 
-function setRow(s, e, i) {
+function setRow(s, e, i, past) {
   return `<div class="set hist done" data-e="${e}" data-i="${i}">
     <span class="set-n">${i + 1}</span>
     <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="kg" aria-label="Set ${i + 1} weight in kg" value="${esc(fmtKg(s.weight))}" />
     <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="reps" aria-label="Set ${i + 1} reps" value="${esc(s.reps)}" />
     <button class="icon-btn" data-act="del-set" aria-label="Delete set ${i + 1}">✕</button>
-  </div>`;
+  </div>${isPersonalBest(past, s) ? pbHtml : ""}`;
 }
+
+// Every set of this exercise logged in workouts before ses.
+const earlier = (sessions, ses, id) =>
+  exerciseHistory(sessions.filter((x) => x.startedAt < ses.startedAt), id).flatMap((h) => h.sets);
 
 function sessionScreen(root, ctx) {
   const id = ctx.params.id;
@@ -157,7 +161,7 @@ function sessionScreen(root, ctx) {
         (en, e) => `<section class="card">
       <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${esc(en.name)}</a>${en.primary ? `<span class="tag">${esc(en.primary)}</span>` : ""}</div>
       <div class="set hist set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span></div>
-      ${en.sets.map((s, i) => setRow(s, e, i)).join("")}
+      ${en.sets.map((s, i) => setRow(s, e, i, earlier(ctx.state.sessions, ses, en.exerciseId))).join("")}
     </section>`,
       )
       .join("")}
