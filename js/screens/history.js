@@ -71,8 +71,9 @@ export function chartHtml(values) {
   const n = values.length;
   const first = pts[0];
   const last = pts[n - 1];
-  const label = (p, v, anchor) =>
-    `<text x="${p.x}" y="${p.y - 9}" text-anchor="${anchor}" fill="var(--muted)" font-size="12">${esc(fmtKg(v))} kg</text>`;
+  // Label sits on the side away from the line, so it never covers it.
+  const label = (p, v, anchor, other) =>
+    `<text x="${p.x}" y="${other && other.y < p.y ? p.y + 18 : p.y - 9}" text-anchor="${anchor}" fill="var(--muted)" font-size="12">${esc(fmtKg(v))} kg</text>`;
   const desc =
     n === 1
       ? `Heaviest weight: ${fmtKg(values[0])} kg in 1 session.`
@@ -80,7 +81,7 @@ export function chartHtml(values) {
   return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="${esc(desc)}">
     ${n > 1 ? `<polyline points="${pts.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />` : ""}
     ${n <= 30 ? pts.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--accent)" />`).join("") : ""}
-    ${label(first, values[0], n === 1 ? "middle" : "start")}${n > 1 ? label(last, values[n - 1], "end") : ""}
+    ${label(first, values[0], n === 1 ? "middle" : "start", pts[1])}${n > 1 ? label(last, values[n - 1], "end", pts[n - 2]) : ""}
   </svg>${n === 1 ? `<p class="muted small">Needs two sessions to draw a line.</p>` : ""}`;
 }
 
