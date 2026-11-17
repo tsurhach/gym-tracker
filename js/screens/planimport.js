@@ -11,7 +11,7 @@ import {
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 
 let pending = null; // { preview, back } the plan being previewed
-const ai = { request: "", mode: "describe", pasted: "" }; // survives going to the preview and back
+const ai = { request: "", mode: "describe", pasted: "", filePasted: "" }; // survives going to the preview and back
 const MAX_FILE = 1_000_000;
 
 const head = (t, sub = "") =>
@@ -84,6 +84,9 @@ function fileView(root, ctx) {
     <button class="btn btn-primary" id="check">Check pasted plan</button>
     <div id="out"></div>${back}`;
   const out = root.querySelector("#out");
+  const paste = root.querySelector("#paste");
+  paste.value = ai.filePasted;
+  paste.oninput = () => (ai.filePasted = paste.value);
   root.querySelector("#file").onchange = async (e) => {
     const f = e.target.files[0];
     e.target.value = "";
@@ -93,7 +96,7 @@ function fileView(root, ctx) {
     submit(await f.text(), ctx, out, "#/import/file");
   };
   root.querySelector("#check").onclick = () =>
-    submit(root.querySelector("#paste").value, ctx, out, "#/import/file");
+    submit(paste.value, ctx, out, "#/import/file");
 }
 
 function aiView(root, ctx) {
