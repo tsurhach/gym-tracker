@@ -4,7 +4,7 @@
   "version": 1,
   "name": "Full Body Beginner",
   "goal": "muscle",
-  "notes": "Three sessions a week, alternating A and B with a rest day between. A simple start that trains every major muscle group.",
+  "notes": "Three sessions a week with a rest day between. Alternate A and B each session: week 1 is A, B, A; week 2 is B, A, B. The app always offers the next one. Trains every major muscle group.",
   "days": [
    {
     "name": "A",
@@ -131,7 +131,7 @@
   "version": 1,
   "name": "5x5 Strength",
   "goal": "strength",
-  "notes": "Three sessions a week, alternating A and B. Heavy sets of five on a few big lifts.",
+  "notes": "Three sessions a week. Alternate A and B each session: week 1 is A, B, A; week 2 is B, A, B. The app always offers the next one. Heavy sets of five on a few big lifts.",
   "days": [
    {
     "name": "A",
@@ -204,7 +204,7 @@
   "version": 1,
   "name": "Upper / Lower",
   "goal": "muscle",
-  "notes": "Four days a week: two upper and two lower workouts. The A days are heavier, the B days use more reps.",
+  "notes": "Four sessions a week, in this order: Upper A, Lower A, Upper B, Lower B, then back to Upper A. The A days are heavier, the B days use more reps.",
   "days": [
    {
     "name": "Upper A",
@@ -449,7 +449,7 @@
   "version": 1,
   "name": "Push / Pull / Legs",
   "goal": "muscle",
-  "notes": "Three workouts, run once a week for a lighter schedule or twice a week (six days) for more volume.",
+  "notes": "Three workouts in the order Push, Pull, Legs, then around again. Do it once through a week (3 sessions) or twice (6 sessions) for more volume. The app offers the next one each time.",
   "days": [
    {
     "name": "Push",
@@ -635,7 +635,7 @@
   "version": 1,
   "name": "Body-Part Split",
   "goal": "muscle",
-  "notes": "Five days a week, one main muscle group per day, with more sets on each.",
+  "notes": "Five sessions a week, one main muscle group each: Chest, Back, Shoulders, Legs, Arms, then back to Chest. More sets on each.",
   "days": [
    {
     "name": "Chest",
