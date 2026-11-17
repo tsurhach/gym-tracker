@@ -219,3 +219,10 @@ test("exportCsv: names starting with = + - @ are made text, numbers untouched", 
   });
   assert.equal(exportCsv(s), "date,workout,exercise,set,weight_kg,reps\r\n2026-11-05,'=SUM(A1),'-Curl,1,-5,8\r\n");
 });
+test("plate settings survive export/import and are optional", () => {
+  const s = sample();
+  assert.equal(importJson(exportJson(s)).settings.plates, undefined);
+  s.settings.plates = [20, 10];
+  s.workouts.push({ id: "w", name: "W", muscles: [], items: [{ exerciseId: "x", sets: 3, repMin: 8, repMax: 12, step: 2.5, plates: true, emptyKg: 0 }] });
+  assert.deepEqual(importJson(exportJson(s)), s);
+});

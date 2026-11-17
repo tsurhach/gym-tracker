@@ -1,4 +1,13 @@
-import { advice, exerciseHistory, isPersonalBest, parseNum, validSet } from "../logic.js";
+import {
+  advice,
+  exerciseHistory,
+  isPersonalBest,
+  parseNum,
+  gymPlates,
+  plateRule,
+  plateText,
+  validSet,
+} from "../logic.js";
 import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
 import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
@@ -37,14 +46,33 @@ function syncAll() {
       ),
     );
     row.classList.toggle("done", !!s.done);
-    row.querySelector(".confirm").setAttribute("aria-pressed", String(!!s.done));
+    row
+      .querySelector(".confirm")
+      .setAttribute("aria-pressed", String(!!s.done));
   }
   paintBadges();
+}
+
+// The plate line follows the first unconfirmed set (the last set when all are done).
+// Only its own element changes, never the inputs.
+function paintPlates() {
+  const el = current?.root.querySelector("[data-plates]");
+  if (!el) return;
+  const rows = [...current.root.querySelectorAll(".set[data-i]")];
+  const row =
+    rows.find((r) => !current.entry.sets[Number(r.dataset.i)]?.done) ??
+    rows.at(-1);
+  const w = row ? parseNum(row.querySelector('[data-f="weight"]').value) : null;
+  const text = w ? plateText(w, current.rule.empty, gymPlates(current.ctx.state.settings)) : "";
+  el.hidden = !text;
+  el.textContent = text;
+  el.setAttribute("aria-label", text.replaceAll(" + ", ", "));
 }
 
 // "New best" badges follow the typed values. Only the badge elements change, never the inputs.
 function paintBadges() {
   if (!current?.root.isConnected) return;
+  paintPlates();
   const { root, entry, past } = current;
   for (const row of root.querySelectorAll(".set[data-i]")) {
     const s = entry.sets[Number(row.dataset.i)];
@@ -54,7 +82,9 @@ function paintBadges() {
       row.querySelector('[data-f="weight"]').value,
       row.querySelector('[data-f="reps"]').value,
     );
-    const badge = row.nextElementSibling?.matches(".pb") ? row.nextElementSibling : null;
+    const badge = row.nextElementSibling?.matches(".pb")
+      ? row.nextElementSibling
+      : null;
     const want = t.done && isPersonalBest(past, t);
     if (want && !badge) row.insertAdjacentHTML("afterend", pbHtml);
     else if (!want && badge) badge.remove();
@@ -82,7 +112,8 @@ const revokeMedia = () => {
   if (mediaUrl) URL.revokeObjectURL(mediaUrl);
   mediaUrl = null;
 };
-if (typeof window !== "undefined") window.addEventListener("hashchange", revokeMedia);
+if (typeof window !== "undefined")
+  window.addEventListener("hashchange", revokeMedia);
 
 // The set just confirmed: a second tap within 400 ms is a double-tap, not an undo.
 let justConfirmed = null;
@@ -102,7 +133,10 @@ function setHtml(s, i, past) {
 }
 
 // Only this section is redrawn when sets change, so the photo is never touched.
-const setsInner = (entry, past) => `<div class="set set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span><span></span></div>
+const setsInner = (
+  entry,
+  past,
+) => `<div class="set set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span><span></span></div>
       ${entry.sets.map((s, i) => setHtml(s, i, past)).join("")}
       <button class="btn" data-act="add" style="margin:8px 0 0">+ Add set</button>`;
 
@@ -127,6 +161,7 @@ export function render(root, ctx) {
   const tags = ex
     ? [ex.primary, ...ex.secondary]
     : [entry.primary].filter(Boolean);
+  const rule = plateRule(item, ex);
   const isCustom = entry.exerciseId.startsWith("custom-");
   revokeMedia();
   const base = `./img/ex/${encodeURIComponent(entry.exerciseId)}`;
@@ -143,11 +178,13 @@ export function render(root, ctx) {
       <h3 style="margin-top:0">Last time${hist.length ? ` · ${esc(fmtDate(hist[hist.length - 1].startedAt))}` : ""}</h3>
       ${prev ? `<div class="last-sets">${esc(lastText(prev))}</div>` : ""}
       <div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>
+      ${rule.on ? `<div class="muted small" role="note" data-plates hidden></div>` : ""}
     </section>
     <section class="card" data-sets>${setsInner(entry, past)}</section>
     <a class="btn btn-primary" href="#/workout">Done, back to list</a>`;
 
-  current = { root, entry, ctx, past };
+  current = { root, entry, ctx, past, rule };
+  paintPlates();
 
   // Only the media area is redrawn, so typed set values are never disturbed.
   const mediaBox = root.querySelector("[data-media]");
@@ -222,7 +259,11 @@ export function render(root, ctx) {
       }
       entry.sets.splice(i, 1);
     } else if (act === "confirm") {
-      if (s.done && justConfirmed?.s === s && Date.now() - justConfirmed.at < 400)
+      if (
+        s.done &&
+        justConfirmed?.s === s &&
+        Date.now() - justConfirmed.at < 400
+      )
         return;
       if (s.done) {
         s.done = false;
@@ -250,6 +291,7 @@ export function render(root, ctx) {
       return;
     }
     root.querySelector("[data-sets]").innerHTML = setsInner(entry, past);
+    paintPlates();
     ctx.save({ render: false });
   });
 }

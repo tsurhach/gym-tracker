@@ -89,6 +89,7 @@ async function main() {
           primary: e.primary,
           secondary: e.secondary ?? [],
           images: e.images ?? 0,
+          equipment: e.equipment,
         }
       );
     },

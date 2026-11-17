@@ -1,5 +1,5 @@
 import { GOALS, MUSCLES } from "../constants.js";
-import { parseNum } from "../logic.js";
+import { PLATE_SIZES, gymPlates, parseNum, plateRule } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
 import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportCsv, exportJson } from "../store.js";
@@ -48,6 +48,7 @@ function download(filename, blob) {
 
 function itemHtml(it, ctx, i, n) {
   const ex = ctx.lookup(it.exerciseId);
+  const rule = plateRule(it, ex);
   return `<li class="item" data-x="${esc(it.exerciseId)}">
     <div class="row">
       <div class="grow">
@@ -64,6 +65,12 @@ function itemHtml(it, ctx, i, n) {
       <label>Max reps<input data-field="repMax" inputmode="numeric" value="${esc(it.repMax)}" /></label>
       <label>Step kg<input data-field="step" inputmode="decimal" value="${esc(fmtKg(it.step))}" /></label>
     </div>
+    <label class="setting">Uses plates
+      <input type="checkbox" data-field="uses"${rule.on ? " checked" : ""} />
+    </label>
+    ${rule.on ? `<div class="setting">Empty weight (bar or sled, before plates)
+      <span class="rest-in"><input data-field="emptyKg" inputmode="decimal" aria-label="Empty weight in kg" value="${esc(fmtKg(rule.empty))}" /> kg</span>
+    </div>` : ""}
   </li>`;
 }
 
@@ -133,6 +140,10 @@ export function render(root, ctx) {
         </span>
       </div>
       <p class="muted small">0:00 turns the timer off</p>
+      <div class="setting-group" role="group" aria-label="Plates the gym has">
+        <div class="muted small">Plates the gym has (kg, pairs)</div>
+        <div class="plate-pick">${PLATE_SIZES.map((k) => `<label><input type="checkbox" data-field="plate" data-kg="${k}"${gymPlates(settings).includes(k) ? " checked" : ""} /> ${k}</label>`).join("")}</div>
+      </div>
       <label class="setting">Notify me when rest is over
         <input type="checkbox" data-field="notifyRest"${settings.notifyRest ? " checked" : ""}${push.supported() ? "" : " disabled"} />
       </label>
@@ -314,6 +325,14 @@ export function render(root, ctx) {
     if (!field) return;
 
     if (field === "showPhotos") settings.showPhotos = t.checked;
+    else if (field === "plate")
+      settings.plates = PLATE_SIZES.filter((k) =>
+        k === Number(t.dataset.kg) ? t.checked : gymPlates(settings).includes(k),
+      );
+    else if (field === "uses") {
+      const { w, xi } = findIn(ctx.state, t);
+      if (w?.items[xi]) w.items[xi].plates = t.checked;
+    }
     else if (field === "notifyRest") {
       // enable() must start inside this tap, so nothing is awaited before it.
       if (t.checked) {
@@ -366,7 +385,10 @@ function applyField(ctx, t) {
   const v = parseNum(t.value);
   const whole = Number.isInteger(v) && v >= 1;
   let ok = true;
-  if (field === "step") {
+  if (field === "emptyKg") {
+    ok = v !== null && v <= 500;
+    if (ok) it.emptyKg = v;
+  } else if (field === "step") {
     ok = v !== null && v > 0;
     if (ok) it.step = v;
   } else if (!whole) ok = false;
@@ -375,14 +397,16 @@ function applyField(ctx, t) {
   else if (field === "repMax" && v >= it.repMin) it.repMax = v;
   else ok = false;
   if (ok) return null;
-  return field === "step"
+  return field === "emptyKg"
+    ? "Empty weight must be a number, 0 or more, like 20 or 0."
+    : field === "step"
     ? "Step must be a number above 0, like 2.5 or 1,25."
     : field === "sets"
       ? "Sets must be a whole number, 1 or more."
       : "Reps must be whole numbers, 1 or more, with min no higher than max.";
 }
 
-const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step"]);
+const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step", "emptyKg"]);
 
 // Rest length from its two fields (blank counts as 0).
 function syncRest(ctx) {

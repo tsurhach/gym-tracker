@@ -12,6 +12,12 @@ import {
   isPersonalBest,
   nextWorkoutId,
   muscleTally,
+  platesPerSide,
+  plateText,
+  gymPlates,
+  plateRule,
+  plateDefault,
+  PLATE_SIZES,
 } from "../js/logic.js";
 import { MUSCLES, GOALS, DEFAULT_STEP } from "../js/constants.js";
 
@@ -196,4 +202,80 @@ test("isPersonalBest: heavier, same weight more reps, same or lower, no history"
   assert.equal(isPersonalBest(past, { weight: 50, reps: 10 }), false);
   assert.equal(isPersonalBest(past, { weight: 45, reps: 20 }), false);
   assert.equal(isPersonalBest([], { weight: 50, reps: 10 }), false);
+});
+test("platesPerSide: 72.5 on a 20 kg bar, no 25s, is 20 + 5 + 1.25", () => {
+  const r = platesPerSide(72.5, 20, PLATE_SIZES.slice(1));
+  assert.deepEqual(r, { each: [20, 5, 1.25], total: 72.5, exact: true, below: false });
+});
+
+test("platesPerSide: just the bar, below the bar, bad input", () => {
+  assert.deepEqual(platesPerSide(20, 20, PLATE_SIZES).each, []);
+  assert.equal(platesPerSide(20, 20, PLATE_SIZES).exact, true);
+  const low = platesPerSide(15, 20, PLATE_SIZES);
+  assert.equal(low.below, true);
+  assert.equal(low.total, 20);
+  for (const t of [0, -5, null, undefined, NaN, "x", Infinity, 1e9])
+    assert.equal(platesPerSide(t, 20, PLATE_SIZES), null);
+});
+
+test("platesPerSide: unreachable weight gives the closest total at or below", () => {
+  const r = platesPerSide(72, 20, PLATE_SIZES);
+  assert.deepEqual(r.each, [25]);
+  assert.equal(r.total, 70);
+  assert.equal(r.exact, false);
+  const r2 = platesPerSide(21, 20, PLATE_SIZES);
+  assert.deepEqual([r2.each, r2.total, r2.exact], [[], 20, false]);
+  assert.deepEqual(platesPerSide(60, 20, [20, 5]).each, [20]);
+  assert.deepEqual(platesPerSide(100, 20, []).each, []);
+});
+
+test("platesPerSide: repeats plates and survives floating point", () => {
+  assert.deepEqual(platesPerSide(140, 20, PLATE_SIZES).each, [25, 25, 10]);
+  const r = platesPerSide(20 + 2 * 1.1 + 2 * 0.2, 20, [1.1, 0.2]);
+  assert.equal(r.exact, true);
+  assert.equal(platesPerSide(47.5, 15, PLATE_SIZES).total, 47.5);
+});
+
+test("plateText wording", () => {
+  const P = PLATE_SIZES;
+  assert.equal(plateText(72.5, 20, P), "Each side: 25 + 1.25"); // greedy takes the 25
+  assert.equal(plateText(72.5, 20, [20, 10, 5, 2.5, 1.25]), "Each side: 20 + 5 + 1.25");
+  assert.equal(plateText(20, 20, P), "Just the bar");
+  assert.equal(plateText(72, 20, P), "Closest: 70 kg — each side: 25");
+  assert.equal(plateText(21, 20, P), "Closest: 20 kg — just the bar");
+  assert.equal(plateText(10, 20, P), "Below the empty weight (20 kg)");
+  assert.equal(plateText(0, 20, P), "");
+  assert.equal(plateText(60, 15, [20, 10]), "Closest: 55 kg — each side: 20");
+  assert.equal(plateText(60, 0, P), "Each side: 25 + 5");
+  assert.equal(plateText(1, 0, P), "Closest: 0 kg — no plates");
+});
+
+test("gymPlates defaults when settings lack or damage the field", () => {
+  assert.deepEqual(gymPlates(undefined), PLATE_SIZES);
+  assert.deepEqual(gymPlates({ plates: [10] }), [10]);
+  assert.deepEqual(gymPlates({ plates: "bad" }), PLATE_SIZES);
+});
+
+test("plateDefault by equipment, Smith and plate-loaded machines", () => {
+  const d = (equipment, id = "x", name = "X") => plateDefault({ id, name, equipment });
+  assert.equal(d("barbell"), 20);
+  assert.equal(d("e-z curl bar"), 0);
+  assert.equal(d("trap bar"), 0);
+  assert.equal(d("machine", "smith-machine-squat", "Smith Machine Squat"), 0);
+  assert.equal(d("machine", "leg-press", "Leg Press"), 0);
+  for (const e of ["dumbbell", "cable", "body only", "kettlebells", "other", undefined])
+    assert.equal(d(e), null);
+  assert.equal(d("machine"), null);
+  assert.equal(plateDefault(undefined), null);
+});
+
+test("plateRule: overrides win, otherwise the equipment default", () => {
+  const bb = { id: "b", name: "B", equipment: "barbell" };
+  assert.deepEqual(plateRule({}, bb), { on: true, empty: 20 });
+  assert.deepEqual(plateRule({ plates: false }, bb), { on: false, empty: 20 });
+  assert.deepEqual(plateRule({ emptyKg: 15 }, bb), { on: true, empty: 15 });
+  const custom = { id: "custom-1", name: "C" };
+  assert.deepEqual(plateRule({}, custom), { on: false, empty: 0 });
+  assert.deepEqual(plateRule({ plates: true, emptyKg: 12 }, custom), { on: true, empty: 12 });
+  assert.deepEqual(plateRule({ emptyKg: -3 }, bb), { on: true, empty: 20 });
 });

@@ -127,3 +127,67 @@ export function muscleTally(sessions, now) {
   }
   return tally;
 }
+
+// ---- Plate calculator (kg, pairs, unlimited count; whole grams so sums stay exact) ----
+export const PLATE_SIZES = [25, 20, 15, 10, 5, 2.5, 1.25];
+
+// Plate sizes the gym has; defaults keep data saved before this existed working.
+export function gymPlates(settings) {
+  const p = settings?.plates;
+  return Array.isArray(p) && p.every((x) => Number.isFinite(x) && x > 0) ? p : PLATE_SIZES;
+}
+
+// Library exercises loaded with plates, by equipment (empty weight in kg). Only a standard bar is 20;
+// everything else defaults to 0 and the owner types the real figure in Plan.
+const EMPTY_BY_EQUIPMENT = { barbell: 20, "e-z curl bar": 0, "trap bar": 0 };
+const PLATE_MACHINES = new Set(["leg-press", "hack-squat", "calf-press-on-the-leg-press-machine"]);
+
+// Default empty weight for an exercise, or null when it is not plate-loaded (custom: null).
+export function plateDefault(ex) {
+  if (!ex) return null;
+  if (/smith/i.test(ex.name ?? "")) return 0;
+  if (PLATE_MACHINES.has(ex.id)) return 0;
+  return EMPTY_BY_EQUIPMENT[ex.equipment] ?? null;
+}
+
+// Per-item overrides (it.plates, it.emptyKg) on top of the equipment default.
+export function plateRule(item, ex) {
+  const d = plateDefault(ex);
+  const on = typeof item?.plates === "boolean" ? item.plates : d !== null;
+  const e = item?.emptyKg;
+  return { on, empty: Number.isFinite(e) && e >= 0 ? e : (d ?? 0) };
+}
+
+// Plates for ONE side, largest first. Greedy: fine for normal plate sets, but an odd set
+// (say only 20 and 15) can miss a closer total. ponytail: switch to a small DP if ever needed.
+// Not reachable exactly: the closest total at or below the target. null for no usable target.
+export function platesPerSide(target, bar, plates) {
+  const g = (x) => Math.round(x * 1000);
+  const t = g(target);
+  const b = g(bar);
+  if (!(t > 0 && t <= 1e6) || !(b >= 0)) return null;
+  if (t < b) return { each: [], total: bar, exact: false, below: true };
+  let side = Math.floor((t - b) / 2);
+  const each = [];
+  for (const p of [...new Set(plates.map(g))].filter((x) => x > 0).sort((x, y) => y - x))
+    for (let n = Math.floor(side / p); n > 0; n--) {
+      each.push(p / 1000);
+      side -= p;
+    }
+  const total = (b + 2 * (Math.floor((t - b) / 2) - side)) / 1000;
+  return { each, total, exact: g(total) === t, below: false };
+}
+
+// The one quiet line on the exercise screen; "" when there is nothing to say.
+export function plateText(target, empty, plates) {
+  const r = platesPerSide(target, empty, plates);
+  if (!r) return "";
+  if (r.below) return `Below the empty weight (${round2(empty)} kg)`;
+  const side = r.each.length
+    ? `each side: ${r.each.join(" + ")}`
+    : empty > 0
+      ? "just the bar"
+      : "no plates";
+  if (r.exact) return side[0].toUpperCase() + side.slice(1);
+  return `Closest: ${round2(r.total)} kg — ${side}`;
+}
