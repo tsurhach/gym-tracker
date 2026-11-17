@@ -1137,3 +1137,33 @@ details.sec > summary:focus-visible {
     transition: none;
   }
 }
+
+/* How to use guide: title with a short line under it */
+details.help > summary {
+  flex-wrap: wrap;
+  gap: 0 8px;
+  padding-block: 8px;
+}
+details.help .sec-title {
+  flex: 1 1 100%;
+  padding-right: 24px;
+}
+details.help .sec-count {
+  flex: 1 1 100%;
+  white-space: normal;
+  margin-top: -2px;
+}
+details.help > summary::after {
+  position: absolute;
+  right: var(--pad);
+}
+details.help {
+  position: relative;
+}
+details.help .sec-body ol,
+details.help .sec-body ul {
+  padding-left: 22px;
+}
+details.help .sec-body li {
+  margin-bottom: 6px;
+}

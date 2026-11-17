@@ -142,6 +142,7 @@ export function render(root, ctx) {
   root.innerHTML = `<h1 class="title">Plan</h1>
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
+    <a class="card weight-card" href="#/help"><span>How to use this app</span><span class="muted small">Short guide</span></a>
     ${section("g:goal", "Goal", goalHtml)}
     ${section(
       "g:change",
