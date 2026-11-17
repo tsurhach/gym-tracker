@@ -209,3 +209,13 @@ test("exportCsv: header, one row per confirmed set, quoting", async () => {
   );
   assert.equal(exportCsv(emptyState()), "date,workout,exercise,set,weight_kg,reps\r\n");
 });
+
+test("exportCsv: names starting with = + - @ are made text, numbers untouched", async () => {
+  const { exportCsv } = await import("../js/store.js");
+  const s = emptyState();
+  s.sessions.push({
+    id: "a", workoutName: "=SUM(A1)", startedAt: new Date(2026, 10, 5, 12).getTime(),
+    entries: [{ exerciseId: "x", name: "-Curl", sets: [{ weight: -5, reps: 8, done: true }] }],
+  });
+  assert.equal(exportCsv(s), "date,workout,exercise,set,weight_kg,reps\r\n2026-11-05,'=SUM(A1),'-Curl,1,-5,8\r\n");
+});
