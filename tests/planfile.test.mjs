@@ -382,3 +382,88 @@ test("buildAiPrompt: both modes, request, format, all names, size", () => {
   );
   assert.doesNotThrow(() => buildAiPrompt());
 });
+
+// ---- review fixes ----
+test("hostile pasted text: deep nesting, proto keys, Infinity, numbers as text", () => {
+  const deep = "[".repeat(100_000) + "]".repeat(100_000);
+  const nested = "{" + '"a":{'.repeat(60_000) + "}".repeat(60_001);
+  for (const t of [deep, nested, "x".repeat(300_000)])
+    assert.doesNotThrow(() => parsePlanText(t));
+  const g = JSON.stringify(good());
+  assert.ok(g.includes('"sets":5'));
+  const bad = [
+    g.replace('"sets":5', '"sets":"5"'),
+    g.replace('"sets":5', '"sets":1e999'),
+    g.replace('"goal":"strength"', '"goal":"__proto__"'),
+    g.replace('"goal":"strength"', '"goal":"constructor"'),
+    `{"__proto__":{"ok":true},"format":"gym-tracker-plan"}`,
+  ];
+  for (const t of bad) {
+    const r = parsePlanText(t);
+    assert.ok(!r.ok || !validatePlanFile(r.obj).ok, t.slice(0, 60));
+  }
+  assert.equal({}.ok, undefined); // no prototype pollution
+});
+
+test("matching: ambiguous generic names stay unmatched; Smith squat alias", () => {
+  for (const n of ["Chest Fly", "Bicep Curl", "Biceps Curl"])
+    assert.equal(matchExercise(n, lib), null, n);
+  assert.equal(matchExercise("Smith Squat", lib)?.id, "smith-machine-squat");
+});
+
+test("non-Latin names stay distinct; own exercise beats an alias", () => {
+  const p = good();
+  p.days[0].exercises = [
+    { name: "סקוואט", sets: 3, reps: [8, 12], muscle: "Quads" },
+    { name: "לחיצת חזה", sets: 3, reps: [8, 12], muscle: "Chest" },
+    { name: "Squat", sets: 3, reps: [5, 5] },
+  ];
+  assert.equal(validatePlanFile(p).ok, true);
+  const own = [
+    { id: "h1", name: "דדליפט", primary: "Back" },
+    { id: "c9", name: "Squat", primary: "Quads" },
+  ];
+  const r = planFromFile(p, lib, own);
+  assert.deepEqual(
+    r.days[0].exercises.map((x) => x.kind),
+    ["new", "new", "existing"],
+  );
+  assert.equal(r.days[0].exercises[2].id, "c9");
+  assert.equal(r.newExercises.length, 2);
+});
+
+test("applyPlan keeps plate settings of exercises in both plans, never duplicates own exercises", () => {
+  const p = good();
+  p.days[0].exercises = [
+    { name: "Smith Machine Squat", sets: 4, reps: [6, 8] },
+    { name: "Bench Press", sets: 3, reps: [5, 5] },
+    { name: "Cable Hip Abduction", sets: 3, reps: [10, 15], muscle: "Glutes" },
+  ];
+  const st = emptyState();
+  const prev = planFromFile(p, lib, st.customExercises);
+  st.workouts = [
+    {
+      id: "w",
+      name: "Old",
+      muscles: [],
+      items: [
+        { exerciseId: "smith-machine-squat", sets: 3, repMin: 8, repMax: 12, step: 2.5, emptyKg: 15, plates: true },
+        { exerciseId: "bench-press", sets: 3, repMin: 8, repMax: 12, step: 2.5, plates: false },
+      ],
+    },
+  ];
+  // made by hand after the preview was built
+  st.customExercises.push({ id: "own", name: "cable hip abduction", primary: "Glutes", secondary: [] });
+  assert.equal(applyPlan(st, prev).ok, true);
+  const [smith, bench, abd] = st.workouts[0].items;
+  assert.deepEqual(
+    { ...smith },
+    { exerciseId: "smith-machine-squat", sets: 4, repMin: 6, repMax: 8, step: 2.5, emptyKg: 15, plates: true },
+  );
+  assert.equal(bench.plates, false);
+  assert.equal(bench.emptyKg, undefined);
+  assert.equal(bench.repMin, 5);
+  assert.equal(abd.exerciseId, "own");
+  assert.equal(st.customExercises.length, 1);
+  assert.ok(isValidState(st));
+});

@@ -89,11 +89,13 @@ export const PLAN_FILE_SCHEMA = {
 };
 
 // ---- names ----
-// Lowercase letters and digits only: "Pull-Up", "pull up" and "PULLUP" are one name.
+// Lowercase letters and digits only: "Pull-Up", "pull up" and "PULLUP" are one name. Any script counts
+// as letters, so two Hebrew names never collapse to the same empty key; accents are dropped.
 export const norm = (s) =>
   String(s ?? "")
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}]/gu, "");
 
 // Other common names -> library exercise id. Exact only; anything else is a new custom exercise.
 export const ALIAS_LIST = {
@@ -127,14 +129,11 @@ export const ALIAS_LIST = {
   "pull-up": ["pullup", "pull ups", "pullups"],
   "chin-up": ["chinup", "chin ups", "chinups"],
   "push-up": ["pushup", "push ups", "pushups"],
-  "dumbbell-flyes": ["dumbbell fly", "dumbbell flies", "chest fly"],
+  // "chest fly" and "bicep curl" are left out on purpose: the library has several of each.
+  "dumbbell-flyes": ["dumbbell fly", "dumbbell flies"],
   "leverage-chest-press": ["chest press", "machine chest press"],
-  "dumbbell-bicep-curl": [
-    "dumbbell curl",
-    "db curl",
-    "bicep curl",
-    "biceps curl",
-  ],
+  "dumbbell-bicep-curl": ["dumbbell curl", "db curl"],
+  "smith-machine-squat": ["smith squat"],
   "triceps-pushdown": ["tricep pushdown", "cable pushdown", "pushdown"],
   "triceps-dip": ["tricep dip", "tricep dips", "triceps dips"],
   skullcrusher: [
@@ -304,7 +303,11 @@ export function planFromFile(obj, library, customExercises = []) {
         repMax,
         step: x.step ?? DEFAULT_STEP,
       };
-      const lib = matchExercise(name, library);
+      // One of the owner's own exercises with this exact name beats an alias, so its history stays linked.
+      const own = customExercises.find((c) => norm(c.name) === norm(name));
+      const lib = own
+        ? library.find((e) => norm(e.name) === norm(name))
+        : matchExercise(name, library);
       if (lib)
         return {
           ...base,
@@ -313,7 +316,6 @@ export function planFromFile(obj, library, customExercises = []) {
           name: lib.name,
           primary: lib.primary,
         };
-      const own = customExercises.find((c) => norm(c.name) === norm(name));
       if (own)
         return {
           ...base,
@@ -322,7 +324,7 @@ export function planFromFile(obj, library, customExercises = []) {
           name: own.name,
           primary: own.primary,
         };
-      const key = norm(name);
+      const key = norm(name) || name; // a name of only symbols keeps itself
       if (!news.has(key))
         news.set(key, {
           key,
@@ -361,10 +363,11 @@ export function applyPlan(state, preview) {
       ok: false,
       error: "Choose a muscle group for each new exercise first.",
     };
+  // An own exercise made since the preview was built is reused, never duplicated.
   const made = new Map(
     preview.newExercises.map((n) => [
       n.key,
-      {
+      state.customExercises.find((c) => norm(c.name) === norm(n.name)) ?? {
         id: crypto.randomUUID(),
         name: n.name,
         primary: muscleOf(n.muscle),
@@ -372,17 +375,28 @@ export function applyPlan(state, preview) {
       },
     ]),
   );
+  // The owner's plate settings (uses plates, empty weight) follow the exercise into the new plan.
+  const kept = new Map();
+  for (const w of state.workouts)
+    for (const it of w.items) {
+      const o = kept.get(it.exerciseId) ?? {};
+      if (o.plates === undefined && typeof it.plates === "boolean") o.plates = it.plates;
+      if (o.emptyKg === undefined && Number.isFinite(it.emptyKg)) o.emptyKg = it.emptyKg;
+      kept.set(it.exerciseId, o);
+    }
   const workouts = preview.days.map((d) => {
     const prim = new Set();
     const items = d.exercises.map((x) => {
       const c = x.kind === "new" ? made.get(x.key) : null;
       prim.add(c ? c.primary : x.primary);
+      const exerciseId = c ? c.id : x.id;
       return {
-        exerciseId: c ? c.id : x.id,
+        exerciseId,
         sets: x.sets,
         repMin: x.repMin,
         repMax: x.repMax,
         step: x.step,
+        ...kept.get(exerciseId),
       };
     });
     return {
@@ -392,12 +406,13 @@ export function applyPlan(state, preview) {
       items,
     };
   });
-  state.customExercises.push(...made.values());
+  state.customExercises.push(
+    ...[...made.values()].filter((c) => !state.customExercises.includes(c)),
+  );
   state.workouts = workouts;
   state.settings.goal = preview.goal;
   return { ok: true };
 }
-
 
 // ---- reading text ----
 export const MAX_PLAN_TEXT = 200_000;
@@ -405,7 +420,10 @@ export const MAX_PLAN_TEXT = 200_000;
 // Every top-level {...} in the text (string-aware), so chatter around or between objects is skipped.
 function topObjects(t) {
   const out = [];
-  let depth = 0, start = -1, inStr = false, esc = false;
+  let depth = 0,
+    start = -1,
+    inStr = false,
+    esc = false;
   for (let i = 0; i < t.length; i++) {
     const c = t[i];
     if (inStr) {
@@ -415,7 +433,8 @@ function topObjects(t) {
     } else if (c === '"') inStr = depth > 0;
     else if (c === "{") {
       if (depth++ === 0) start = i;
-    } else if (c === "}" && depth > 0 && --depth === 0) out.push(t.slice(start, i + 1));
+    } else if (c === "}" && depth > 0 && --depth === 0)
+      out.push(t.slice(start, i + 1));
   }
   return out;
 }
@@ -424,10 +443,14 @@ function topObjects(t) {
 // candidate that is a valid plan; if none is, the first that parses (so the plain errors show).
 // Smart quotes are not repaired.
 export function parsePlanText(text) {
-  if (typeof text !== "string" || !text.trim()) return { ok: false, errors: ["There is no text to read."] };
-  if (text.length > MAX_PLAN_TEXT) return { ok: false, errors: ["This is too long to be a plan."] };
+  if (typeof text !== "string" || !text.trim())
+    return { ok: false, errors: ["There is no text to read."] };
+  if (text.length > MAX_PLAN_TEXT)
+    return { ok: false, errors: ["This is too long to be a plan."] };
   const t = text.replace(/^\uFEFF/, "");
-  const fenced = [...t.matchAll(/```[a-z]*\s*([\s\S]*?)```/gi)].map((m) => m[1]);
+  const fenced = [...t.matchAll(/```[a-z]*\s*([\s\S]*?)```/gi)].map(
+    (m) => m[1],
+  );
   const tries = [t, ...fenced, ...topObjects(t), ...fenced.flatMap(topObjects)];
   let first = null;
   for (const s of tries) {
@@ -444,7 +467,9 @@ export function parsePlanText(text) {
   if (first) return { ok: true, obj: first };
   return {
     ok: false,
-    errors: ['No valid JSON was found. If the answer has curly quotes, ask the AI to "use straight quotes and reply with only the JSON".'],
+    errors: [
+      'No valid JSON was found. If the answer has curly quotes, ask the AI to "use straight quotes and reply with only the JSON".',
+    ],
   };
 }
 
@@ -461,7 +486,13 @@ const EXAMPLE = {
       exercises: [
         { name: "Barbell Squat", sets: 3, reps: [6, 10], step: 2.5 },
         { name: "Bench Press", sets: 3, reps: [6, 10], step: 2.5 },
-        { name: "Cable Hip Abduction", sets: 3, reps: [10, 15], step: 2.5, muscle: "Glutes" },
+        {
+          name: "Cable Hip Abduction",
+          sets: 3,
+          reps: [10, 15],
+          step: 2.5,
+          muscle: "Glutes",
+        },
       ],
     },
   ],
@@ -469,12 +500,21 @@ const EXAMPLE = {
 
 // Prompt for the owner's own AI chat app (also reused by a later in-app version).
 // mode: "describe" (design a plan from the request) or "convert" (convert an attached plan faithfully).
-export function buildAiPrompt({ request = "", library = [], custom = [], mode = "describe" } = {}) {
+export function buildAiPrompt({
+  request = "",
+  library = [],
+  custom = [],
+  mode = "describe",
+} = {}) {
   const groups = MUSCLES.map((m) => {
-    const names = [...library, ...custom].filter((e) => e.primary === m).map((e) => e.name);
+    const names = [...library, ...custom]
+      .filter((e) => e.primary === m)
+      .map((e) => e.name);
     return names.length ? `${m}: ${names.join("; ")}` : "";
   }).filter(Boolean);
-  const ask = String(request).trim() || "(nothing specific; use sensible defaults for a general trainee)";
+  const ask =
+    String(request).trim() ||
+    "(nothing specific; use sensible defaults for a general trainee)";
   const task =
     mode === "convert"
       ? `TASK: Convert the training plan I have attached (a file or photo) into this app's format. Be faithful: keep its days, its exercises, its sets and its reps exactly as written. Do not improve it, add to it or remove from it. Map each exercise to the closest name in the exercise list below. Only when nothing in the list fits, use the original name and add a "muscle". If the plan gives reps as a single number, use it twice, like [5, 5]. If it gives no weight steps, leave "step" out.`
@@ -490,7 +530,8 @@ RULES
 - "goal" must be one of: ${Object.keys(GOALS).join(", ")}.
 - "muscle" is allowed only for exercises that are NOT in the list below, and must be one of: ${MUSCLES.join(", ")}.
 - Limits: ${LIMITS.days[0]} to ${LIMITS.days[1]} days; ${LIMITS.exercises[0]} to ${LIMITS.exercises[1]} exercises per day; sets ${LIMITS.sets[0]} to ${LIMITS.sets[1]}; reps ${LIMITS.reps[0]} to ${LIMITS.reps[1]} as [lowest, highest]; step ${LIMITS.step[0]} to ${LIMITS.step[1]}; names up to ${LIMITS.name} characters (day names up to ${LIMITS.dayName}); no exercise twice in one day.
-- Use plain straight quotes. "notes" is optional: one or two sentences.
+- "sets" and both "reps" numbers are whole numbers.
+- Use plain straight quotes. "notes" is optional: one or two sentences, at most ${LIMITS.notes} characters.
 
 FORMAT (example; yours will differ):
 ${JSON.stringify(EXAMPLE, null, 1)}
