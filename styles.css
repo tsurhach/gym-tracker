@@ -1080,3 +1080,60 @@ a.card.block {
   min-height: 24px;
   height: 24px;
 }
+
+/* Plan screen: collapsible sections */
+details.sec {
+  padding: 0;
+}
+details.sec > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 var(--pad);
+  cursor: pointer;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+details.sec > summary::-webkit-details-marker {
+  display: none;
+}
+details.sec > summary::after {
+  content: "";
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-left: auto;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+details.sec[open] > summary::after {
+  transform: rotate(45deg);
+}
+details.sec > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+}
+.sec-title {
+  font-size: 18px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.sec-count {
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.sec-body {
+  padding: 0 var(--pad) var(--pad);
+}
+.sec-body > :last-child {
+  margin-bottom: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  details.sec > summary::after {
+    transition: none;
+  }
+}
