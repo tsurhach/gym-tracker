@@ -4,6 +4,7 @@ import { GOALS, MUSCLES } from "../constants.js";
 import {
   applyPlan,
   buildAiPrompt,
+  fileKind,
   needsMuscle,
   parsePlanText,
   planFromFile,
@@ -41,6 +42,32 @@ const pasteBox = (
 ) => `<label class="setting" style="display:block">${label}
     <textarea id="${id}" rows="8" style="width:100%;margin-top:6px" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>`;
 
+// Copies `text`; on failure shows a select-all box in `fb`. Call straight from a tap handler (iOS needs a fresh tap).
+async function copyText(text, fb) {
+  try {
+    await navigator.clipboard.writeText(text);
+    fb.innerHTML = "";
+    showBanner("Instructions copied.", { kind: "ok" });
+  } catch {
+    fb.innerHTML = `<p class="muted small">Copying did not work here. Select all of this text and copy it yourself.</p><textarea id="prompt" rows="8" readonly style="width:100%"></textarea>`;
+    const ta = fb.querySelector("#prompt");
+    ta.value = text;
+    ta.focus();
+    ta.select();
+  }
+}
+
+// "Paste the AI's answer" box -> preview. Same on the AI screen and the file screen.
+const answerHtml = `${pasteBox("answer", "Paste the AI's answer")}
+      <button class="btn btn-primary" id="checkAnswer">Check the plan</button>`;
+function wireAnswer(root, ctx, out, backTo) {
+  const a = root.querySelector("#answer");
+  a.value = ai.pasted;
+  a.oninput = () => (ai.pasted = a.value);
+  root.querySelector("#checkAnswer").onclick = () =>
+    submit(a.value, ctx, out, backTo);
+}
+
 function programsView(root, ctx) {
   root.innerHTML = `${head("Ready-made programs", "Pick one to see it first. Nothing changes until you confirm.")}<div id="list"><p class="muted">Loading…</p></div>${back}`;
   fetch("./data/programs.json")
@@ -77,13 +104,44 @@ function programsView(root, ctx) {
     });
 }
 
+// PDF, photo or Word file: the app cannot read it, so help the owner hand it to their AI app. The File is never read here.
+function docPanel(root, ctx, docs, out, f) {
+  docs.innerHTML = `<section class="card"><h2>This app can't read PDFs or photos on its own yet.</h2>
+    <p>Your AI app can: two taps.</p>
+    <button class="btn btn-primary" id="copyDoc">Copy instructions</button>
+    <div id="docFallback"></div>
+    <button class="btn" id="shareDoc">Send the file to your AI app</button>
+    <p class="muted small" id="shareMsg"></p>
+    <p class="muted small">In your AI app, paste the instructions, send, then copy its whole answer and come back.</p>
+    ${answerHtml}</section>`;
+  const $ = (q) => docs.querySelector(q);
+  const hint = "Open your AI app, attach the file there, and paste the instructions.";
+  $("#copyDoc").onclick = () =>
+    copyText(
+      buildAiPrompt({ library: ctx.library, custom: ctx.state.customExercises, mode: "convert" }),
+      $("#docFallback"),
+    );
+  $("#shareDoc").onclick = async () => {
+    if (!navigator.canShare?.({ files: [f] })) return ($("#shareMsg").textContent = hint);
+    try {
+      await navigator.share({ files: [f] });
+      $("#shareMsg").textContent = "";
+    } catch {
+      $("#shareMsg").textContent = hint; // cancelled (AbortError) or failed: same plain hint, no error
+    }
+  };
+  wireAnswer(docs, ctx, out, "#/import/file");
+}
+
 function fileView(root, ctx) {
   root.innerHTML = `${head("Load a plan from a file", "Choose a plan file (.json), or paste the plan text, for example an answer from an AI chat.")}
-    <label class="btn file-btn">Choose a plan file<input type="file" accept="application/json,text/plain,.json,.txt" id="file" /></label>
+    <label class="btn file-btn">Choose a plan file<input type="file" accept="application/json,text/plain,application/pdf,image/jpeg,image/png,image/heic,image/heif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.json,.txt,.pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" id="file" /></label>
     ${pasteBox("paste", "Or paste plan text")}
     <button class="btn btn-primary" id="check">Check pasted plan</button>
+    <div id="docs"></div>
     <div id="out"></div>${back}`;
   const out = root.querySelector("#out");
+  const docs = root.querySelector("#docs");
   const paste = root.querySelector("#paste");
   paste.value = ai.filePasted;
   paste.oninput = () => (ai.filePasted = paste.value);
@@ -91,6 +149,11 @@ function fileView(root, ctx) {
     const f = e.target.files[0];
     e.target.value = "";
     if (!f) return;
+    docs.innerHTML = out.innerHTML = "";
+    const kind = fileKind(f.name, f.type);
+    if (kind === "ai") return docPanel(root, ctx, docs, out, f);
+    if (kind === "unsupported")
+      return (out.innerHTML = `<section class="card"><p>This kind of file cannot be used. Choose a plan file (.json or .txt), a PDF, a photo or a Word file.</p></section>`);
     if (f.size > MAX_FILE)
       return (out.innerHTML = `<section class="card"><p>This file is too big to be a plan.</p></section>`);
     submit(await f.text(), ctx, out, "#/import/file");
@@ -110,24 +173,24 @@ function aiView(root, ctx) {
       </div>
       <button class="btn btn-primary" id="copy">Copy instructions</button>
       <div id="fallback"></div>
+      <p class="muted small" id="attachNote" hidden>You can attach your file (PDF, photo or Word) in the AI app itself.</p>
       <p class="muted small">Paste this into the Claude or ChatGPT app (attach your plan file or photo there if you have one), then copy its whole answer and come back.</p>
     </section>
     <section class="card"><h2>Step 2</h2>
-      ${pasteBox("answer", "Paste the AI's answer")}
-      <button class="btn btn-primary" id="check">Check the plan</button>
+      ${answerHtml}
     </section>
     <div id="out"></div>${back}`;
   const $ = (s) => root.querySelector(s);
   $("#req").value = ai.request;
-  $("#answer").value = ai.pasted;
   $("#req").oninput = (e) => (ai.request = e.target.value);
-  $("#answer").oninput = (e) => (ai.pasted = e.target.value);
-  const paint = () =>
+  const paint = () => {
     root
       .querySelectorAll("[data-mode]")
       .forEach((b) =>
         b.setAttribute("aria-pressed", String(b.dataset.mode === ai.mode)),
       );
+    $("#attachNote").hidden = ai.mode !== "convert";
+  };
   paint();
   root.querySelector(".seg").onclick = (e) => {
     const b = e.target.closest("[data-mode]");
@@ -135,28 +198,17 @@ function aiView(root, ctx) {
     ai.mode = b.dataset.mode;
     paint();
   };
-  $("#copy").onclick = async () => {
-    const text = buildAiPrompt({
-      request: ai.request,
-      library: ctx.library,
-      custom: ctx.state.customExercises,
-      mode: ai.mode,
-    });
-    try {
-      await navigator.clipboard.writeText(text);
-      $("#fallback").innerHTML = "";
-      showBanner("Instructions copied.", { kind: "ok" });
-    } catch {
-      $("#fallback").innerHTML =
-        `<p class="muted small">Copying did not work here. Select all of this text and copy it yourself.</p><textarea id="prompt" rows="8" readonly style="width:100%"></textarea>`;
-      const ta = $("#prompt");
-      ta.value = text;
-      ta.focus();
-      ta.select();
-    }
-  };
-  $("#check").onclick = () =>
-    submit($("#answer").value, ctx, $("#out"), "#/import/ai");
+  $("#copy").onclick = () =>
+    copyText(
+      buildAiPrompt({
+        request: ai.request,
+        library: ctx.library,
+        custom: ctx.state.customExercises,
+        mode: ai.mode,
+      }),
+      $("#fallback"),
+    );
+  wireAnswer(root, ctx, $("#out"), "#/import/ai");
 }
 
 function previewView(root, ctx) {

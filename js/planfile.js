@@ -380,8 +380,10 @@ export function applyPlan(state, preview) {
   for (const w of state.workouts)
     for (const it of w.items) {
       const o = kept.get(it.exerciseId) ?? {};
-      if (o.plates === undefined && typeof it.plates === "boolean") o.plates = it.plates;
-      if (o.emptyKg === undefined && Number.isFinite(it.emptyKg)) o.emptyKg = it.emptyKg;
+      if (o.plates === undefined && typeof it.plates === "boolean")
+        o.plates = it.plates;
+      if (o.emptyKg === undefined && Number.isFinite(it.emptyKg))
+        o.emptyKg = it.emptyKg;
       kept.set(it.exerciseId, o);
     }
   const workouts = preview.days.map((d) => {
@@ -484,8 +486,13 @@ const STAGES = [
 ];
 
 const candidatesOf = (t) => {
-  const fenced = [...t.matchAll(/```[a-z]*\s*([\s\S]*?)```/gi)].map((m) => m[1]);
-  return [t, ...fenced, ...topObjects(t), ...fenced.flatMap(topObjects)].slice(0, 60);
+  const fenced = [...t.matchAll(/```[a-z]*\s*([\s\S]*?)```/gi)].map(
+    (m) => m[1],
+  );
+  return [t, ...fenced, ...topObjects(t), ...fenced.flatMap(topObjects)].slice(
+    0,
+    60,
+  );
 };
 
 // A few characters around a parse error, when the engine says where it is.
@@ -493,7 +500,10 @@ function around(src, msg) {
   const m = /position (\d+)/.exec(msg);
   if (!m) return "";
   const at = +m[1];
-  const bit = src.slice(Math.max(0, at - 25), at + 25).replace(/\s+/g, " ").trim();
+  const bit = src
+    .slice(Math.max(0, at - 25), at + 25)
+    .replace(/\s+/g, " ")
+    .trim();
   return bit ? ` Near: "${bit}".` : "";
 }
 
@@ -516,7 +526,11 @@ export function parsePlanText(text) {
       try {
         obj = JSON.parse(s);
       } catch (e) {
-        if (n === STAGES.length - 1 && s.trimStart().startsWith("{") && (!failed || s.length > failed.src.length))
+        if (
+          n === STAGES.length - 1 &&
+          s.trimStart().startsWith("{") &&
+          (!failed || s.length > failed.src.length)
+        )
           failed = { msg: String(e.message), src: s };
         continue;
       }
@@ -527,7 +541,9 @@ export function parsePlanText(text) {
     }
   }
   if (planish ?? first) return { ok: true, obj: planish ?? first };
-  const why = failed ? ` The reader said: ${failed.msg}.${around(failed.src, failed.msg)}` : "";
+  const why = failed
+    ? ` The reader said: ${failed.msg}.${around(failed.src, failed.msg)}`
+    : "";
   return {
     ok: false,
     errors: [
@@ -560,6 +576,28 @@ const EXAMPLE = {
     },
   ],
 };
+
+// What to do with a chosen file: "json" (text/JSON, read here), "ai" (PDF, photo, Word: needs the AI app) or "unsupported".
+// iOS often gives an empty type, so the extension decides first; then the MIME type.
+export function fileKind(name = "", type = "") {
+  const n = String(name).toLowerCase();
+  const ext = n.includes(".") ? n.slice(n.lastIndexOf(".") + 1) : "";
+  const t = String(type).toLowerCase();
+  if (["json", "txt", "text"].includes(ext)) return "json";
+  if (
+    ["pdf", "jpg", "jpeg", "png", "heic", "heif", "doc", "docx"].includes(ext)
+  )
+    return "ai";
+  if (t === "application/json" || t.startsWith("text/")) return "json";
+  if (
+    t === "application/pdf" ||
+    t.startsWith("image/") ||
+    t === "application/msword" ||
+    t.includes("wordprocessingml")
+  )
+    return "ai";
+  return "unsupported";
+}
 
 // Prompt for the owner's own AI chat app (also reused by a later in-app version).
 // mode: "describe" (design a plan from the request) or "convert" (convert an attached plan faithfully).
