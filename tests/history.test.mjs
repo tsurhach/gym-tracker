@@ -37,3 +37,12 @@ test("exerciseRows flags stuck", () => {
   assert.equal(r.stuck, true);
   assert.equal(progressText(r), "30 kg · stuck");
 });
+
+test("chartPoints: one point, equal values, increasing values", async () => {
+  const { chartPoints } = await import("../js/screens/history.js");
+  assert.deepEqual(chartPoints([50], 320, 120, 28), [{ x: 160, y: 60 }]);
+  assert.deepEqual(chartPoints([50, 50, 50], 320, 120, 28).map((p) => p.y), [60, 60, 60]);
+  const up = chartPoints([40, 50, 60], 320, 120, 28);
+  assert.deepEqual(up.map((p) => p.x), [28, 160, 292]);
+  assert.deepEqual(up.map((p) => p.y), [92, 60, 28]); // heavier is higher (smaller y)
+});

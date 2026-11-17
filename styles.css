@@ -979,6 +979,11 @@ a.card.block {
   color: var(--warning);
   font-weight: 600;
 }
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .pb {
   margin: -4px 0 8px 28px;
   font-size: 12px;
