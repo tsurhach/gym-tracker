@@ -3,6 +3,7 @@ import { muscleTally, nextWorkoutId } from "../logic.js";
 import { discardSession, startSession } from "../session.js";
 import { confirmSheet, esc, fmtKg } from "../ui.js";
 import { dayNum, localDate } from "../weight.js";
+import { isInstalled, markSeen, seen } from "./help.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -74,7 +75,21 @@ export function render(root, ctx) {
     (state.settings.lastExportAt == null ||
       now - state.settings.lastExportAt > 30 * DAY_MS);
 
+  const newHere = !state.sessions.length && !a && !seen("newCard");
+  const addApp = !isInstalled() && !seen("installBanner");
   root.innerHTML = `<h1 class="title">Today</h1>
+    ${
+      addApp
+        ? `<div class="card row remind"><a class="grow" href="#/help/install">Add this app to your home screen</a>
+          <button class="icon-btn" data-act="hide" data-k="installBanner" aria-label="Dismiss home screen tip">✕</button></div>`
+        : ""
+    }
+    ${
+      newHere
+        ? `<div class="card row remind"><a class="grow" href="#/help"><b>New here? See how it works</b><br><span class="muted small">A short guide, about two minutes.</span></a>
+          <button class="icon-btn" data-act="hide" data-k="newCard" aria-label="Dismiss new here card">✕</button></div>`
+        : ""
+    }
     ${
       remind
         ? `<div class="card row remind"><a class="grow" href="#/plan">Back up your data: export a backup file from Plan.</a>
@@ -95,7 +110,8 @@ export function render(root, ctx) {
           : `<p class="muted small">Every muscle group trained.</p>`
       }
     </section>
-    <a class="card weight-card" href="#/weight"><span class="muted small">Body weight</span> <span>${weightText(state.bodyWeights)}</span></a>`;
+    <a class="card weight-card" href="#/weight"><span class="muted small">Body weight</span> <span>${weightText(state.bodyWeights)}</span></a>
+    <p class="small" style="text-align:center"><a href="#/help" class="muted" style="display:inline-block;padding:14px 12px">How to use this app</a></p>`;
 
   root.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-act]");
@@ -114,6 +130,9 @@ export function render(root, ctx) {
         return;
       discardSession(state);
       ctx.save();
+    } else if (t.dataset.act === "hide") {
+      markSeen(t.dataset.k);
+      t.closest(".card").remove(); // no redraw
     } else if (t.dataset.act === "dismiss") {
       state.settings.backupNudgeDismissedAt = Date.now();
       ctx.save();

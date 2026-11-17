@@ -9,6 +9,7 @@ import * as history from "./screens/history.js";
 import * as muscles from "./screens/muscles.js";
 import * as weight from "./screens/weight.js";
 import * as planimport from "./screens/planimport.js";
+import * as help from "./screens/help.js";
 import * as rest from "./rest.js";
 import { checkOnForeground, reloadOnUpdate } from "./update.js";
 
@@ -23,6 +24,7 @@ const screens = {
   plan,
   setup,
   import: planimport,
+  help,
 };
 const NEEDS_ID = new Set(["exercise", "progress"]);
 const NO_TABS = new Set(["setup", "workout", "exercise"]);
@@ -33,6 +35,7 @@ const TAB_OF = {
   weight: "today",
   setup: "plan",
   import: "plan",
+  help: "today",
 };
 
 function parseHash(hash) {
