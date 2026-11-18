@@ -7,6 +7,8 @@ import { confirmSheet, esc, fmtKg } from "../ui.js";
 export function lastText(sets) {
   if (!sets || !sets.length) return "";
   const kg = (w) => fmtKg(w);
+  if (sets.every((s) => s.weight === 0))
+    return `Body weight × ${sets.map((s) => s.reps).join(", ")}`;
   if (sets.every((s) => s.weight === sets[0].weight)) {
     return `${kg(sets[0].weight)} kg × ${sets.map((s) => s.reps).join(", ")}`;
   }
@@ -44,7 +46,7 @@ function rowHtml(e, ctx) {
     sub = `<div class="muted small">${done} of ${total} sets</div>`;
   } else {
     const prev = lastSets(state, e.exerciseId);
-    const a = advice(prev, itemFor(state, e.exerciseId));
+    const a = advice(prev, itemFor(state, e.exerciseId), ctx.lookup(e.exerciseId));
     if (a.kind === "heavier")
       sub = `<div class="up small">↑ ${esc(a.message)}</div>`;
     else if (prev)

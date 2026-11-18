@@ -682,6 +682,8 @@ export function applyPlan(state, preview) {
         o.plates = it.plates;
       if (o.emptyKg === undefined && Number.isFinite(it.emptyKg))
         o.emptyKg = it.emptyKg;
+      if (o.restSec === undefined && Number.isFinite(it.restSec))
+        o.restSec = it.restSec;
       kept.set(it.exerciseId, o);
     }
   const workouts = preview.days.map((d) => {

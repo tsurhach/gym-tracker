@@ -30,3 +30,7 @@ test("applyInputs: blank weight on an unconfirmed set stays null, comma decimal 
   assert.equal(s.weight, null);
   assert.equal(applyInputs(s, "57,5", "8").weight, 57.5);
 });
+
+test("lastText: all-zero sets read Body weight", () => {
+  assert.equal(lastText([{ weight: 0, reps: 12 }, { weight: 0, reps: 12 }, { weight: 0, reps: 11 }]), "Body weight × 12, 12, 11");
+});

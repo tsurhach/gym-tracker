@@ -76,3 +76,14 @@ test("custom sound plays at most 6 seconds", () => {
   assert.equal(playSeconds(NaN), 0);
   assert.equal(playSeconds(-1), 0);
 });
+
+test("restLength: exercise rest wins, 0 means off, junk or missing falls back", () => {
+  const set = { restSeconds: 90 };
+  assert.equal(restLength(set, { restSec: 150 }), 150);
+  assert.equal(restLength(set, { restSec: 0 }), 0);
+  assert.equal(restLength(set, {}), 90);
+  assert.equal(restLength(set, undefined), 90);
+  assert.equal(restLength(set, { restSec: "x" }), 90);
+  assert.equal(restLength(set, { restSec: 99999 }), 90);
+  assert.equal(restLength({}, {}), 90);
+});

@@ -541,6 +541,7 @@ test("applyPlan keeps plate settings of exercises in both plans, never duplicate
           repMax: 12,
           step: 2.5,
           plates: false,
+          restSec: 45,
         },
       ],
     },
@@ -568,6 +569,8 @@ test("applyPlan keeps plate settings of exercises in both plans, never duplicate
   );
   assert.equal(bench.plates, false);
   assert.equal(bench.emptyKg, undefined);
+  assert.equal(bench.restSec, 45); // per-exercise rest follows the exercise
+  assert.equal(smith.restSec, undefined);
   assert.equal(bench.repMin, 5);
   assert.equal(abd.exerciseId, "own");
   assert.equal(st.customExercises.length, 1);
