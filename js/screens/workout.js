@@ -46,7 +46,7 @@ function rowHtml(e, ctx) {
     sub = `<div class="muted small">${done} of ${total} sets</div>`;
   } else {
     const prev = lastSets(state, e.exerciseId);
-    const a = advice(prev, itemFor(state, e.exerciseId), ctx.lookup(e.exerciseId));
+    const a = advice(prev, itemFor(state, e.exerciseId), ctx.lookup(e.exerciseId), state.settings);
     if (a.kind === "heavier")
       sub = `<div class="up small">↑ ${esc(a.message)}</div>`;
     else if (prev)

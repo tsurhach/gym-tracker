@@ -154,11 +154,11 @@ export function render(root, ctx) {
   const hasPhotos = !!ex && ex.images === 2;
   const showPhotos = hasPhotos && state.settings.showPhotos;
   const prev = lastSets(state, entry.exerciseId);
-  const adv = advice(prev, item, ex);
+  const adv = advice(prev, item, ex, state.settings);
   const hist = exerciseHistory(state.sessions, entry.exerciseId).filter(
     (x) => x.sets.length,
   );
-  const stuck = stuckNote(hist.map((h) => h.sets), adv);
+  const stuck = stuckNote(hist.map((h) => h.sets), adv, state.settings);
   const past = hist.flatMap((h) => h.sets);
   const tags = ex
     ? [ex.primary, ...ex.secondary]
@@ -179,7 +179,7 @@ export function render(root, ctx) {
     <section class="card">
       <h3 style="margin-top:0">Last time${hist.length ? ` · ${esc(fmtDate(hist[hist.length - 1].startedAt))}` : ""}</h3>
       ${prev ? `<div class="last-sets">${esc(lastText(prev))}</div>` : ""}
-      <div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>
+      ${adv.message ? `<div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>` : ""}
       ${stuck ? `<div class="muted small" role="note">${esc(stuck)}</div>` : ""}
       ${rule.on ? `<div class="muted small" role="note" data-plates hidden></div>` : ""}
     </section>

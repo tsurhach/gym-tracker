@@ -331,3 +331,38 @@ test("stuckNote: one gentle sentence after 3 flat sessions, nothing when progres
   const top = [s(50, 12, 12, 12), s(50, 12, 12, 12), s(50, 12, 12, 12)];
   assert.equal(stuckNote(top, advice(top[2], item)), null);
 });
+
+test("settings: body-weight suggestions off (missing = on) keeps body-weight moves quiet", () => {
+  const bodyEx = { equipment: "body only" };
+  const top = [{ weight: 0, reps: 12 }, { weight: 0, reps: 12 }, { weight: 0, reps: 12 }];
+  const mid = [{ weight: 0, reps: 12 }, { weight: 0, reps: 12 }, { weight: 0, reps: 11 }];
+  const off = { bodyAdvice: false };
+  for (const on of [undefined, {}, { bodyAdvice: true }]) {
+    assert.match(advice(top, item, bodyEx, on).message, /Add a rep or two/);
+    assert.equal(advice(mid, item, bodyEx, on).message, "Beat your reps from last time.");
+    assert.match(advice(null, item, bodyEx, on).message, /First time/);
+  }
+  for (const prev of [top, mid]) {
+    const a = advice(prev, item, bodyEx, off);
+    assert.equal(a.message, "");
+    assert.equal(a.kind, "stay");
+    assert.equal(a.weight, 0);
+    assert.deepEqual(prefill(prev, item, bodyEx, off).map((x) => x.weight), [0, 0, 0]);
+    assert.ok(!/2\.5|Try/.test(a.message));
+  }
+  assert.deepEqual(prefill(top, item, bodyEx, off).map((x) => x.reps), [12, 12, 12]);
+  assert.deepEqual(advice(null, item, bodyEx, off), { kind: "first", weight: 0, message: "" });
+  assert.deepEqual(prefill(null, item, bodyEx, off).map((x) => x.weight), [0, 0, 0]);
+  // Weighted moves are unaffected
+  const w = [{ weight: 50, reps: 12 }, { weight: 50, reps: 12 }, { weight: 50, reps: 12 }];
+  assert.equal(advice(w, item, null, off).message, advice(w, item, null).message);
+});
+
+test("settings: stuck reminder off (missing = on)", () => {
+  const flat = [s(50, 10, 10, 9), s(50, 10, 10, 9), s(50, 10, 10, 9)];
+  const adv = advice(flat[2], item);
+  assert.ok(stuckNote(flat, adv, {}));
+  assert.ok(stuckNote(flat, adv, { stuckNote: true }));
+  assert.equal(stuckNote(flat, adv, { stuckNote: false }), null);
+  assert.equal(isStuck(flat), true); // History flag unaffected
+});
