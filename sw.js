@@ -1,8 +1,8 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files); a release is a new VERSION.
-const VERSION = "ad5ef7344a8c";
+const VERSION = "3e35e477fe52";
 const SHELL = `gym-tracker-shell-${VERSION}`;
-const IMAGES = "gym-tracker-img-v1"; // photos never change per id, so not tied to VERSION
+const IMAGES = "gym-tracker-img-v2"; // pictures never change per id, so not tied to VERSION; bump to drop old ones (v1 held the .jpg photos)
 
 const PRECACHE = [
   "./",
@@ -56,7 +56,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// Only touch our own old shell caches; the origin may be shared with other apps.
+// Only touch our own old shell and image caches; the origin may be shared with other apps.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -64,7 +64,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k.startsWith("gym-tracker-shell-") && k !== SHELL)
+            .filter((k) => (k.startsWith("gym-tracker-shell-") && k !== SHELL) || (k.startsWith("gym-tracker-img-") && k !== IMAGES))
             .map((k) => caches.delete(k)),
         ),
       )

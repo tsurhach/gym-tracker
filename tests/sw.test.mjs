@@ -130,12 +130,12 @@ test("install fails if any precached file fails", async () => {
   await assert.rejects(w.fire("install"));
 });
 
-test("activate deletes only old gym-tracker shell caches", async () => {
+test("activate deletes only old gym-tracker shell and image caches", async () => {
   const w = boot();
-  for (const n of ["gym-tracker-shell-old", "gym-tracker-img-v1", "other-app-v1", `gym-tracker-shell-${VERSION}`])
+  for (const n of ["gym-tracker-shell-old", "gym-tracker-img-v1", "gym-tracker-img-v2", "other-app-v1", `gym-tracker-shell-${VERSION}`])
     w.stores.set(n, new Map());
   await w.fire("activate");
-  assert.deepEqual([...w.stores.keys()].sort(), ["gym-tracker-img-v1", `gym-tracker-shell-${VERSION}`, "other-app-v1"].sort());
+  assert.deepEqual([...w.stores.keys()].sort(), ["gym-tracker-img-v2", `gym-tracker-shell-${VERSION}`, "other-app-v1"].sort());
 });
 
 test("shell requests come from the cache without touching the network", async () => {
@@ -160,9 +160,9 @@ test("offline navigation falls back to index.html; cross-origin and POST pass th
 
 test("images are cached on first fetch in the unversioned image cache", async () => {
   const w = boot();
-  await w.fire("fetch", { request: req("img/ex/a/0.jpg") });
-  assert.ok(w.stores.get("gym-tracker-img-v1").size === 1);
-  await w.fire("fetch", { request: req("img/ex/a/0.jpg") });
+  await w.fire("fetch", { request: req("img/ex/a/0.svg") });
+  assert.ok(w.stores.get("gym-tracker-img-v2").size === 1);
+  await w.fire("fetch", { request: req("img/ex/a/0.svg") });
   assert.equal(w.net.length, 1);
 });
 
@@ -181,7 +181,7 @@ test("icons come from the versioned shell cache, not the image cache", async () 
   const res = await w.fire("fetch", { request: req("icons/icon-192.png") });
   assert.match(await res.text(), /icons\/icon-192\.png/);
   assert.deepEqual(w.net, []);
-  assert.equal(w.stores.has("gym-tracker-img-v1"), false);
+  assert.equal(w.stores.has("gym-tracker-img-v2"), false);
 });
 
 test("a push shows one 'Rest over' notification, replacing the last", async () => {

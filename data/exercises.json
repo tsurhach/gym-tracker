@@ -401,7 +401,7 @@
     ],
     "equipment": "barbell",
     "images": 2,
-    "howto": "Hold the bar in front of your thighs with hands about shoulder width. Pull it up toward your chin, leading with your elbows. Lower slowly and keep the bar close to your body."
+    "howto": "Hold the bar in front of your thighs with hands about shoulder width. Pull it up toward your chin, leading with your elbows, and stop when they reach shoulder height. Lower slowly and keep the bar close to your body."
   },
   {
     "id": "cable-seated-lateral-raise",
@@ -915,7 +915,7 @@
     ],
     "equipment": "machine",
     "images": 2,
-    "howto": "Stand under the bar with feet slightly in front of you. Lower until your thighs are about level with the floor, then stand up. Keep your back flat against the bar's path."
+    "howto": "Stand under the bar with feet slightly in front of you. Lower until your thighs are about level with the floor, then stand up. Keep your chest up and your back flat."
   },
   {
     "id": "romanian-deadlift",
