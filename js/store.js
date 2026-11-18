@@ -118,36 +118,33 @@ export function isValidState(o) {
 }
 
 const COLLECTIONS = ["customExercises", "workouts", "sessions", "bodyWeights"];
-// What counts as "changed": the record minus its own stamp (settings also minus the per-device export time).
-const sig = (r, skip) =>
-  JSON.stringify(r, (k, v) =>
-    k === "updatedAt" || k === skip ? undefined : v,
-  );
+// What counts as "changed": the record's JSON. Its updatedAt is in it but only written here, so it
+// matches the snapshot unless the record changed. Settings skip the per-device export time.
+// No replacer function: it made every save about 5x slower on a large history.
+const sig = (r) => JSON.stringify(r);
+const settingsSig = (s) => JSON.stringify({ ...s, lastExportAt: undefined });
 
-// id -> signature of every syncable record, plus "settings".
-function snapshotOf(state) {
-  const m = new Map([["settings", sig(state.settings, "lastExportAt")]]);
-  for (const c of COLLECTIONS)
-    for (const r of state[c] ?? []) if (r && r.id) m.set(r.id, sig(r));
-  return m;
-}
-
-// Stamps changed records and tombstones removed ones, all in place (screens hold references).
-function stamp(state, snap) {
+// id -> signature of every syncable record, plus "settings". Given the previous snapshot it first
+// stamps changed records and tombstones removed ones, all in place (screens hold references).
+function snapshotOf(state, prev = null) {
   const now = Date.now();
-  const bump = (r) => (r.updatedAt = Math.max(now, (r.updatedAt ?? 0) + 1));
-  const seen = new Set(["settings"]);
-  if (snap.get("settings") !== sig(state.settings, "lastExportAt"))
-    bump(state.settings);
-  for (const c of COLLECTIONS)
-    for (const r of state[c] ?? []) {
-      if (!r || !r.id) continue;
-      seen.add(r.id);
-      if (snap.get(r.id) !== sig(r)) bump(r);
+  const m = new Map();
+  const add = (id, r, f) => {
+    let s = f(r);
+    if (prev && prev.get(id) !== s) {
+      r.updatedAt = Math.max(now, (r.updatedAt ?? 0) + 1);
+      s = f(r);
     }
-  for (const id of snap.keys())
-    if (!seen.has(id))
-      (state.deleted ??= {})[id] = Math.max(now, state.deleted?.[id] ?? 0);
+    m.set(id, s);
+  };
+  add("settings", state.settings, settingsSig);
+  for (const c of COLLECTIONS)
+    for (const r of state[c] ?? []) if (r && r.id) add(r.id, r, sig);
+  if (prev)
+    for (const id of prev.keys())
+      if (!m.has(id))
+        (state.deleted ??= {})[id] = Math.max(now, state.deleted?.[id] ?? 0);
+  return m;
 }
 
 export function createStore(storage) {
@@ -185,9 +182,9 @@ export function createStore(storage) {
     // resetSnapshot: the state was swapped wholesale (backup restore), so nothing counts as deleted or edited.
     save(state, { resetSnapshot = false } = {}) {
       try {
-        if (!resetSnapshot && snap) stamp(state, snap);
+        const next = snapshotOf(state, resetSnapshot ? null : snap);
         storage.setItem(KEY, JSON.stringify(state));
-        snap = snapshotOf(state);
+        snap = next; // only after a successful write
         return true;
       } catch {
         return false;

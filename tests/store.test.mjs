@@ -409,3 +409,14 @@ test("full backup round-trips stamps and tombstones", async () => {
   assert.deepEqual(r.state, state);
   assert.deepEqual(importJson(exportJson(state)), state);
 });
+
+test("re-logging a day's body weight is an edit: same id, stamped, no tombstone", async () => {
+  const { logWeight } = await import("../js/weight.js");
+  const { store, m, state } = loaded();
+  logWeight(state, "2026-01-01", 81);
+  store.save(state);
+  const s = saved(m);
+  assert.equal(s.bodyWeights[0].id, "b1");
+  assert.equal(typeof s.bodyWeights[0].updatedAt, "number");
+  assert.equal(s.deleted, undefined);
+});
