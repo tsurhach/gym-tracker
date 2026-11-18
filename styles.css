@@ -12,6 +12,8 @@
   --radius-sm: 10px;
   --press: #343944;
   --accent-press: #a9cc3a;
+  --accent-hover: #d6f76b;
+  --tag-text: #c9cdd6;
   --fs-sm: 13px;
   --fs-lg: 20px;
   --fs-xl: 28px;
@@ -21,6 +23,33 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   color-scheme: dark;
+}
+
+/* Light theme. --surface matches the inverted drawing fill (#1a1d24 -> see .photo img filter). */
+:root[data-theme="light"] {
+  --bg: #f4f2ee;
+  --surface: #e5e2db;
+  --surface2: #d6d2c9;
+  --line: #beb9ae;
+  --text: #1a1814;
+  --muted: #57524a;
+  --accent: #46610a;
+  --on-accent: #ffffff;
+  --warning: #8a5300;
+  --press: #beb9ae;
+  --accent-press: #364c06;
+  --accent-hover: #3a520a;
+  --tag-text: #35312a;
+  color-scheme: light;
+}
+:root[data-theme="light"] .photo img[src$=".png"],
+:root[data-theme="light"] .pick-thumb[src$=".png"] {
+  filter: none;
+  mix-blend-mode: multiply;
+}
+:root[data-theme="light"] .photo img[src$=".svg"],
+:root[data-theme="light"] .pick-thumb[src$=".svg"] {
+  filter: invert(1); /* #1a1d24 fill becomes #e5e2db, which is --surface */
 }
 
 * {
@@ -325,7 +354,7 @@ h2,
   border-radius: 20px;
   padding: 2px 10px;
   font-size: 12px;
-  color: #c9cdd6;
+  color: var(--tag-text);
 }
 
 .seg {
@@ -338,6 +367,10 @@ h2,
   padding: 8px 4px;
   border-radius: 12px;
   text-align: center;
+}
+
+.setting-group > .seg {
+  margin-bottom: var(--gap);
 }
 
 .big-choice {
@@ -675,7 +708,7 @@ details.card form > * {
     background: var(--line);
   }
   .btn-primary:hover {
-    background: #d6f76b;
+    background: var(--accent-hover);
   }
   .chip:not([aria-pressed="true"]):hover {
     color: var(--text);

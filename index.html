@@ -8,6 +8,30 @@
     />
     <meta name="theme-color" content="#0f1115" />
     <meta name="color-scheme" content="dark" />
+    <script>
+      // Runs before first paint. Dark unless the saved setting says light or auto. Never throws.
+      window.gymTheme = function (mode) {
+        try {
+          var light =
+            mode === "light" ||
+            (mode === "auto" && matchMedia("(prefers-color-scheme: light)").matches);
+          var d = document, root = d.documentElement;
+          root.dataset.theme = light ? "light" : "dark";
+          var set = function (n, v) {
+            var m = d.querySelector('meta[name="' + n + '"]');
+            if (m) m.content = v;
+          };
+          set("theme-color", light ? "#f4f2ee" : "#0f1115");
+          set("color-scheme", light ? "light" : "dark");
+          set("apple-mobile-web-app-status-bar-style", light ? "default" : "black-translucent");
+        } catch (e) {}
+      };
+      try {
+        window.gymTheme(JSON.parse(localStorage.getItem("gymtracker.v1")).settings.theme);
+      } catch (e) {
+        window.gymTheme();
+      }
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

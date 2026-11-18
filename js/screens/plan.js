@@ -179,7 +179,13 @@ export function render(root, ctx) {
     ${section(
       "g:settings",
       "Settings",
-      `<label class="setting">Show exercise photos
+      `<div class="setting-group" role="group" aria-label="Appearance">
+        <div>Appearance</div>
+        <div class="seg">${[["dark", "Dark"], ["light", "Light"], ["auto", "Match phone"]]
+          .map(([m, l]) => `<button class="chip" data-act="theme" data-mode="${m}" aria-pressed="${(settings.theme ?? "dark") === m}">${l}</button>`)
+          .join("")}</div>
+      </div>
+      <label class="setting">Show exercise photos
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
       </label>
       <label class="setting">Body-weight suggestions
@@ -256,6 +262,13 @@ export function render(root, ctx) {
     if (!t) return;
     const { w, xi } = find(t);
     switch (t.dataset.act) {
+      case "theme": {
+        settings.theme = t.dataset.mode;
+        globalThis.gymTheme?.(settings.theme);
+        for (const b of t.parentElement.children) b.setAttribute("aria-pressed", String(b === t));
+        await ctx.save({ render: false }); // no redraw: the owner may be typing in a field
+        return;
+      }
       case "goal": {
         const g = t.dataset.goal;
         if (g === settings.goal) return;
