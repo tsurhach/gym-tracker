@@ -691,7 +691,7 @@ async function importFile(input, ctx) {
   current = null; // the old screen's fields must not be copied into the imported data
   const previous = ctx.state;
   ctx.state = imported;
-  if (!(await ctx.save({ render: false }))) {
+  if (!(await ctx.save({ render: false, resetSnapshot: true }))) {
     ctx.state = previous; // not saved: put the old data back so nothing later persists the import
     window.dispatchEvent(new HashChangeEvent("hashchange"));
     showBanner("Backup was not restored. Nothing was changed.");

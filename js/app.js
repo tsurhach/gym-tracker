@@ -121,7 +121,7 @@ async function main() {
     },
     // Resolves true only when the store actually saved.
     // { render: false } saves without redrawing (used when the page is being hidden).
-    async save({ render: redraw = true } = {}) {
+    async save({ render: redraw = true, resetSnapshot = false } = {}) {
       if (blocked && !(await askOverwrite())) {
         showBanner("Changes are not saved. Your old data was left untouched.", {
           sticky: true,
@@ -130,7 +130,7 @@ async function main() {
         return false;
       }
       blocked = false;
-      const saved = store.save(ctx.state);
+      const saved = store.save(ctx.state, { resetSnapshot });
       if (!saved) {
         showBanner(
           "Could not save. Storage may be full or blocked. Export a backup if you can.",

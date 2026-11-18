@@ -89,13 +89,69 @@ export function isValidState(o) {
     )
   )
     return false;
+  // Sync groundwork (all optional, so data from before them stays valid).
+  if (
+    o.deleted !== undefined &&
+    !(isObj(o.deleted) && Object.values(o.deleted).every(num))
+  )
+    return false;
+  if (o.settings.updatedAt !== undefined && !num(o.settings.updatedAt))
+    return false;
+  const stamped = [
+    o.customExercises,
+    o.workouts,
+    o.sessions,
+    o.bodyWeights ?? [],
+  ];
+  if (
+    !stamped.every((c) =>
+      c.every(
+        (r) => !isObj(r) || r.updatedAt === undefined || num(r.updatedAt),
+      ),
+    )
+  )
+    return false;
   return o.sessions.every(
     (s) =>
       isObj(s) && str(s.id) && num(s.startedAt) && entriesOk(s.entries, false),
   );
 }
 
+const COLLECTIONS = ["customExercises", "workouts", "sessions", "bodyWeights"];
+// What counts as "changed": the record minus its own stamp (settings also minus the per-device export time).
+const sig = (r, skip) =>
+  JSON.stringify(r, (k, v) =>
+    k === "updatedAt" || k === skip ? undefined : v,
+  );
+
+// id -> signature of every syncable record, plus "settings".
+function snapshotOf(state) {
+  const m = new Map([["settings", sig(state.settings, "lastExportAt")]]);
+  for (const c of COLLECTIONS)
+    for (const r of state[c] ?? []) if (r && r.id) m.set(r.id, sig(r));
+  return m;
+}
+
+// Stamps changed records and tombstones removed ones, all in place (screens hold references).
+function stamp(state, snap) {
+  const now = Date.now();
+  const bump = (r) => (r.updatedAt = Math.max(now, (r.updatedAt ?? 0) + 1));
+  const seen = new Set(["settings"]);
+  if (snap.get("settings") !== sig(state.settings, "lastExportAt"))
+    bump(state.settings);
+  for (const c of COLLECTIONS)
+    for (const r of state[c] ?? []) {
+      if (!r || !r.id) continue;
+      seen.add(r.id);
+      if (snap.get(r.id) !== sig(r)) bump(r);
+    }
+  for (const id of snap.keys())
+    if (!seen.has(id))
+      (state.deleted ??= {})[id] = Math.max(now, state.deleted?.[id] ?? 0);
+}
+
 export function createStore(storage) {
+  let snap = null; // null until load()/first save: then nothing is stamped or tombstoned
   return {
     load() {
       let raw = null;
@@ -105,12 +161,17 @@ export function createStore(storage) {
         // Unreadable: the shell blocks saving until the user confirms, so unseen data is not overwritten.
         return { state: emptyState(), recovered: true, kept: false };
       }
-      if (raw == null)
+      if (raw == null) {
+        snap = snapshotOf(emptyState());
         return { state: emptyState(), recovered: false, kept: true };
+      }
       try {
         const parsed = JSON.parse(raw);
-        if (isValidState(parsed))
+        if (isValidState(parsed)) {
+          for (const w of parsed.workouts) w.id ??= crypto.randomUUID();
+          snap = snapshotOf(parsed);
           return { state: parsed, recovered: false, kept: true };
+        }
       } catch {}
       let kept = true;
       try {
@@ -118,11 +179,15 @@ export function createStore(storage) {
       } catch {
         kept = false; // bad data could not be set aside; UI should warn before saving
       }
+      snap = snapshotOf(emptyState());
       return { state: emptyState(), recovered: true, kept };
     },
-    save(state) {
+    // resetSnapshot: the state was swapped wholesale (backup restore), so nothing counts as deleted or edited.
+    save(state, { resetSnapshot = false } = {}) {
       try {
+        if (!resetSnapshot && snap) stamp(state, snap);
         storage.setItem(KEY, JSON.stringify(state));
+        snap = snapshotOf(state);
         return true;
       } catch {
         return false;
