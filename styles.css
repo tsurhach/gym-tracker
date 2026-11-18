@@ -641,6 +641,11 @@ body.resting #app {
   object-fit: cover;
   background: var(--line);
 }
+img.pick-thumb {
+  object-fit: contain;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
 .pick-name {
   flex: 1;
   min-width: 0;
@@ -806,6 +811,26 @@ a.btn-primary {
   height: 100%;
   object-fit: cover;
   animation: 2.4s ease-in-out infinite;
+}
+/* Drawings are never cropped. The PNG ones are black on white, so flip them for the dark theme. */
+.photo .a,
+.photo .b {
+  object-fit: contain;
+}
+.photo.still .a {
+  animation: none;
+  opacity: 1;
+}
+.photo-hint {
+  margin: calc(-1 * var(--gap) + 6px) 0 var(--gap);
+  text-align: center;
+}
+.howto {
+  margin: 0 0 var(--gap);
+  line-height: 1.45;
+}
+img[src$=".png"] {
+  filter: invert(0.9);
 }
 .media-ctl {
   margin-bottom: var(--gap);

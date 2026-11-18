@@ -1,5 +1,5 @@
 import { MUSCLES } from "./constants.js";
-import { esc, showBanner } from "./ui.js";
+import { esc, exImageUrls, showBanner } from "./ui.js";
 import { checkFile, getMedia, saveMedia } from "./media.js";
 
 // Full-screen exercise picker: library + custom exercises, searchable, grouped by
@@ -96,7 +96,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [] } = 
       for (const e of rows) {
         const added = exclude.has(e.id);
         const thumb = e.images
-          ? `<img class="pick-thumb" src="./img/ex/${encodeURIComponent(e.id)}/0.jpg" alt="" width="56" height="56" loading="lazy" decoding="async" />`
+          ? `<img class="pick-thumb" src="${exImageUrls(e)[0]}" alt="" width="56" height="56" loading="lazy" decoding="async" />`
           : `<span class="pick-thumb"${custom.has(e.id) ? ` data-mid="${esc(e.id)}"` : ""}></span>`;
         html += `<button class="pick-row" data-id="${esc(e.id)}"${added ? " disabled" : ""}>
           ${thumb}

@@ -27,6 +27,30 @@ const ENT = {
 export const esc = (text) =>
   String(text ?? "").replace(/[&<>"']/g, (c) => ENT[c]);
 
+// Picture files for a library exercise: 0, 1 or 2 drawings (ext defaults to svg).
+export const exImageUrls = (ex) =>
+  Array.from(
+    { length: ex?.images ?? 0 },
+    (_, i) => `./img/ex/${encodeURIComponent(ex.id)}/${i}.${ex.ext ?? "svg"}`,
+  );
+
+// The written how-to, a compact block under the picture. Only when the setting is on (missing = off).
+export const howtoHtml = (ex, settings) =>
+  settings?.showHowTo === true && ex?.howto
+    ? `<div class="howto muted small"><b>How to do it</b><br />${esc(ex.howto)}</div>`
+    : "";
+
+// 2 pictures cross-fade, 1 stays still, 0 gives "". The optional hint sits under the picture.
+export function photoHtml(ex) {
+  const urls = exImageUrls(ex);
+  if (!urls.length) return "";
+  const imgs = urls
+    .map((u, i) => `<img class="${i ? "b" : "a"}" src="${u}" alt="" loading="lazy" />`)
+    .join("");
+  const hint = ex.hint ? `<p class="muted small photo-hint">${esc(ex.hint)}</p>` : "";
+  return `<div class="photo${urls.length === 1 ? " still" : ""}">${imgs}</div>${hint}`;
+}
+
 // 57.5 -> "57.5", 50 -> "50", 1.25 -> "1.25"
 export const fmtKg = (n) => String(round2(Number(n)));
 

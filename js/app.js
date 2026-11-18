@@ -95,6 +95,9 @@ async function main() {
           primary: e.primary,
           secondary: e.secondary ?? [],
           images: e.images ?? 0,
+          ext: e.ext,
+          hint: e.hint,
+          howto: e.howto,
           equipment: e.equipment,
         }
       );

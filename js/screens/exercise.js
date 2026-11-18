@@ -9,7 +9,7 @@ import {
   plateText,
   validSet,
 } from "../logic.js";
-import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
+import { confirmSheet, esc, fmtDate, fmtKg, howtoHtml, photoHtml } from "../ui.js";
 import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
 import { cancelRest, startRest } from "../rest.js";
@@ -151,7 +151,7 @@ export function render(root, ctx) {
   }
   const ex = ctx.lookup(entry.exerciseId);
   const item = itemFor(state, entry.exerciseId);
-  const hasPhotos = !!ex && ex.images === 2;
+  const hasPhotos = !!ex && ex.images > 0;
   const showPhotos = hasPhotos && state.settings.showPhotos;
   const prev = lastSets(state, entry.exerciseId);
   const adv = advice(prev, item, ex, state.settings);
@@ -166,15 +166,16 @@ export function render(root, ctx) {
   const rule = plateRule(item, ex);
   const isCustom = entry.exerciseId.startsWith("custom-");
   revokeMedia();
-  const base = `./img/ex/${encodeURIComponent(entry.exerciseId)}`;
 
   root.innerHTML = `<div class="row topbar">
       <a class="back" href="#/workout">‹ ${esc(a.workoutName)}</a>
-      ${hasPhotos || isCustom ? `<button class="link-btn" data-act="photos"${hasPhotos ? "" : " hidden"}>${state.settings.showPhotos ? "Hide picture" : "Show picture"}</button>` : ""}
+      <span class="row">${ex?.howto ? `<button class="link-btn" data-act="howto">${state.settings.showHowTo === true ? "Hide how-to" : "Show how-to"}</button>` : ""}
+      ${hasPhotos || isCustom ? `<button class="link-btn" data-act="photos"${hasPhotos ? "" : " hidden"}>${state.settings.showPhotos ? "Hide picture" : "Show picture"}</button>` : ""}</span>
     </div>
     <h1 class="title">${esc(entry.name)}</h1>
     <div class="tags">${tags.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ")}</div>
-    ${showPhotos ? `<div class="photo"><img class="a" src="${base}/0.jpg" alt="" loading="lazy" /><img class="b" src="${base}/1.jpg" alt="" loading="lazy" /></div>` : ""}
+    ${showPhotos ? photoHtml(ex) : ""}
+    ${howtoHtml(ex, state.settings)}
     ${isCustom ? `<div data-media></div>` : ""}
     <section class="card">
       <h3 style="margin-top:0">Last time${hist.length ? ` · ${esc(fmtDate(hist[hist.length - 1].startedAt))}` : ""}</h3>
@@ -238,6 +239,8 @@ export function render(root, ctx) {
     const s = entry.sets[i];
     if (act === "photos") {
       state.settings.showPhotos = !state.settings.showPhotos;
+    } else if (act === "howto") {
+      state.settings.showHowTo = state.settings.showHowTo !== true;
     } else if (act === "media-remove") {
       if (await confirmSheet("Remove this photo or video?", "Remove")) {
         await deleteMedia(entry.exerciseId);
@@ -289,7 +292,7 @@ export function render(root, ctx) {
         return;
       }
     } else return;
-    if (act === "photos") {
+    if (act === "photos" || act === "howto") {
       ctx.save(); // the picture appears or disappears: redraw the whole screen
       return;
     }
