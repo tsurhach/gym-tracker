@@ -829,7 +829,8 @@ a.btn-primary {
   margin: 0 0 var(--gap);
   line-height: 1.45;
 }
-img[src$=".png"] {
+.photo img[src$=".png"],
+.pick-thumb[src$=".png"] {
   filter: invert(0.9);
 }
 .media-ctl {
