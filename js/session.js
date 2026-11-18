@@ -35,7 +35,7 @@ function makeEntry(state, item, lookup) {
     exerciseId: ex.id,
     name: ex.name,
     primary: ex.primary,
-    sets: prefill(last, item, ex).map((s) => ({ ...s, done: false })),
+    sets: prefill(last, item, ex, state.settings).map((s) => ({ ...s, done: false })),
   };
 }
 

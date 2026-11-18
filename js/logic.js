@@ -50,10 +50,14 @@ function analyse(prevSets, item) {
 // heaviest set was 0 kg (also covers custom exercises). A session mixing 0 and 5 kg is weighted.
 const isBodyOnly = (ex) => ex?.equipment === "body only";
 
-export function advice(prevSets, item, ex) {
+// settings.bodyAdvice === false: body-weight moves get no sentence (missing setting = on).
+export function advice(prevSets, item, ex, settings) {
+  const quiet = settings?.bodyAdvice === false;
   if (!prevSets || prevSets.length === 0) {
     if (isBodyOnly(ex))
-      return {
+      return quiet
+        ? { kind: "first", weight: 0, message: "" }
+        : {
         kind: "first",
         weight: 0,
         message: "First time. Body weight. Do as many good reps as you can.",
@@ -66,6 +70,7 @@ export function advice(prevSets, item, ex) {
   }
   const { W, heavier } = analyse(prevSets, item);
   if (W === 0) {
+    if (quiet) return { kind: "stay", weight: 0, message: "" };
     return heavier
       ? {
           kind: "heavier",
@@ -89,12 +94,12 @@ export function advice(prevSets, item, ex) {
   };
 }
 
-export function prefill(prevSets, item, ex) {
+export function prefill(prevSets, item, ex, settings) {
   const rows = Array.from({ length: item.sets }, (_, i) => i);
   if (!prevSets || prevSets.length === 0) {
     return rows.map(() => ({ weight: isBodyOnly(ex) ? 0 : null, reps: item.repMin }));
   }
-  const a = advice(prevSets, item, ex);
+  const a = advice(prevSets, item, ex, settings);
   if (a.kind === "heavier" && a.weight === 0) {
     // Body weight at the top of the range: same weight, one more rep than last time.
     return rows.map((i) => ({
@@ -136,7 +141,8 @@ export function isStuck(history) {
 
 // One gentle sentence for the exercise screen, or null. Advice only: nothing else changes.
 // "Go heavier" wins over stuck.
-export function stuckNote(history, adv) {
+export function stuckNote(history, adv, settings) {
+  if (settings?.stuckNote === false) return null;
   if (adv?.kind === "heavier" || !isStuck(history)) return null;
   return "Same numbers for the last 3 sessions. That happens. Aim for one more rep today.";
 }

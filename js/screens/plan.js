@@ -182,6 +182,14 @@ export function render(root, ctx) {
       `<label class="setting">Show exercise photos
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
       </label>
+      <label class="setting">Body-weight suggestions
+        <input type="checkbox" data-field="bodyAdvice"${settings.bodyAdvice === false ? "" : " checked"} />
+      </label>
+      <p class="muted small">Tips like "add a rep or two" on push-ups and other body-weight moves.</p>
+      <label class="setting">Stuck reminder
+        <input type="checkbox" data-field="stuckNote"${settings.stuckNote === false ? "" : " checked"} />
+      </label>
+      <p class="muted small">A gentle note when your numbers have stayed the same for 3 workouts.</p>
       <div class="setting" role="group" aria-label="Rest between sets">Rest between sets
         <span class="rest-in">
           <input data-field="restMin" inputmode="numeric" aria-label="Rest minutes" value="${Math.floor(restLength(settings) / 60)}" /> min
@@ -392,6 +400,7 @@ export function render(root, ctx) {
     if (!field) return;
 
     if (field === "showPhotos") settings.showPhotos = t.checked;
+    else if (field === "bodyAdvice" || field === "stuckNote") settings[field] = t.checked;
     else if (field === "plate")
       settings.plates = PLATE_SIZES.filter((k) =>
         k === Number(t.dataset.kg) ? t.checked : gymPlates(settings).includes(k),
