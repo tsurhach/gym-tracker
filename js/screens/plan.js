@@ -222,7 +222,9 @@ export function render(root, ctx) {
       <label class="btn file-btn">Import backup
         <input type="file" data-field="import" accept="application/json,.json" />
       </label>
-      <p class="muted small" id="app-version">${versionText}</p>`,
+      <p class="muted small" id="app-version">${versionText}</p>
+      <!-- TEMP-PASSKEY-SPIKE: remove this line and the spike/ folder after the passkey test -->
+      <p class="muted small"><a href="spike/passkey.html">Passkey test (temporary)</a></p>`,
     )}`;
   runningVersion().then((v) => {
     versionText = v ? `Version ${v}` : "Version: not installed";
