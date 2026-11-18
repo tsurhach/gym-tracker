@@ -81,6 +81,7 @@ const SECTIONS = [
     "“Go heavier” advice",
     "Only a suggestion.",
     `<p>If you did all your reps on every set last time, the app says something like "Try 42.5 kg today". It means you may be ready for a bit more weight.</p>
+    <p>For body-weight exercises like push-ups, it suggests one more rep, or a little added weight if you have it.</p>
     <p>It is only a suggestion. Use the weight that feels right.</p>`,
   ],
   [

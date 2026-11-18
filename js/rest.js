@@ -25,8 +25,13 @@ export const overDeadline = (endsAt, now) =>
   now >= endsAt + OVER_MS ? now + OVER_MS : endsAt + OVER_MS;
 
 // Seconds to rest from settings: missing -> 90, 0 -> off.
-export const restLength = (settings) =>
-  Number.isFinite(settings?.restSeconds) ? settings.restSeconds : DEFAULT_REST;
+// An exercise's own restSec (0..3600) wins over the setting.
+export const restLength = (settings, item) =>
+  Number.isFinite(item?.restSec) && item.restSec >= 0 && item.restSec <= MAX_REST
+    ? item.restSec
+    : Number.isFinite(settings?.restSeconds)
+      ? settings.restSeconds
+      : DEFAULT_REST;
 
 export const remaining = (endsAt, now) =>
   Math.max(0, Math.ceil((endsAt - now) / 1000));
@@ -320,9 +325,9 @@ export function sync(name, shellCtx) {
 }
 
 // Call inside the set-confirm tap: iOS only lets audio start from a tap.
-export function startRest(shellCtx) {
+export function startRest(shellCtx, item) {
   ctx = shellCtx;
-  const len = restLength(ctx.state.settings);
+  const len = restLength(ctx.state.settings, item);
   if (!len || !ctx.state.active) return;
   unlock();
   ctx.state.active.rest = { endsAt: Date.now() + len * 1000, total: len };

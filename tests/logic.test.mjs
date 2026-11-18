@@ -7,6 +7,7 @@ import {
   exerciseHistory,
   advice,
   prefill,
+  stuckNote,
   beats,
   isStuck,
   isPersonalBest,
@@ -278,4 +279,55 @@ test("plateRule: overrides win, otherwise the equipment default", () => {
   assert.deepEqual(plateRule({}, custom), { on: false, empty: 0 });
   assert.deepEqual(plateRule({ plates: true, emptyKg: 12 }, custom), { on: true, empty: 12 });
   assert.deepEqual(plateRule({ emptyKg: -3 }, bb), { on: true, empty: 20 });
+});
+
+test("body weight: top of the range suggests reps or a little added weight, weight stays 0", () => {
+  const a = advice(s(0, 12, 12, 12), item);
+  assert.equal(a.kind, "heavier");
+  assert.equal(a.weight, 0);
+  assert.equal(
+    a.message,
+    "You hit 12 on every set. Add a rep or two, or add 2.5 kg (belt or vest) if you have it.",
+  );
+  assert.deepEqual(prefill(s(0, 12, 12, 12), item), s(0, 13, 13, 13));
+});
+
+test("body weight: stay message and pre-fill keep last reps at 0", () => {
+  const a = advice(s(0, 10, 10, 9), item);
+  assert.deepEqual([a.kind, a.weight, a.message], ["stay", 0, "Beat your reps from last time."]);
+  assert.deepEqual(prefill(s(0, 10, 10, 9), item), s(0, 10, 10, 9));
+});
+
+test("body weight: first time pre-fills 0 for body only, still blank for others", () => {
+  const bodyEx = { equipment: "body only" };
+  assert.equal(advice(null, item, bodyEx).weight, 0);
+  assert.equal(advice(null, item, bodyEx).message, "First time. Body weight. Do as many good reps as you can.");
+  assert.deepEqual(prefill(null, item, bodyEx), s(0, 8, 8, 8));
+  assert.deepEqual(prefill(null, item, { equipment: "barbell" }), [
+    { weight: null, reps: 8 },
+    { weight: null, reps: 8 },
+    { weight: null, reps: 8 },
+  ]);
+  assert.equal(advice(null, item).message, "First time. Pick a starting weight.");
+});
+
+test("weighted exercises are unchanged, even if the library says body only", () => {
+  assert.equal(advice(s(55, 12, 12, 12), item).message, "You hit 12 on every set. Try 57.5 kg today.");
+  assert.equal(advice(s(50, 10, 10, 9), item, { equipment: "body only" }).message, "Stay at 50 kg and beat your reps.");
+  assert.deepEqual(prefill(s(55, 12, 12, 12), item), s(57.5, 8, 8, 8));
+  assert.equal(advice([...s(0, 10), ...s(5, 12, 12, 12)], item).weight, 7.5);
+});
+
+test("stuckNote: one gentle sentence after 3 flat sessions, nothing when progressing or heavier", () => {
+  const flat = [s(50, 10, 10, 9), s(50, 10, 10, 9), s(50, 10, 10, 9)];
+  const adv = advice(flat[2], item);
+  assert.equal(
+    stuckNote(flat, adv),
+    "Same numbers for the last 3 sessions. That happens. Aim for one more rep today.",
+  );
+  assert.equal(adv.message, "Stay at 50 kg and beat your reps."); // advice itself is unchanged
+  assert.equal(stuckNote([flat[0], flat[1]], adv), null);
+  assert.equal(stuckNote([s(50, 8, 8, 8), s(50, 9, 9, 9), s(50, 10, 10, 10)], adv), null);
+  const top = [s(50, 12, 12, 12), s(50, 12, 12, 12), s(50, 12, 12, 12)];
+  assert.equal(stuckNote(top, advice(top[2], item)), null);
 });

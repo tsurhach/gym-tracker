@@ -46,8 +46,18 @@ function analyse(prevSets, item) {
   return { W, heavier };
 }
 
-export function advice(prevSets, item) {
+// Body weight: library equipment "body only" (first time, no history yet), or last time's
+// heaviest set was 0 kg (also covers custom exercises). A session mixing 0 and 5 kg is weighted.
+const isBodyOnly = (ex) => ex?.equipment === "body only";
+
+export function advice(prevSets, item, ex) {
   if (!prevSets || prevSets.length === 0) {
+    if (isBodyOnly(ex))
+      return {
+        kind: "first",
+        weight: 0,
+        message: "First time. Body weight. Do as many good reps as you can.",
+      };
     return {
       kind: "first",
       weight: null,
@@ -55,6 +65,15 @@ export function advice(prevSets, item) {
     };
   }
   const { W, heavier } = analyse(prevSets, item);
+  if (W === 0) {
+    return heavier
+      ? {
+          kind: "heavier",
+          weight: 0,
+          message: `You hit ${item.repMax} on every set. Add a rep or two, or add ${round2(item.step)} kg (belt or vest) if you have it.`,
+        }
+      : { kind: "stay", weight: 0, message: "Beat your reps from last time." };
+  }
   if (heavier) {
     const weight = round2(W + item.step);
     return {
@@ -70,12 +89,19 @@ export function advice(prevSets, item) {
   };
 }
 
-export function prefill(prevSets, item) {
+export function prefill(prevSets, item, ex) {
   const rows = Array.from({ length: item.sets }, (_, i) => i);
   if (!prevSets || prevSets.length === 0) {
-    return rows.map(() => ({ weight: null, reps: item.repMin }));
+    return rows.map(() => ({ weight: isBodyOnly(ex) ? 0 : null, reps: item.repMin }));
   }
-  const a = advice(prevSets, item);
+  const a = advice(prevSets, item, ex);
+  if (a.kind === "heavier" && a.weight === 0) {
+    // Body weight at the top of the range: same weight, one more rep than last time.
+    return rows.map((i) => ({
+      weight: 0,
+      reps: (prevSets[i] ?? prevSets[prevSets.length - 1]).reps + 1,
+    }));
+  }
   if (a.kind === "heavier") {
     return rows.map(() => ({ weight: a.weight, reps: item.repMin }));
   }
@@ -106,6 +132,13 @@ export function isStuck(history) {
   if (history.length < 3) return false;
   const [a, b, c] = history.slice(-3);
   return !beats(b, a) && !beats(c, b);
+}
+
+// One gentle sentence for the exercise screen, or null. Advice only: nothing else changes.
+// "Go heavier" wins over stuck.
+export function stuckNote(history, adv) {
+  if (adv?.kind === "heavier" || !isStuck(history)) return null;
+  return "Same numbers for the last 3 sessions. That happens. Aim for one more rep today.";
 }
 
 export function nextWorkoutId(workouts, sessions) {

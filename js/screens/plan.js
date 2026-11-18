@@ -65,6 +65,12 @@ function itemHtml(it, ctx, i, n) {
       <label>Max reps<input data-field="repMax" inputmode="numeric" value="${esc(it.repMax)}" /></label>
       <label>Step kg<input data-field="step" inputmode="decimal" value="${esc(fmtKg(it.step))}" /></label>
     </div>
+    <div class="setting">Rest after a set (blank = normal rest)
+      <span class="rest-in">
+        <input data-field="xRestMin" inputmode="numeric" aria-label="Rest minutes for this exercise" value="${it.restSec == null ? "" : Math.floor(it.restSec / 60)}" /> min
+        <input data-field="xRestSec" inputmode="numeric" aria-label="Rest seconds for this exercise" value="${it.restSec == null ? "" : it.restSec % 60}" /> sec
+      </span>
+    </div>
     <label class="setting">Uses plates
       <input type="checkbox" data-field="uses"${rule.on ? " checked" : ""} />
     </label>
@@ -411,6 +417,8 @@ export function render(root, ctx) {
     else {
       const msg = applyField(ctx, t);
       if (msg) showBanner(msg);
+      // Typed rest fields stay as typed: blank must remain blank, so no redraw.
+      if (field === "xRestMin" || field === "xRestSec") return ctx.save({ render: false });
     }
     ctx.save(); // re-renders, which also puts the old value back after a rejected edit
   });
@@ -443,6 +451,12 @@ function applyField(ctx, t) {
   }
   const it = w.items[xi];
   if (!it) return null;
+  if (field === "xRestMin" || field === "xRestSec") {
+    const q = (f) => t.closest("[data-x]").querySelector(`[data-field="${f}"]`).value;
+    if (!q("xRestMin").trim() && !q("xRestSec").trim()) delete it.restSec;
+    else it.restSec = parseRest(q("xRestMin"), q("xRestSec"));
+    return null;
+  }
   const v = parseNum(t.value);
   const whole = Number.isInteger(v) && v >= 1;
   let ok = true;
@@ -467,7 +481,7 @@ function applyField(ctx, t) {
       : "Reps must be whole numbers, 1 or more, with min no higher than max.";
 }
 
-const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step", "emptyKg"]);
+const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step", "emptyKg", "xRestMin", "xRestSec"]);
 
 // Rest length from its two fields (blank counts as 0).
 function syncRest(ctx) {
