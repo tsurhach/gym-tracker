@@ -36,9 +36,12 @@ export function exerciseHistory(sessions, exerciseId) {
 }
 
 // Swap candidates: same main muscle, not the current one, not in excludeIds.
-// Ranked: done before, then different equipment (custom counts as different), then shared secondary muscles; ties keep list order.
-export function alternatives(current, all, sessions, excludeIds = new Set(), limit = 5) {
+// Ranked: swapped to before (counts, most first; state.swapCounts "idA|idB" sorted, created on first swap), done before, then different equipment (custom counts as different), then shared secondary muscles; ties keep list order.
+export const pairKey = (a, b) => [a, b].sort().join("|");
+
+export function alternatives(current, all, sessions, excludeIds = new Set(), limit = 5, counts = {}) {
   const sec = new Set(current.secondary ?? []);
+  const used = (e) => counts[pairKey(current.id, e.id)] ?? 0;
   const rank = (e) => [
     exerciseHistory(sessions, e.id).some((h) => h.sets.length) ? 0 : 1,
     e.equipment && e.equipment === current.equipment ? 1 : 0,
@@ -47,7 +50,7 @@ export function alternatives(current, all, sessions, excludeIds = new Set(), lim
   return all
     .filter((e) => e.primary === current.primary && e.id !== current.id && !excludeIds.has(e.id))
     .map((e, i) => ({ e, i, r: rank(e) }))
-    .sort((a, b) => a.r[0] - b.r[0] || a.r[1] - b.r[1] || a.r[2] - b.r[2] || a.i - b.i)
+    .sort((a, b) => used(b.e) - used(a.e) || a.r[0] - b.r[0] || a.r[1] - b.r[1] || a.r[2] - b.r[2] || a.i - b.i)
     .slice(0, limit)
     .map((x) => x.e);
 }

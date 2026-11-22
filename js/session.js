@@ -1,5 +1,5 @@
 import { GOALS, DEFAULT_STEP } from "./constants.js";
-import { prefill, exerciseHistory } from "./logic.js";
+import { prefill, exerciseHistory, pairKey } from "./logic.js";
 
 export function newItem(exerciseId, goalKey) {
   const { sets, repMin, repMax } = GOALS[goalKey];
@@ -85,6 +85,8 @@ export function swapEntry(state, oldId, newId, lookup, { inPlan = false } = {}) 
   entry.target = { sets, repMin, repMax, step };
   if (done.length) a.entries.splice(i, 1, { ...old, sets: done }, entry);
   else a.entries[i] = entry;
+  const k = pairKey(oldId, newId);
+  state.swapCounts = { ...state.swapCounts, [k]: (state.swapCounts?.[k] ?? 0) + 1 };
   if (inPlan && pi && !w.items.some((it) => it.exerciseId === newId)) pi.exerciseId = newId;
   return state;
 }

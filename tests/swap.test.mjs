@@ -31,6 +31,23 @@ test("exclusion and primary muscle", () => {
   assert.ok(!r.includes("bench") && !r.includes("row"));
 });
 
+test("swaps count symmetrically and usual ones rank first by count", () => {
+  const s = setup();
+  swapEntry(s, "bench", "fly", lookup);
+  swapEntry(s, "fly", "bench", lookup);
+  swapEntry(s, "bench", "db", lookup);
+  assert.deepEqual(s.swapCounts, { "bench|fly": 2, "bench|db": 1 });
+  const r = ids(alternatives(by.bench, LIB, [], new Set(), 5, s.swapCounts));
+  assert.deepEqual(r.slice(0, 3), ["fly", "db", "dip"]);
+  const x = ids(alternatives(by.bench, LIB, [], new Set(["fly"]), 5, s.swapCounts));
+  assert.deepEqual(x.slice(0, 2), ["db", "dip"]);
+  assert.ok(!x.includes("fly"));
+  const old = setup();
+  delete old.swapCounts;
+  swapEntry(old, "bench", "db", lookup);
+  assert.equal(old.swapCounts["bench|db"], 1);
+});
+
 function setup(plan = ["bench", "row"]) {
   const s = emptyState();
   s.workouts = [{ id: "w", name: "W", items: plan.map((exerciseId) => ({ exerciseId, sets: 4, repMin: 6, repMax: 9, step: 2.5 })) }];
