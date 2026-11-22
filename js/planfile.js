@@ -279,8 +279,117 @@ const MORE_ALIASES = {
   "standing-dumbbell-calf-raise": ["dumbbell calf raise"],
 };
 
+// Third batch: the full name pass over wger, free-exercise-db and everkinetic, and the exercises added with the
+// Everkinetic drawings (docs/exercise-aliases.md). Same rule: same movement on the same equipment, else leave it out.
+const EXTRA_ALIASES = {
+  "bench-press": ["barbell bench press medium grip", "bench press custom"],
+  "dumbbell-bench-press": ["benchpress dumbbells"],
+  "close-grip-barbell-bench-press": ["bench press narrow grip", "narrow grip bench press"],
+  "overhead-press": ["standing military press", "seated military press", "seated barbell military press"],
+  "bent-over-barbell-row": ["bent over rowing"],
+  "t-bar-row": ["rowing t bar", "t bar row with handle"],
+  "straight-arm-pulldown": ["straight arm push down",
+    "rope straight arm pulldown",
+    "straight arm pull down bar attachment",
+    "straight arm pull down rope attachment",
+  ],
+  "wide-grip-lat-pulldown": ["pull down wide bar wide grip", "lat pull down leaning back", "lat pull down straight back"],
+  "close-grip-front-lat-pulldown": ["v bar pulldown"],
+  "reverse-grip-lat-pulldown": [
+    "underhand pull downs",
+    "underhand pull down",
+    "underhand lat pull down",
+    "underhand lat pulldown",
+    "underhand grip lat pulldown",
+    "supinated lat pulldown",
+    "reverse grip pulldown",
+  ],
+  "inverted-row": ["body row", "bodyweight row", "australian pull ups", "australian pull up"],
+  "hanging-leg-raise": ["leg raises pull up bar"],
+  "rear-delt-fly": ["bent over lateral raises", "bent over lateral raise"],
+  "front-dumbbell-raise": ["front two dumbbell raise"],
+  "dumbbell-shoulder-press": ["standing dumbbell press"],
+  "cable-seated-lateral-raise": [
+    "cable lateral raise",
+    "cable lateral raises",
+    "lateral raise cable",
+    "side lateral raise cable",
+    "cable lateral raises single arm",
+  ],
+  "cable-rear-delt-fly": ["bent over lateral cable raises"],
+  "dumbbell-pullover": [
+    "dumbbell bent arm pullover",
+    "bent arm dumbbell pullover",
+    "cross bench dumbbell pullovers",
+    "straight arm dumbbell pullover",
+  ],
+  "incline-bench-press": ["barbell incline bench press medium grip"],
+  "incline-dumbbell-fly": ["incline dumbbell fly s", "incline dumbbell flys"],
+  "incline-cable-flye": ["incline cable fly s"],
+  "smith-machine-bench-press": ["smith bench press", "bench press smith", "smith machine flat bench press"],
+  "smith-machine-incline-bench-press": ["smith incline bench press", "incline bench press smith"],
+  "smith-machine-squat": ["squats on multipress"],
+  "bench-dips": ["dips between two benches", "chair dips"],
+  "seated-dip-machine": ["dip machine", "triceps dip machine", "tricep dips using machine", "machine dips"],
+  "dumbbell-skullcrusher": [
+    "lying dumbbell tricep extension",
+    "lying triceps extension with dumbbells",
+    "lying two arm triceps extension with dumbbell",
+  ],
+  "dumbbell-overhead-triceps-extension": ["triceps overhead dumbbell", "standing dumbbell triceps extension"],
+  "dumbbell-one-arm-triceps-extension": [
+    "standing one arm dumbbell triceps extension",
+    "standing one arm triceps extension with dumbbell",
+  ],
+  "barbell-overhead-triceps-extension": [
+    "standing overhead barbell triceps extension",
+    "standing overhead triceps extension with barbell",
+    "seated overhead triceps extension with barbell",
+  ],
+  "diamond-push-up": ["close triceps pushup", "close grip push up", "close grip press ups", "triangle push up"],
+  "rope-triceps-pushdown": ["triceps pushdown rope attachment", "triceps pushdown with rope and cable"],
+  "v-bar-triceps-pushdown": [
+    "triceps pushdown v bar attachment",
+    "triceps pushdown with v bar and cable",
+    "v bar pushdown",
+  ],
+  "cable-rope-hammer-curl": ["cable hammer curls rope attachment", "hammer curls with rope and cable"],
+  "hammer-curl": [
+    "biceps hammer curl with dumbbell",
+    "alternating hammer curl with dumbbell",
+    "alternate hammer curl",
+    "alternating dumbbell hammer curl",
+  ],
+  "dumbbell-bicep-curl": ["dumbbell alternate bicep curl", "alternating bicep curl with dumbbell"],
+  "incline-dumbbell-curl": ["alternate incline dumbbell curl", "alternating incline curl with dumbbell"],
+  "cable-curl": ["standing biceps cable curl", "standing biceps curl with cable", "straight bar cable curls"],
+  "ez-bar-curl": ["ez bar curl with barbell"],
+  "dumbbell-reverse-curl": ["standing dumbbell reverse curl", "biceps curl reverse with dumbbells"],
+  "barbell-squat": ["barbell full squat"],
+  "barbell-lunge": ["barbell lunges standing"],
+  "dumbbell-lunges": ["dumbbell lunges standing"],
+  "barbell-reverse-lunge": ["rear lunges with barbell", "barbell step back lunge"],
+  "lying-leg-curl": ["leg curls laying"],
+  "seated-leg-curl": ["leg curls sitting"],
+  "romanian-deadlift": ["barbell romanian deadlift rdl"],
+  "glute-ham-raise": ["natural glute ham raise"],
+  "hip-adduction-machine": ["thigh adductor", "seated hip adduction", "adductor machine", "hip adductor machine"],
+  "calf-press-on-the-leg-press-machine": [
+    "calf press",
+    "calves press on leg machine",
+    "calf press using leg press machine",
+  ],
+  "lying-leg-raise": ["flat bench leg raises", "flat bench lying leg raise"],
+  "bicycle-crunch": ["air bike"],
+  "barbell-deadlift": ["dead lifts barbell"],
+  "dumbbell-shrug": ["shoulder shrugs dumbbell"],
+  "hip-abduction-machine": ["thigh abductor"],
+  "skullcrusher": ["lying triceps press with barbell"],
+  "dumbbell-upright-row": ["upright row w dumbbells", "standing dumbbell upright row"],
+};
+
 export const ALIAS_LIST = {};
-for (const src of [LEGACY_ALIASES, MORE_ALIASES])
+for (const src of [LEGACY_ALIASES, MORE_ALIASES, EXTRA_ALIASES])
   for (const [id, names] of Object.entries(src)) ALIAS_LIST[id] = [...(ALIAS_LIST[id] ?? []), ...names];
 const ALIASES = new Map();
 for (const [id, names] of Object.entries(ALIAS_LIST))
@@ -310,8 +419,9 @@ const WORD = {
   flye: "fly",
   flyes: "fly",
   flies: "fly",
+  flys: "fly",
 };
-const FILLER = new Set(["with", "on", "the", "a", "an", "of", "using"]);
+const FILLER = new Set(["with", "on", "the", "a", "an", "of", "using", "custom"]);
 const stem = (w) => {
   if (WORD[w]) return WORD[w];
   if (/[^s]{2}(ch|sh|x|ss)es$/.test(w)) return w.slice(0, -2); // crunches -> crunch

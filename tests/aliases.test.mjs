@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { matchExercise } from "../js/planfile.js";
+import { linkCustomsToLibrary } from "../js/migrate.js";
 
 const lib = JSON.parse(readFileSync(new URL("../data/exercises.json", import.meta.url), "utf8"));
 const id = (n) => matchExercise(n, lib)?.id ?? null;
@@ -136,4 +137,88 @@ test("near-misses with other equipment or another movement stay unmatched", () =
     "Single Leg Romanian Deadlift",
   ])
     assert.equal(id(n), null, n);
+});
+
+// ---- full name pass (wger, free-exercise-db, everkinetic): docs/exercise-aliases.md ----
+const TABLE = JSON.parse(readFileSync(new URL("./alias-table.json", import.meta.url), "utf8"));
+
+test("every source name classed as the same exercise maps to its library exercise", () => {
+  const entries = Object.entries(TABLE);
+  assert.ok(entries.length >= 380, `${entries.length}`);
+  for (const [n, e] of entries) {
+    assert.ok(lib.some((x) => x.id === e), `unknown id ${e}`);
+    assert.equal(id(n), e, n);
+  }
+});
+
+// Other equipment, another movement, a grip or stance variant, or a bare name that fits two exercises.
+test("different or ambiguous source names stay unmatched", () => {
+  for (const n of [
+    "Pullover",
+    "Reverse lunges",
+    "Dumbbell Rear Lunge",
+    "Barbell Walking Lunge",
+    "Dumbbell Front Squat",
+    "Wide-Grip Barbell Bench Press",
+    "Wide Grip Bench Press",
+    "Low Cable Crossover",
+    "Decline Dumbbell Flyes",
+    "Incline Close Grip Barbell Bench Press",
+    "Close Grip EZ Bar Curl with Barbell",
+    "Dumbbell Prone Incline Curl",
+    "Seated Dumbbell Curl",
+    "Standing Bicep Curl",
+    "Alternating bicep curls",
+    "Dumbbell Romanian Deadlift",
+    "Dumbbell Deadlift",
+    "Dumbbell Raise",
+    "Front Raises",
+    "Side bend",
+    "Barbell Side Bend",
+    "Glute Bridge",
+    "Shoulder Shrug",
+    "Pendelay Rows",
+    "Sumo Deadlift",
+    "Pistol Squat",
+    "Bulgarian Split Squat (Custom)",
+    "Pull-Ups (Wide Grip)",
+    "Weighted Pull Ups",
+    "Assisted Pull-Up",
+    "Push-Ups | Incline",
+    "Wide Push-Up",
+    "TRX Rows",
+    "Bodyweight Walking Lunge",
+    "Seated Dumbbell Calf Raise",
+    "Cable Seated Crunch",
+    "Smith Machine Close Grip Bench Press",
+    "Smith Machine Hack Squat",
+    "Single-arm Preacher Curl",
+    "Kettlebell Arnold Press",
+    "Triceps Dips (Assisted)",
+    "Lying T-Bar Row",
+    "Seated Row (Machine)",
+    "Reverse Barbell Curl",
+    "Landmine press",
+    "Flutter Kicks",
+    "Side Plank",
+  ])
+    assert.equal(id(n), null, n);
+});
+
+test("custom exercises named like the new names are linked, including a new library exercise", () => {
+  const s = {
+    customExercises: [
+      { id: "c1", name: "Barbell Step Back Lunge", primary: "Quads", secondary: [] },
+      { id: "c2", name: "Dips Between Two Benches", primary: "Triceps", secondary: [] },
+      { id: "c3", name: "Smith Bench Press", primary: "Chest", secondary: [] },
+      { id: "c4", name: "Landmine press", primary: "Shoulders", secondary: [] },
+    ],
+    workouts: [{ id: "w", name: "A", muscles: [], items: ["c1", "c2", "c3", "c4"].map((x) => ({ exerciseId: x, sets: 3, repMin: 8, repMax: 10, step: 2 })) }],
+    active: null,
+    sessions: [],
+  };
+  const links = linkCustomsToLibrary(s, lib, new Set());
+  assert.deepEqual(links.map((l) => l.to), ["Barbell Reverse Lunge", "Bench Dips", "Smith Machine Bench Press"]);
+  assert.deepEqual(s.customExercises.map((c) => c.id), ["c4"]);
+  assert.deepEqual(s.workouts[0].items.map((i) => i.exerciseId), ["barbell-reverse-lunge", "bench-dips", "smith-machine-bench-press", "c4"]);
 });
