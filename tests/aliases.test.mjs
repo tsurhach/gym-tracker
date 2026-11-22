@@ -144,7 +144,7 @@ const TABLE = JSON.parse(readFileSync(new URL("./alias-table.json", import.meta.
 
 test("every source name classed as the same exercise maps to its library exercise", () => {
   const entries = Object.entries(TABLE);
-  assert.ok(entries.length >= 380, `${entries.length}`);
+  assert.ok(entries.length >= 375, `${entries.length}`);
   for (const [n, e] of entries) {
     assert.ok(lib.some((x) => x.id === e), `unknown id ${e}`);
     assert.equal(id(n), e, n);
@@ -155,6 +155,11 @@ test("every source name classed as the same exercise maps to its library exercis
 test("different or ambiguous source names stay unmatched", () => {
   for (const n of [
     "Pullover",
+    "Air Bike", // also a cardio machine
+    "Calf Press", // could be a calf press machine
+    "Seated Leg Press", // a different machine from the 45 degree sled
+    "Lower Back Extensions", // machine or bench
+    "Seated Military Press", // barbell, dumbbell or machine
     "Reverse lunges",
     "Dumbbell Rear Lunge",
     "Barbell Walking Lunge",
