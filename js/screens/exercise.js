@@ -9,7 +9,14 @@ import {
   plateText,
   validSet,
 } from "../logic.js";
-import { confirmSheet, esc, fmtDate, fmtKg, howtoHtml, photoHtml } from "../ui.js";
+import {
+  confirmSheet,
+  esc,
+  fmtDate,
+  fmtKg,
+  howtoHtml,
+  photoHtml,
+} from "../ui.js";
 import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
 import { cancelRest, startRest } from "../rest.js";
@@ -64,7 +71,9 @@ function paintPlates() {
     rows.find((r) => !current.entry.sets[Number(r.dataset.i)]?.done) ??
     rows.at(-1);
   const w = row ? parseNum(row.querySelector('[data-f="weight"]').value) : null;
-  const text = w ? plateText(w, current.rule.empty, gymPlates(current.ctx.state.settings)) : "";
+  const text = w
+    ? plateText(w, current.rule.empty, gymPlates(current.ctx.state.settings))
+    : "";
   el.hidden = !text;
   el.textContent = text;
   el.setAttribute("aria-label", text.replaceAll(" + ", ", "));
@@ -158,7 +167,11 @@ export function render(root, ctx) {
   const hist = exerciseHistory(state.sessions, entry.exerciseId).filter(
     (x) => x.sets.length,
   );
-  const stuck = stuckNote(hist.map((h) => h.sets), adv, state.settings);
+  const stuck = stuckNote(
+    hist.map((h) => h.sets),
+    adv,
+    state.settings,
+  );
   const past = hist.flatMap((h) => h.sets);
   const tags = ex
     ? [ex.primary, ...ex.secondary]
@@ -169,11 +182,13 @@ export function render(root, ctx) {
 
   root.innerHTML = `<div class="row topbar">
       <a class="back" href="#/workout">‹ ${esc(a.workoutName)}</a>
-      <span class="row">${ex?.howto ? `<button class="link-btn" data-act="howto">${state.settings.showHowTo === true ? "Hide how-to" : "Show how-to"}</button>` : ""}
-      ${hasPhotos || isCustom ? `<button class="link-btn" data-act="photos"${hasPhotos ? "" : " hidden"}>${state.settings.showPhotos ? "Hide picture" : "Show picture"}</button>` : ""}</span>
     </div>
     <h1 class="title">${esc(entry.name)}</h1>
     <div class="tags">${tags.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ")}</div>
+    <div class="view-opts">
+      ${hasPhotos || isCustom ? `<label class="check" data-photo-opt${hasPhotos ? "" : " hidden"}><input type="checkbox" data-act="photos"${state.settings.showPhotos ? " checked" : ""} /> Show picture</label>` : ""}
+      ${ex?.howto ? `<label class="check"><input type="checkbox" data-act="howto"${state.settings.showHowTo === true ? " checked" : ""} /> Show how-to</label>` : ""}
+    </div>
     ${showPhotos ? photoHtml(ex) : ""}
     ${howtoHtml(ex, state.settings)}
     ${isCustom ? `<div data-media></div>` : ""}
@@ -199,7 +214,8 @@ export function render(root, ctx) {
     if (gen !== mediaGen || !root.isConnected) return;
     revokeMedia();
     if (m) mediaUrl = URL.createObjectURL(m.blob);
-    root.querySelector('.topbar [data-act="photos"]').hidden = !m;
+    const opt = root.querySelector("[data-photo-opt]");
+    if (opt) opt.hidden = !m;
     const shown = m && state.settings.showPhotos;
     mediaBox.innerHTML = `${shown ? `<div class="photo">${m.kind === "video" ? `<video src="${mediaUrl}" controls playsinline muted loop preload="metadata"></video>` : `<img src="${mediaUrl}" alt="" />`}</div>` : ""}
       <div class="row media-ctl">

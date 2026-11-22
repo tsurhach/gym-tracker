@@ -869,6 +869,31 @@ a.btn-primary {
 .media-ctl {
   margin-bottom: var(--gap);
 }
+.view-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 4px 0 var(--gap);
+}
+.view-opts:empty {
+  display: none;
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--muted);
+}
+.check[hidden] {
+  display: none;
+}
+.check input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
 .media-ctl .btn {
   margin-bottom: 0;
 }
