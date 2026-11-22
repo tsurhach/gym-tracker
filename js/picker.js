@@ -6,23 +6,24 @@ import { checkFile, getMedia, saveMedia } from "./media.js";
 // primary muscle, with a form to create a custom exercise. Not tied to any screen.
 // onPick(exerciseId) is called once, then the picker closes.
 // opts.exclude: Set of exercise ids shown as already added and not selectable.
+// opts.title: heading, default "Add exercise".
 // opts.muscles: the workout's muscle groups; by default only exercises whose primary is one of them are listed.
 export function pickerExercises(all, muscles, showAll) {
   return showAll || !muscles?.length ? all : all.filter((e) => muscles.includes(e.primary));
 }
 
-export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [] } = {}) {
+export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], title = "Add exercise" } = {}) {
   let showAll = false;
   const el = document.createElement("div");
   el.className = "overlay";
   el.setAttribute("role", "dialog");
   el.setAttribute("aria-modal", "true");
-  el.setAttribute("aria-label", "Add exercise");
+  el.setAttribute("aria-label", title);
   el.innerHTML = `
     <div class="overlay-inner">
       <div class="overlay-head">
         <button class="icon-btn" data-act="close" aria-label="Close">✕</button>
-        <h2>Add exercise</h2>
+        <h2>${esc(title)}</h2>
       </div>
       <input type="search" data-search placeholder="Search exercises" aria-label="Search exercises" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
       <details class="card" style="margin-top:12px">

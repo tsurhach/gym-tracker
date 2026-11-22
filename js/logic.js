@@ -35,6 +35,23 @@ export function exerciseHistory(sessions, exerciseId) {
   return out.sort((a, b) => a.startedAt - b.startedAt);
 }
 
+// Swap candidates: same main muscle, not the current one, not in excludeIds.
+// Ranked: done before, then different equipment (custom counts as different), then shared secondary muscles; ties keep list order.
+export function alternatives(current, all, sessions, excludeIds = new Set(), limit = 5) {
+  const sec = new Set(current.secondary ?? []);
+  const rank = (e) => [
+    exerciseHistory(sessions, e.id).some((h) => h.sets.length) ? 0 : 1,
+    e.equipment && e.equipment === current.equipment ? 1 : 0,
+    -(e.secondary ?? []).filter((m) => sec.has(m)).length,
+  ];
+  return all
+    .filter((e) => e.primary === current.primary && e.id !== current.id && !excludeIds.has(e.id))
+    .map((e, i) => ({ e, i, r: rank(e) }))
+    .sort((a, b) => a.r[0] - b.r[0] || a.r[1] - b.r[1] || a.r[2] - b.r[2] || a.i - b.i)
+    .slice(0, limit)
+    .map((x) => x.e);
+}
+
 const topWeight = (sets) => Math.max(...sets.map((x) => x.weight));
 
 // Heaviest weight W, and whether every planned set was done at W with reps >= repMax.

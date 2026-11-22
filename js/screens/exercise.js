@@ -20,6 +20,7 @@ import {
 import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
 import { cancelRest, startRest } from "../rest.js";
+import { openSwap } from "../swapsheet.js";
 
 // Pure: a set plus the two input texts gives the updated set. A confirmed set whose
 // values are no longer valid becomes unconfirmed; weight may stay null while unconfirmed.
@@ -200,7 +201,8 @@ export function render(root, ctx) {
       ${rule.on ? `<div class="muted small" role="note" data-plates hidden></div>` : ""}
     </section>
     <section class="card" data-sets>${setsInner(entry, past)}</section>
-    <a class="btn btn-primary" href="#/workout">Done, back to list</a>`;
+    <a class="btn btn-primary" href="#/workout">Done, back to list</a>
+    <button class="btn" data-act="swap" style="margin-top:var(--gap)">Swap exercise</button>`;
 
   current = { root, entry, ctx, past, rule };
   paintPlates();
@@ -253,6 +255,10 @@ export function render(root, ctx) {
     const row = t.closest(".set");
     const i = row ? Number(row.dataset.i) : -1;
     const s = entry.sets[i];
+    if (act === "swap") {
+      ctx.save({ render: false });
+      return openSwap(ctx, entry);
+    }
     if (act === "photos") {
       state.settings.showPhotos = !state.settings.showPhotos;
     } else if (act === "howto") {

@@ -67,6 +67,28 @@ export function addEntry(state, exerciseId, lookup) {
   return state;
 }
 
+// Swap an exercise in today's workout. The new entry takes the old one's plan targets (kept on
+// entry.target, read by itemFor). Done sets stay on the old entry; the new one gets the remaining sets.
+// inPlan: also replace the exercise in the workout's plan (unless the new one is already there).
+export function swapEntry(state, oldId, newId, lookup, { inPlan = false } = {}) {
+  const a = state.active;
+  const i = a?.entries.findIndex((e) => e.exerciseId === oldId) ?? -1;
+  if (i < 0 || oldId === newId || a.entries.some((e) => e.exerciseId === newId)) return state;
+  const old = a.entries[i];
+  const w = state.workouts.find((x) => x.id === a.workoutId);
+  const pi = w?.items.find((it) => it.exerciseId === oldId);
+  const { sets, repMin, repMax, step } = old.target ?? pi ?? newItem(oldId, state.settings.goal);
+  const done = old.sets.filter((s) => s.done);
+  const left = done.length ? Math.max(1, sets - done.length) : sets;
+  const entry = makeEntry(state, { exerciseId: newId, sets: left, repMin, repMax, step }, lookup);
+  if (!entry) return state;
+  entry.target = { sets, repMin, repMax, step };
+  if (done.length) a.entries.splice(i, 1, { ...old, sets: done }, entry);
+  else a.entries[i] = entry;
+  if (inPlan && pi && !w.items.some((it) => it.exerciseId === newId)) pi.exerciseId = newId;
+  return state;
+}
+
 export function finishSession(state, now) {
   const a = state.active;
   if (!a) return state;

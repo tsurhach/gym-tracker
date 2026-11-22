@@ -15,10 +15,11 @@ export function lastText(sets) {
   return `${sets.map((s) => `${kg(s.weight)} × ${s.reps}`).join(", ")} kg`;
 }
 
-// The plan item (sets, rep range, step) behind an entry. Added-on exercises use goal defaults.
+// The plan item (sets, rep range, step) behind an entry (a swapped-in entry carries the old one's). Added-on exercises use goal defaults.
 export function itemFor(state, exerciseId) {
   const w = state.workouts.find((x) => x.id === state.active?.workoutId);
   return (
+    state.active?.entries.find((e) => e.exerciseId === exerciseId)?.target ??
     w?.items.find((it) => it.exerciseId === exerciseId) ??
     newItem(exerciseId, state.settings.goal)
   );

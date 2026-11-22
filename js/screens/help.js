@@ -72,6 +72,7 @@ const SECTIONS = [
       <li>The weight and reps are filled in from last time.</li>
       <li>After each set, tap the <b>✓</b> to confirm it.</li>
       <li>To change a number, tap it and type.</li>
+      <li>Machine taken? On the exercise, tap <b>Swap exercise</b> to switch to a similar one.</li>
       <li>Tap <b>Done, back to list</b>, then pick the next exercise.</li>
       <li>At the end, tap <b>Finish workout</b>.</li>
     </ol>`,
