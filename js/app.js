@@ -1,4 +1,6 @@
 import { createStore } from "./store.js";
+import { linkCustomsToLibrary } from "./migrate.js";
+import { allMediaKeys } from "./media.js";
 import { confirmSheet, showBanner } from "./ui.js";
 import * as setup from "./screens/setup.js";
 import * as plan from "./screens/plan.js";
@@ -79,6 +81,13 @@ async function main() {
 
   const store = createStore(browserStorage());
   const loaded = store.load();
+  // Customs an import made from a near-miss name become the library exercise (once; skipped if media is unreadable).
+  if (loaded.kept && !loaded.recovered && loaded.state.customExercises.length) {
+    try {
+      const keys = new Set(await allMediaKeys());
+      if (linkCustomsToLibrary(loaded.state, library, keys)) store.save(loaded.state);
+    } catch {}
+  }
   let blocked = false; // unreadable data that could not be set aside: no save until confirmed
 
   const ctx = {

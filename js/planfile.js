@@ -157,20 +157,84 @@ export const ALIAS_LIST = {
   "barbell-hip-thrust": ["hip thrust", "hip thrusts"],
   "standing-calf-raise": ["calf raise", "calf raises"],
   "back-extension": ["hyperextension", "back extensions"],
+  "close-grip-front-lat-pulldown": [
+    "close grip lat pulldown",
+    "close grip pulldown",
+    "narrow grip lat pulldown",
+    "v bar lat pulldown",
+  ],
+  "rope-triceps-pushdown": [
+    "rope pushdown",
+    "cable rope pushdown",
+    "triceps rope pushdown",
+    "cable rope triceps pushdown",
+  ],
   "ez-bar-curl": ["ez curl", "ez bar curl", "ez curl bar curl"],
 };
 const ALIASES = new Map();
 for (const [id, names] of Object.entries(ALIAS_LIST))
   for (const n of [id, ...names]) ALIASES.set(norm(n), id);
 
-// The library exercise this name means, or null. Name or alias only; never a guess.
+// A forgiving key: lowercase words, DB/BB spelled out, bicep(s)/tricep(s), plurals and "pull down"/"pulldown"
+// folded together, then sorted so word order does not matter. Two names with the same key are the same exercise.
+const WORD = {
+  db: "dumbbell",
+  bb: "barbell",
+  biceps: "bicep",
+  triceps: "tricep",
+  flye: "fly",
+  flyes: "fly",
+  flies: "fly",
+};
+const stem = (w) => {
+  if (WORD[w]) return WORD[w];
+  if (/[^s]{2}(ch|sh|x|ss)es$/.test(w)) return w.slice(0, -2); // crunches -> crunch
+  if (/ies$/.test(w) && w.length > 4) return w.slice(0, -3) + "y";
+  if (/[^s]s$/.test(w) && w.length > 3) return w.slice(0, -1);
+  return w;
+};
+export const looseKey = (s) =>
+  String(s ?? "")
+    .toLowerCase()
+    .replace(/\b(pull|push|chin|sit|step)[\s-]+(down|up)s?\b/g, "$1$2")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .map(stem)
+    .sort()
+    .join(" ");
+
+const looseMaps = new WeakMap();
+function looseMap(library) {
+  let m = looseMaps.get(library);
+  if (m) return m;
+  m = new Map();
+  const add = (name, id) => {
+    const k = looseKey(name);
+    if (k) m.set(k, m.has(k) && m.get(k) !== id ? null : id); // two ids on one key: ambiguous
+  };
+  for (const e of library) add(e.name, e.id);
+  for (const [id, names] of Object.entries(ALIAS_LIST))
+    for (const n of names) add(n, id);
+  looseMaps.set(library, m);
+  return m;
+}
+
+// Only the forgiving step (no exact name or alias): "dumbbell bicep curls" -> Dumbbell Bicep Curl.
+export function looseMatch(name, library) {
+  if (!Array.isArray(library) || ALIASES.has(norm(name)) || library.some((e) => norm(e.name) === norm(name))) return null; // an exact name or alias is not a near-miss
+  const id = looseMap(library).get(looseKey(name));
+  return (id && library.find((e) => e.id === id)) || null;
+}
+
+// The library exercise this name means, or null. Exact name, then alias, then the forgiving key; never a guess
+// between two exercises.
 export function matchExercise(name, library) {
   const k = norm(name);
   if (!k || !Array.isArray(library)) return null;
   const byName = library.find((e) => norm(e.name) === k);
   if (byName) return byName;
   const id = ALIASES.get(k);
-  return (id && library.find((e) => e.id === id)) || null;
+  return (id && library.find((e) => e.id === id)) || looseMatch(name, library);
 }
 
 // ---- validation ----

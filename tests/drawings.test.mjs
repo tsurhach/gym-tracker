@@ -71,3 +71,12 @@ test("every library exercise has a written how-to", () => {
     assert.ok(e.howto.trim().length > 40, `${e.id} howto too short`);
   }
 });
+
+test("every drawing has the light line colour and no dark line colour on the dark fill", () => {
+  for (const f of walk("img/ex/").filter((f) => f.endsWith(".svg"))) {
+    const t = readFileSync(new URL(f, root), "utf8");
+    const cols = [...t.matchAll(/(?:fill|stroke)="(#[0-9a-fA-F]{3,8})"/g)].map((m) => m[1].toLowerCase());
+    assert.ok(cols.includes("#c9ced8"), `${f} has no light line colour`);
+    for (const c of cols) assert.ok(c === "#1a1d24" || c === "#c9ced8", `${f} has stray colour ${c}`);
+  }
+});

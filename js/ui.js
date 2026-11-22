@@ -45,7 +45,7 @@ export function photoHtml(ex) {
   const urls = exImageUrls(ex);
   if (!urls.length) return "";
   const imgs = urls
-    .map((u, i) => `<img class="${i ? "b" : "a"}" src="${u}" alt="" loading="lazy" />`)
+    .map((u, i) => `<img class="${i ? "b" : "a"}" src="${u}" alt="" />`)
     .join("");
   const hint = ex.hint ? `<p class="muted small photo-hint">${esc(ex.hint)}</p>` : "";
   return `<div class="photo${urls.length === 1 ? " still" : ""}">${imgs}</div>${hint}`;

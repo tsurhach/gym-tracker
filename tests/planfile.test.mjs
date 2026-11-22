@@ -171,7 +171,6 @@ test("matching: names, spacing, punctuation, aliases", () => {
 
 test("matching: no guessing", () => {
   for (const n of [
-    "Squats",
     "Bench",
     "Leg Curl",
     "Row",
