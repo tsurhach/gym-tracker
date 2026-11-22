@@ -266,8 +266,8 @@ const MORE_ALIASES = {
   "seated-leg-curl": ["seated hamstring curl"],
   "stiff-leg-deadlift": ["sldl", "straight leg deadlift"],
   "glute-ham-raise": ["ghr"],
-  "glute-kickback": ["donkey kick", "donkey kicks"],
-  "one-legged-cable-kickback": ["cable glute kickback"],
+  "glute-kickback": ["glute kickback", "donkey kick", "donkey kicks"],
+  "cable-glute-kickback": ["standing cable kickback", "cable kickback"],
   "hip-abduction-machine": ["seated hip abduction", "abductor machine", "hip abductor machine"],
   "calf-press-on-the-leg-press-machine": [
     "calf raise on leg press",

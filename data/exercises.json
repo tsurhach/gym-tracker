@@ -1045,14 +1045,14 @@
   },
   {
     "id": "glute-kickback",
-    "name": "Glute Kickback",
+    "name": "Glute Kickback (Hands and Knees)",
     "primary": "Glutes",
     "secondary": [
       "Hamstrings"
     ],
     "equipment": "body only",
     "images": 2,
-    "howto": "Get on your hands and knees with a flat back. Kick one leg back and up until your thigh is level with your back, then lower slowly. Do not arch your lower back."
+    "howto": "Start on your hands and knees with a flat back and hands under your shoulders. Keeping your knee bent, kick one leg back and up until your thigh is level with your back, squeeze your bum, then lower slowly. Do not arch your lower back."
   },
   {
     "id": "one-legged-cable-kickback",
@@ -1578,5 +1578,16 @@
     "equipment": "body only",
     "images": 2,
     "howto": "Lie on your back with your knees bent and your hands behind your head. Curl up and twist so one elbow moves towards the opposite knee. Lower back down and repeat to the other side."
+  },
+  {
+    "id": "cable-glute-kickback",
+    "name": "Cable Glute Kickback",
+    "primary": "Glutes",
+    "secondary": [
+      "Hamstrings"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Clip an ankle strap to a low pulley and face the machine, holding the frame for balance. Keeping your leg nearly straight, kick it straight back and squeeze your bum, then return slowly. Do not lean forward or arch your lower back."
   }
 ]
