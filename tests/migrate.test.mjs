@@ -127,3 +127,15 @@ test("customs named like an alias added in the forgiving-match release are still
   assert.deepEqual(s.sessions[0].entries.map((e) => e.exerciseId), ["close-grip-front-lat-pulldown", "rope-triceps-pushdown"]);
   assert.deepEqual(linkCustomsToLibrary(s, lib, new Set()), []);
 });
+
+test("every alias added after the legacy set re-links a matching custom (Pec Deck, Bench Press (Barbell)); legacy names stay", () => {
+  const s = base();
+  s.customExercises.push(
+    { id: "p1", name: "Pec Deck", primary: "Chest", secondary: [] },
+    { id: "p2", name: "Squat (Barbell)", primary: "Quads", secondary: [] },
+    { id: "p3", name: "Deadlift", primary: "Back", secondary: [] }, // legacy alias: deliberate, kept
+  );
+  const done = linkCustomsToLibrary(s, lib, new Set()).map((l) => l.from);
+  assert.ok(done.includes("Pec Deck") && done.includes("Squat (Barbell)"));
+  assert.ok(s.customExercises.some((c) => c.id === "p3"));
+});

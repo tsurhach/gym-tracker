@@ -98,7 +98,9 @@ export const norm = (s) =>
     .replace(/[^\p{L}\p{N}]/gu, "");
 
 // Other common names -> library exercise id. Exact only; anything else is a new custom exercise.
-export const ALIAS_LIST = {
+// FROZEN: the aliases that existed before the forgiving-match release (e8763d3). A custom named exactly like one of
+// these is treated as chosen on purpose. Never edit this list; new aliases go in MORE_ALIASES below.
+export const LEGACY_ALIASES = {
   "bench-press": [
     "barbell bench press",
     "flat bench press",
@@ -157,6 +159,15 @@ export const ALIAS_LIST = {
   "barbell-hip-thrust": ["hip thrust", "hip thrusts"],
   "standing-calf-raise": ["calf raise", "calf raises"],
   "back-extension": ["hyperextension", "back extensions"],
+  "ez-bar-curl": ["ez curl", "ez bar curl", "ez curl bar curl"],
+};
+Object.freeze(LEGACY_ALIASES);
+
+// Aliases added since: the ones from the forgiving-match release (e8763d3), then names from the free exercise
+// lists (see docs/exercise-aliases.md). Add new ones HERE. Every alias in this list (and every future one) also
+// re-links an existing custom exercise spelled exactly like it (see looseMatch), so nothing else needs keeping in sync.
+// Only the same movement on the same equipment belongs here; when in doubt, leave it out.
+const MORE_ALIASES = {
   "close-grip-front-lat-pulldown": [
     "close grip lat pulldown",
     "close grip pulldown",
@@ -169,23 +180,138 @@ export const ALIAS_LIST = {
     "triceps rope pushdown",
     "cable rope triceps pushdown",
   ],
-  "ez-bar-curl": ["ez curl", "ez bar curl", "ez curl bar curl"],
+  "incline-bench-press": ["incline barbell press"],
+  "dumbbell-bench-press": ["flat dumbbell bench press"],
+  "incline-dumbbell-press": ["incline dumbbell bench press"],
+  "decline-barbell-bench-press": ["decline bench press"],
+  "push-up": ["press up", "press ups"],
+  "dumbbell-flyes": ["dumbbell chest fly", "flat dumbbell fly"],
+  "cable-crossover": ["cable fly", "cable chest fly"],
+  "pec-deck-fly": [
+    "pec deck",
+    "pec dec",
+    "pec deck machine",
+    "machine chest fly",
+    "machine fly",
+    "butterfly machine",
+    "butterfly pec deck",
+  ],
+  "leverage-chest-press": ["seated chest press", "machine bench press"],
+  "chest-dip": ["dips chest version"],
+  "triceps-dip": ["dips triceps version"],
+  "wide-grip-lat-pulldown": ["wide grip pulldown"],
+  "straight-arm-pulldown": ["straight arm lat pulldown"],
+  "back-extension": [
+    "hyperextension back extension",
+    "45 degree back extension",
+    "45 degree hyperextension",
+    "roman chair back extension",
+    "lower back extension",
+  ],
+  "dumbbell-shoulder-press": [
+    "dumbbell overhead press",
+    "seated dumbbell shoulder press",
+    "seated dumbbell press",
+    "standing dumbbell shoulder press",
+  ],
+  "arnold-dumbbell-press": ["arnold press", "arnold shoulder press"],
+  "lateral-raise": ["side lateral raise"],
+  "face-pull": ["rope face pull", "cable rope face pull"],
+  "rear-delt-fly": [
+    "dumbbell reverse fly",
+    "bent over reverse fly",
+    "bent over rear delt fly",
+    "rear delt reverse fly dumbbell",
+  ],
+  "reverse-machine-flyes": [
+    "machine rear delt fly",
+    "reverse pec deck",
+    "rear delt reverse fly machine",
+  ],
+  "machine-shoulder-military-press": [
+    "machine shoulder press",
+    "seated machine shoulder press",
+    "machine military press",
+  ],
+  "barbell-curl": ["standing barbell curl", "barbell bicep curl"],
+  "dumbbell-bicep-curl": [
+    "alternating dumbbell curl",
+    "alternating dumbbell bicep curl",
+    "standing dumbbell curl",
+    "standing dumbbell bicep curl",
+  ],
+  "cable-rope-hammer-curl": ["cable hammer curl", "rope hammer curl"],
+  "preacher-curl": ["ez bar preacher curl", "ez preacher curl"],
+  "incline-dumbbell-curl": ["incline dumbbell bicep curl"],
+  "cable-curl": ["cable bicep curl", "standing cable curl"],
+  "machine-bicep-curl": ["machine curl"],
+  "ez-bar-curl": ["ez bar bicep curl"],
+  "triceps-pushdown": ["triceps pressdown", "straight bar pushdown", "v bar pushdown"],
+  skullcrusher: ["barbell skullcrusher", "barbell skull crusher"],
+  "cable-rope-overhead-triceps-extension": [
+    "cable overhead triceps extension",
+    "rope overhead triceps extension",
+  ],
+  "bench-dips": ["bench tricep dip"],
+  "dumbbell-one-arm-triceps-extension": ["single arm dumbbell triceps extension"],
+  crunch: ["abdominal crunch", "ab crunch"],
+  "cable-crunch": ["kneeling cable crunch"],
+  plank: ["front plank", "forearm plank"],
+  "ab-crunch-machine": ["crunch machine", "abdominal machine", "ab machine", "seated ab crunch machine"],
+  "ab-roller": ["ab wheel", "ab wheel rollout", "ab rollout", "wheel rollout"],
+  "barbell-squat": ["high bar squat", "low bar squat"],
+  "leg-press": ["45 degree leg press", "seated leg press"],
+  "leg-extension": ["seated leg extension"],
+  "goblet-squat": ["dumbbell goblet squat"],
+  "lying-leg-curl": ["lying hamstring curl", "prone leg curl"],
+  "seated-leg-curl": ["seated hamstring curl"],
+  "stiff-leg-deadlift": ["sldl", "straight leg deadlift"],
+  "glute-ham-raise": ["ghr"],
+  "glute-kickback": ["donkey kick", "donkey kicks"],
+  "one-legged-cable-kickback": ["cable glute kickback"],
+  "hip-abduction-machine": ["seated hip abduction", "abductor machine", "hip abductor machine"],
+  "calf-press-on-the-leg-press-machine": [
+    "calf raise on leg press",
+    "leg press calf raise",
+    "calf press leg press",
+  ],
+  "standing-barbell-calf-raise": ["barbell calf raise"],
+  "standing-dumbbell-calf-raise": ["dumbbell calf raise"],
 };
+
+export const ALIAS_LIST = {};
+for (const src of [LEGACY_ALIASES, MORE_ALIASES])
+  for (const [id, names] of Object.entries(src)) ALIAS_LIST[id] = [...(ALIAS_LIST[id] ?? []), ...names];
 const ALIASES = new Map();
 for (const [id, names] of Object.entries(ALIAS_LIST))
   for (const n of [id, ...names]) ALIASES.set(norm(n), id);
+// Names a custom exercise could have been given on purpose before aliases existed: the frozen legacy set.
+const LEGACY_KEYS = new Set();
+for (const [id, names] of Object.entries(LEGACY_ALIASES)) for (const n of [id, ...names]) LEGACY_KEYS.add(norm(n));
 
-// A forgiving key: lowercase words, DB/BB spelled out, bicep(s)/tricep(s), plurals and "pull down"/"pulldown"
-// folded together, then sorted so word order does not matter. Two names with the same key are the same exercise.
+// A forgiving key: lowercase words, DB/BB spelled out, bicep(s)/tricep(s), plurals, "pull down"/"pulldown",
+// "e-z"/"ez", "body weight"/"bodyweight" folded together, filler words ("with", "on", "the") dropped, then sorted
+// and de-duplicated so word order and "Bench Press (Barbell)" vs "Barbell Bench Press" do not matter.
+// Two names with the same key are the same exercise.
 const WORD = {
   db: "dumbbell",
+  dumbell: "dumbbell",
+  dumbel: "dumbbell",
   bb: "barbell",
+  barbel: "barbell",
+  kb: "kettlebell",
+  bw: "bodyweight",
+  leverage: "machine", // free-exercise-db calls selectorised machines "leverage"
+  lever: "machine",
+  single: "one", // single-arm = one-arm
+  legged: "leg", // stiff-legged = stiff-leg
   biceps: "bicep",
   triceps: "tricep",
   flye: "fly",
   flyes: "fly",
   flies: "fly",
 };
+const FILLER = new Set(["with", "on", "the", "a", "an", "of", "using"]);
 const stem = (w) => {
   if (WORD[w]) return WORD[w];
   if (/[^s]{2}(ch|sh|x|ss)es$/.test(w)) return w.slice(0, -2); // crunches -> crunch
@@ -194,49 +320,63 @@ const stem = (w) => {
   return w;
 };
 export const looseKey = (s) =>
-  String(s ?? "")
-    .toLowerCase()
-    .replace(/\b(pull|push|chin|sit|step)[\s-]+(down|up)s?\b/g, "$1$2")
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter(Boolean)
-    .map(stem)
+  [
+    ...new Set(
+      String(s ?? "")
+        .toLowerCase()
+        .replace(/\b(pull|push|chin|sit|step)[\s-]+(down|up)s?\b/g, "$1$2")
+        .replace(/\be[\s-]?z\b/g, "ez")
+        .replace(/\bbody[\s-]?weight\b/g, "bodyweight")
+        .split(/[^\p{L}\p{N}]+/u)
+        .filter((w) => w && !FILLER.has(w))
+        .map(stem),
+    ),
+  ]
     .sort()
     .join(" ");
+
+// "Squat (Barbell)", "Lat Pulldown (Cable)": a library name or alias plus the equipment the exercise is
+// done with names the same exercise. Only added where that key is not already some other exercise's.
+const EQUIPMENT_WORDS = {
+  barbell: "barbell",
+  dumbbell: "dumbbell",
+  cable: "cable",
+  machine: "machine",
+  kettlebells: "kettlebell",
+  "body only": "bodyweight",
+  "e-z curl bar": "ez bar",
+};
 
 const looseMaps = new WeakMap();
 function looseMap(library) {
   let m = looseMaps.get(library);
   if (m) return m;
   m = new Map();
-  const add = (name, id) => {
+  const add = (map, name, id) => {
     const k = looseKey(name);
-    if (k) m.set(k, m.has(k) && m.get(k) !== id ? null : id); // two ids on one key: ambiguous
+    if (k) map.set(k, map.has(k) && map.get(k) !== id ? null : id); // two ids on one key: ambiguous
   };
-  for (const e of library) add(e.name, e.id);
+  for (const e of library) add(m, e.name, e.id);
   for (const [id, names] of Object.entries(ALIAS_LIST))
-    for (const n of names) add(n, id);
+    for (const n of names) add(m, n, id);
+  const implied = new Map();
+  for (const e of library) {
+    const eq = EQUIPMENT_WORDS[e.equipment];
+    if (!eq) continue;
+    const alias = Object.hasOwn(ALIAS_LIST, e.id) ? ALIAS_LIST[e.id] : [];
+    for (const n of [e.name, ...alias]) add(implied, `${n} ${eq}`, e.id);
+  }
+  for (const [k, id] of implied) if (id && !m.has(k)) m.set(k, id);
   looseMaps.set(library, m);
   return m;
 }
 
 // Only the forgiving step (no exact name or alias): "dumbbell bicep curls" -> Dumbbell Bicep Curl.
-// Aliases added with the forgiving matcher (e8763d3). A custom spelled exactly like one of these was made before
-// the alias existed, so it still counts as a near-miss; every other exact name or alias is a deliberate custom.
-const NEW_ALIASES = new Set(
-  [
-    "close grip lat pulldown",
-    "close grip pulldown",
-    "narrow grip lat pulldown",
-    "v bar lat pulldown",
-    "rope pushdown",
-    "cable rope pushdown",
-    "triceps rope pushdown",
-    "cable rope triceps pushdown",
-  ].map(norm),
-);
+// A custom named exactly like a library exercise or a LEGACY alias (e.g. "Squat") was chosen on purpose, so it is
+// left alone. Every other name, including every alias added since, counts as a near-miss and gets linked.
 export function looseMatch(name, library) {
   const k = norm(name);
-  if (!Array.isArray(library) || (!NEW_ALIASES.has(k) && (ALIASES.has(k) || library.some((e) => norm(e.name) === k)))) return null; // an exact name or older alias is not a near-miss
+  if (!Array.isArray(library) || LEGACY_KEYS.has(k) || library.some((e) => norm(e.name) === k)) return null;
   const id = looseMap(library).get(looseKey(name));
   return (id && library.find((e) => e.id === id)) || null;
 }

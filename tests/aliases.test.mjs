@@ -1,0 +1,138 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { matchExercise } from "../js/planfile.js";
+
+const lib = JSON.parse(readFileSync(new URL("../data/exercises.json", import.meta.url), "utf8"));
+const id = (n) => matchExercise(n, lib)?.id ?? null;
+
+// Real-world spellings (Hevy/Strong style "Name (Equipment)", wger, free-exercise-db, everkinetic, ChatGPT plans).
+const SAME = {
+  "Bench Press (Barbell)": "bench-press",
+  "Bench Press (Dumbbell)": "dumbbell-bench-press",
+  "Incline Bench Press (Barbell)": "incline-bench-press",
+  "Incline Bench Press - Dumbbell": "incline-dumbbell-press",
+  "Decline Bench Press (Barbell)": "decline-barbell-bench-press",
+  "Flat DB Bench Press": "dumbbell-bench-press",
+  "Chest Press (Machine)": "leverage-chest-press",
+  "Leverage Chest Press": "leverage-chest-press",
+  "Push Ups (Bodyweight)": "push-up",
+  "Chest Fly (Dumbbell)": "dumbbell-flyes",
+  "Fly With Dumbbells": "dumbbell-flyes",
+  "Pec Deck": "pec-deck-fly",
+  "Butterfly (Pec Deck)": "pec-deck-fly",
+  "Chest Fly (Machine)": "pec-deck-fly",
+  "Cable Fly": "cable-crossover",
+  "Lat Pulldown (Cable)": "wide-grip-lat-pulldown",
+  "Lat Pulldown - Close Grip (Cable)": "close-grip-front-lat-pulldown",
+  "Straight Arm Pulldown (Cable)": "straight-arm-pulldown",
+  "Pull Up (Bodyweight)": "pull-up",
+  "Chin Up (Bodyweight)": "chin-up",
+  "Bent Over Row (Barbell)": "bent-over-barbell-row",
+  "Bent Over Row with Barbell": "bent-over-barbell-row",
+  "Seated Row (Cable)": "seated-cable-row",
+  "Single Arm Dumbbell Row": "one-arm-dumbbell-row",
+  "T Bar Row": "t-bar-row",
+  "Deadlift (Barbell)": "barbell-deadlift",
+  "Romanian Deadlift (Barbell)": "romanian-deadlift",
+  "RDL (Barbell)": "romanian-deadlift",
+  "SLDL": "stiff-leg-deadlift",
+  "Stiff-Legged Deadlift (Barbell)": "stiff-leg-deadlift",
+  "Good Morning (Barbell)": "good-morning",
+  "Hyperextensions (Back Extensions)": "back-extension",
+  "Shrug (Barbell)": "barbell-shrug",
+  "Shrugs, Dumbbells": "dumbbell-shrug",
+  "Overhead Press (Barbell)": "overhead-press",
+  "Shoulder Press (Dumbbell)": "dumbbell-shoulder-press",
+  "DB Shoulder Press": "dumbbell-shoulder-press",
+  "Overhead Press (Dumbbell)": "dumbbell-shoulder-press",
+  "Arnold Press (Dumbbell)": "arnold-dumbbell-press",
+  "Shoulder Press (Machine)": "machine-shoulder-military-press",
+  "Lateral Raise (Dumbbell)": "lateral-raise",
+  "Front Raise (Dumbbell)": "front-dumbbell-raise",
+  "Face Pull (Cable)": "face-pull",
+  "Reverse Fly (Dumbbell)": "rear-delt-fly",
+  "Reverse Fly (Machine)": "reverse-machine-flyes",
+  "Upright Row (Barbell)": "upright-row",
+  "Bicep Curl (Barbell)": "barbell-curl",
+  "Bicep Curl (Dumbbell)": "dumbbell-bicep-curl",
+  "Hammer Curl (Dumbbell)": "hammer-curl",
+  "Preacher Curl (Barbell)": "preacher-curl",
+  "Bicep Curl (Cable)": "cable-curl",
+  "Curl (EZ Bar)": "ez-bar-curl",
+  "Concentration Curl (Dumbbell)": "concentration-curl",
+  "Triceps Pushdown (Cable)": "triceps-pushdown",
+  "Triceps Pushdown (Rope)": "rope-triceps-pushdown",
+  "Skullcrusher (Barbell)": "skullcrusher",
+  "Skull Crusher (EZ Bar)": "skullcrusher",
+  "Overhead Triceps Extension (Cable)": "cable-rope-overhead-triceps-extension",
+  "Triceps Extension (Machine)": "machine-triceps-extension",
+  "Wrist Curl (Barbell)": "barbell-wrist-curl",
+  "Reverse Wrist Curl (Dumbbell)": "dumbbell-reverse-wrist-curl",
+  "Crunch (Cable)": "cable-crunch",
+  "Hanging Leg Raise (Bodyweight)": "hanging-leg-raise",
+  "Ab Wheel": "ab-roller",
+  "Pallof Press (Cable)": "pallof-press",
+  "Squat (Barbell)": "barbell-squat",
+  "Squat (Smith Machine)": "smith-machine-squat",
+  "Front Squat (Barbell)": "front-squat",
+  "Leg Press (Machine)": "leg-press",
+  "Leg Extension (Machine)": "leg-extension",
+  "Hack Squat (Machine)": "hack-squat",
+  "Goblet Squat (Kettlebell)": "goblet-squat",
+  "Lunge (Dumbbell)": "dumbbell-lunges",
+  "Lunge (Barbell)": "barbell-lunge",
+  "Step Up (Dumbbell)": "dumbbell-step-ups",
+  "Lying Leg Curl (Machine)": "lying-leg-curl",
+  "Seated Leg Curl (Machine)": "seated-leg-curl",
+  "Hip Thrust (Barbell)": "barbell-hip-thrust",
+  "Hip Abduction (Machine)": "hip-abduction-machine",
+  "Standing Calf Raise (Machine)": "standing-calf-raise",
+  "Seated Calf Raise (Machine)": "seated-calf-raise",
+  "Calf Raise (Smith Machine)": "smith-machine-calf-raise",
+  "Cable Pull Through": "pull-through",
+};
+
+test("real-world names from Hevy, Strong, wger, free-exercise-db and everkinetic map to the library", () => {
+  assert.ok(Object.keys(SAME).length >= 60);
+  for (const [n, e] of Object.entries(SAME)) {
+    assert.ok(lib.some((x) => x.id === e), `unknown id ${e}`);
+    assert.equal(id(n), e, n);
+  }
+});
+
+// Different equipment or a different movement: these must NOT be linked (a wrong drawing is worse than none).
+test("near-misses with other equipment or another movement stay unmatched", () => {
+  for (const n of [
+    "Bench Press (Smith Machine)",
+    "Incline Bench Press (Smith Machine)",
+    "Incline Bench Press (Barbell) Close Grip",
+    "Romanian Deadlift (Dumbbell)",
+    "Deadlift (Dumbbell)",
+    "Bent Over Row (Dumbbell)",
+    "Lat Pulldown (Machine)",
+    "Seated Row (Machine)",
+    "Squat (Dumbbell)",
+    "Bodyweight Squat",
+    "Bulgarian Split Squat",
+    "Hip Thrust (Smith Machine)",
+    "Glute Kickback (Machine)",
+    "Hammer Curl (Machine)",
+    "Preacher Curl (Dumbbell)",
+    "Skullcrusher (Dumbbell)",
+    "Triceps Extension (Dumbbell)",
+    "Weighted Pull Up",
+    "Weighted Dips",
+    "Dips",
+    "Front Raise",
+    "Shrug",
+    "Leg Curl (Machine)",
+    "Lunge (Walking)",
+    "Calf Raise (Seated, Dumbbell)",
+    "Hack Squat (Barbell)",
+    "Reverse Curl (Barbell)",
+    "Cable Crunch Twist",
+    "Single Leg Romanian Deadlift",
+  ])
+    assert.equal(id(n), null, n);
+});
