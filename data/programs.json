@@ -1,892 +1,637 @@
 [
- {
-  "format": "gym-tracker-plan",
-  "version": 1,
-  "name": "Full Body Beginner",
-  "goal": "muscle",
-  "notes": "Three sessions a week with a rest day between. Alternate A and B each session: week 1 is A, B, A; week 2 is B, A, B. The app always offers the next one. Trains every major muscle group.",
-  "days": [
-   {
-    "name": "A",
-    "exercises": [
-     {
-      "name": "Barbell Squat",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Bench Press",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Seated Cable Row",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Dumbbell Shoulder Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Dumbbell Bicep Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Crunch",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
+  {
+    "format": "gym-tracker-plan",
+    "version": 1,
+    "name": "Full Body Beginner",
+    "goal": "muscle",
+    "notes": "Three sessions a week with a rest day between. Alternate A and B each session: week 1 is A, B, A; week 2 is B, A, B. The app always offers the next one. Trains every major muscle group.",
+    "days": [
+      {
+        "name": "A",
+        "exercises": [
+          {
+            "name": "Barbell Squat",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Bench Press",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Seated Cable Row",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Dumbbell Shoulder Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Dumbbell Bicep Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Crunch",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "B",
+        "exercises": [
+          {
+            "name": "Romanian Deadlift",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Incline Dumbbell Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Wide-Grip Lat Pulldown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Leg Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 5
+          },
+          {
+            "name": "Lateral Raise",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Triceps Pushdown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      }
     ]
-   },
-   {
-    "name": "B",
-    "exercises": [
-     {
-      "name": "Romanian Deadlift",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Incline Dumbbell Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Wide-Grip Lat Pulldown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Leg Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 5
-     },
-     {
-      "name": "Lateral Raise",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Triceps Pushdown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
+  },
+  {
+    "format": "gym-tracker-plan",
+    "version": 1,
+    "name": "5x5 Strength",
+    "goal": "strength",
+    "notes": "Three sessions a week. Alternate A and B each session: week 1 is A, B, A; week 2 is B, A, B. The app always offers the next one. Heavy sets of five on a few big lifts.",
+    "days": [
+      {
+        "name": "A",
+        "exercises": [
+          {
+            "name": "Barbell Squat",
+            "sets": 5,
+            "reps": [5, 5],
+            "step": 2.5
+          },
+          {
+            "name": "Bench Press",
+            "sets": 5,
+            "reps": [5, 5],
+            "step": 2.5
+          },
+          {
+            "name": "Bent Over Barbell Row",
+            "sets": 5,
+            "reps": [5, 5],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "B",
+        "exercises": [
+          {
+            "name": "Barbell Squat",
+            "sets": 5,
+            "reps": [5, 5],
+            "step": 2.5
+          },
+          {
+            "name": "Overhead Press",
+            "sets": 5,
+            "reps": [5, 5],
+            "step": 2.5
+          },
+          {
+            "name": "Barbell Deadlift",
+            "sets": 1,
+            "reps": [5, 5],
+            "step": 5
+          }
+        ]
+      }
     ]
-   }
-  ]
- },
- {
-  "format": "gym-tracker-plan",
-  "version": 1,
-  "name": "5x5 Strength",
-  "goal": "strength",
-  "notes": "Three sessions a week. Alternate A and B each session: week 1 is A, B, A; week 2 is B, A, B. The app always offers the next one. Heavy sets of five on a few big lifts.",
-  "days": [
-   {
-    "name": "A",
-    "exercises": [
-     {
-      "name": "Barbell Squat",
-      "sets": 5,
-      "reps": [
-       5,
-       5
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Bench Press",
-      "sets": 5,
-      "reps": [
-       5,
-       5
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Bent Over Barbell Row",
-      "sets": 5,
-      "reps": [
-       5,
-       5
-      ],
-      "step": 2.5
-     }
+  },
+  {
+    "format": "gym-tracker-plan",
+    "version": 1,
+    "name": "Upper / Lower",
+    "goal": "muscle",
+    "notes": "Four sessions a week, in this order: Upper A, Lower A, Upper B, Lower B, then back to Upper A. The A days are heavier, the B days use more reps.",
+    "days": [
+      {
+        "name": "Upper A",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "sets": 4,
+            "reps": [4, 6],
+            "step": 2.5
+          },
+          {
+            "name": "Bent Over Barbell Row",
+            "sets": 4,
+            "reps": [4, 6],
+            "step": 2.5
+          },
+          {
+            "name": "Overhead Press",
+            "sets": 3,
+            "reps": [6, 8],
+            "step": 2.5
+          },
+          {
+            "name": "Wide-Grip Lat Pulldown",
+            "sets": 3,
+            "reps": [6, 8],
+            "step": 2.5
+          },
+          {
+            "name": "Dumbbell Bicep Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Triceps Pushdown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Lower A",
+        "exercises": [
+          {
+            "name": "Barbell Squat",
+            "sets": 4,
+            "reps": [4, 6],
+            "step": 2.5
+          },
+          {
+            "name": "Romanian Deadlift",
+            "sets": 3,
+            "reps": [6, 8],
+            "step": 2.5
+          },
+          {
+            "name": "Leg Press",
+            "sets": 3,
+            "reps": [6, 8],
+            "step": 5
+          },
+          {
+            "name": "Lying Leg Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Standing Calf Raise",
+            "sets": 4,
+            "reps": [8, 12],
+            "step": 5
+          },
+          {
+            "name": "Cable Crunch",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Upper B",
+        "exercises": [
+          {
+            "name": "Incline Dumbbell Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Seated Cable Row",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Dumbbell Shoulder Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Lateral Raise",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Hammer Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Rope Triceps Pushdown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Lower B",
+        "exercises": [
+          {
+            "name": "Barbell Hip Thrust",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Static Lunge (Split Squat)",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Leg Extension",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Seated Leg Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Seated Calf Raise",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 5
+          },
+          {
+            "name": "Hanging Leg Raise",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      }
     ]
-   },
-   {
-    "name": "B",
-    "exercises": [
-     {
-      "name": "Barbell Squat",
-      "sets": 5,
-      "reps": [
-       5,
-       5
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Overhead Press",
-      "sets": 5,
-      "reps": [
-       5,
-       5
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Barbell Deadlift",
-      "sets": 1,
-      "reps": [
-       5,
-       5
-      ],
-      "step": 5
-     }
+  },
+  {
+    "format": "gym-tracker-plan",
+    "version": 1,
+    "name": "Push / Pull / Legs",
+    "goal": "muscle",
+    "notes": "Three workouts in the order Push, Pull, Legs, then around again. Do it once through a week (3 sessions) or twice (6 sessions) for more volume. The app offers the next one each time.",
+    "days": [
+      {
+        "name": "Push",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Overhead Press",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Incline Dumbbell Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Lateral Raise",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Rope Triceps Pushdown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Cable Rope Overhead Triceps Extension",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Pull",
+        "exercises": [
+          {
+            "name": "Bent Over Barbell Row",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Wide-Grip Lat Pulldown",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Seated Cable Row",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Face Pull",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Barbell Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Hammer Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          }
+        ]
+      },
+      {
+        "name": "Legs",
+        "exercises": [
+          {
+            "name": "Barbell Squat",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Romanian Deadlift",
+            "sets": 3,
+            "reps": [6, 10],
+            "step": 2.5
+          },
+          {
+            "name": "Leg Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 5
+          },
+          {
+            "name": "Lying Leg Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Standing Calf Raise",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 5
+          },
+          {
+            "name": "Hanging Leg Raise",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      }
     ]
-   }
-  ]
- },
- {
-  "format": "gym-tracker-plan",
-  "version": 1,
-  "name": "Upper / Lower",
-  "goal": "muscle",
-  "notes": "Four sessions a week, in this order: Upper A, Lower A, Upper B, Lower B, then back to Upper A. The A days are heavier, the B days use more reps.",
-  "days": [
-   {
-    "name": "Upper A",
-    "exercises": [
-     {
-      "name": "Bench Press",
-      "sets": 4,
-      "reps": [
-       4,
-       6
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Bent Over Barbell Row",
-      "sets": 4,
-      "reps": [
-       4,
-       6
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Overhead Press",
-      "sets": 3,
-      "reps": [
-       6,
-       8
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Wide-Grip Lat Pulldown",
-      "sets": 3,
-      "reps": [
-       6,
-       8
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Dumbbell Bicep Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Triceps Pushdown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
+  },
+  {
+    "format": "gym-tracker-plan",
+    "version": 1,
+    "name": "Body-Part Split",
+    "goal": "muscle",
+    "notes": "Five sessions a week, one main muscle group each: Chest, Back, Shoulders, Legs, Arms, then back to Chest. More sets on each.",
+    "days": [
+      {
+        "name": "Chest",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "sets": 4,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Incline Dumbbell Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Chest Dip",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Pec Deck Fly",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Cable Crossover",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Back",
+        "exercises": [
+          {
+            "name": "Bent Over Barbell Row",
+            "sets": 4,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Wide-Grip Lat Pulldown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Seated Cable Row",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "One-Arm Dumbbell Row",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Straight-Arm Pulldown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Shoulders",
+        "exercises": [
+          {
+            "name": "Overhead Press",
+            "sets": 4,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Arnold Dumbbell Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Lateral Raise",
+            "sets": 4,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Rear Delt Fly",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Face Pull",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      },
+      {
+        "name": "Legs",
+        "exercises": [
+          {
+            "name": "Barbell Squat",
+            "sets": 4,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Romanian Deadlift",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Leg Press",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 5
+          },
+          {
+            "name": "Lying Leg Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Standing Calf Raise",
+            "sets": 4,
+            "reps": [8, 12],
+            "step": 5
+          }
+        ]
+      },
+      {
+        "name": "Arms",
+        "exercises": [
+          {
+            "name": "Barbell Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Hammer Curl",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2
+          },
+          {
+            "name": "Skullcrusher",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Rope Triceps Pushdown",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          },
+          {
+            "name": "Cable Rope Overhead Triceps Extension",
+            "sets": 3,
+            "reps": [8, 12],
+            "step": 2.5
+          }
+        ]
+      }
     ]
-   },
-   {
-    "name": "Lower A",
-    "exercises": [
-     {
-      "name": "Barbell Squat",
-      "sets": 4,
-      "reps": [
-       4,
-       6
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Romanian Deadlift",
-      "sets": 3,
-      "reps": [
-       6,
-       8
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Leg Press",
-      "sets": 3,
-      "reps": [
-       6,
-       8
-      ],
-      "step": 5
-     },
-     {
-      "name": "Lying Leg Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Standing Calf Raise",
-      "sets": 4,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 5
-     },
-     {
-      "name": "Cable Crunch",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   },
-   {
-    "name": "Upper B",
-    "exercises": [
-     {
-      "name": "Incline Dumbbell Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Seated Cable Row",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Dumbbell Shoulder Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Lateral Raise",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Hammer Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Rope Triceps Pushdown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   },
-   {
-    "name": "Lower B",
-    "exercises": [
-     {
-      "name": "Barbell Hip Thrust",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Split Squat with Dumbbells",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Leg Extension",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Seated Leg Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Seated Calf Raise",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 5
-     },
-     {
-      "name": "Hanging Leg Raise",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   }
-  ]
- },
- {
-  "format": "gym-tracker-plan",
-  "version": 1,
-  "name": "Push / Pull / Legs",
-  "goal": "muscle",
-  "notes": "Three workouts in the order Push, Pull, Legs, then around again. Do it once through a week (3 sessions) or twice (6 sessions) for more volume. The app offers the next one each time.",
-  "days": [
-   {
-    "name": "Push",
-    "exercises": [
-     {
-      "name": "Bench Press",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Overhead Press",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Incline Dumbbell Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Lateral Raise",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Rope Triceps Pushdown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Cable Rope Overhead Triceps Extension",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   },
-   {
-    "name": "Pull",
-    "exercises": [
-     {
-      "name": "Bent Over Barbell Row",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Wide-Grip Lat Pulldown",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Seated Cable Row",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Face Pull",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Barbell Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Hammer Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     }
-    ]
-   },
-   {
-    "name": "Legs",
-    "exercises": [
-     {
-      "name": "Barbell Squat",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Romanian Deadlift",
-      "sets": 3,
-      "reps": [
-       6,
-       10
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Leg Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 5
-     },
-     {
-      "name": "Lying Leg Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Standing Calf Raise",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 5
-     },
-     {
-      "name": "Hanging Leg Raise",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   }
-  ]
- },
- {
-  "format": "gym-tracker-plan",
-  "version": 1,
-  "name": "Body-Part Split",
-  "goal": "muscle",
-  "notes": "Five sessions a week, one main muscle group each: Chest, Back, Shoulders, Legs, Arms, then back to Chest. More sets on each.",
-  "days": [
-   {
-    "name": "Chest",
-    "exercises": [
-     {
-      "name": "Bench Press",
-      "sets": 4,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Incline Dumbbell Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Chest Dip",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Pec Deck Fly",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Cable Crossover",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   },
-   {
-    "name": "Back",
-    "exercises": [
-     {
-      "name": "Bent Over Barbell Row",
-      "sets": 4,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Wide-Grip Lat Pulldown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Seated Cable Row",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "One-Arm Dumbbell Row",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Straight-Arm Pulldown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   },
-   {
-    "name": "Shoulders",
-    "exercises": [
-     {
-      "name": "Overhead Press",
-      "sets": 4,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Arnold Dumbbell Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Lateral Raise",
-      "sets": 4,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Rear Delt Fly",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Face Pull",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   },
-   {
-    "name": "Legs",
-    "exercises": [
-     {
-      "name": "Barbell Squat",
-      "sets": 4,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Romanian Deadlift",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Leg Press",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 5
-     },
-     {
-      "name": "Lying Leg Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Standing Calf Raise",
-      "sets": 4,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 5
-     }
-    ]
-   },
-   {
-    "name": "Arms",
-    "exercises": [
-     {
-      "name": "Barbell Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Hammer Curl",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2
-     },
-     {
-      "name": "Skullcrusher",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Rope Triceps Pushdown",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     },
-     {
-      "name": "Cable Rope Overhead Triceps Extension",
-      "sets": 3,
-      "reps": [
-       8,
-       12
-      ],
-      "step": 2.5
-     }
-    ]
-   }
-  ]
- }
+  }
 ]

@@ -106,6 +106,12 @@ export const ALIAS_LIST = {
     "bb bench press",
   ],
   "dumbbell-bench-press": ["db bench press", "flat dumbbell press"],
+  "split-squat-with-dumbbells": [
+    "split squat with dumbbells",
+    "split squat",
+    "dumbbell split squat",
+    "static lunge",
+  ],
   "incline-dumbbell-press": ["db incline press", "incline db press"],
   "overhead-press": [
     "ohp",
