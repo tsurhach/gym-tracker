@@ -67,7 +67,10 @@ const base = () => ({
 
 test("migration rewrites ids everywhere, merges duplicates, keeps every set", () => {
   const s = base();
-  assert.equal(linkCustomsToLibrary(s, lib, new Set()), true);
+  assert.deepEqual(linkCustomsToLibrary(s, lib, new Set()), [
+    { from: "Dumbbell Bicep Curls", to: "Dumbbell Bicep Curl" },
+    { from: "Crunches", to: "Crunch" },
+  ]);
   assert.deepEqual(s.customExercises.map((c) => c.id), ["c2"]);
   assert.deepEqual(s.workouts[0].items.map((i) => i.exerciseId), ["dumbbell-bicep-curl", "c2", "crunch"]);
   assert.equal(s.workouts[0].items[0].restSec, 90);
@@ -82,15 +85,15 @@ test("migration is a no-op the second time, skips customs with media, and ignore
   const s = base();
   linkCustomsToLibrary(s, lib, new Set());
   const once = JSON.stringify(s);
-  assert.equal(linkCustomsToLibrary(s, lib, new Set()), false);
+  assert.deepEqual(linkCustomsToLibrary(s, lib, new Set()), []);
   assert.equal(JSON.stringify(s), once);
 
   const m = base();
-  assert.equal(linkCustomsToLibrary(m, lib, new Set(["c1", "c3"])), false);
+  assert.deepEqual(linkCustomsToLibrary(m, lib, new Set(["c1", "c3"])), []);
   assert.deepEqual(m, base());
 
   const none = { version: 1, settings: {}, customExercises: [], workouts: [], active: null, sessions: [] };
-  assert.equal(linkCustomsToLibrary(none, lib, new Set()), false);
+  assert.deepEqual(linkCustomsToLibrary(none, lib, new Set()), []);
   assert.deepEqual(none.workouts, []);
 });
 

@@ -85,7 +85,12 @@ async function main() {
   if (loaded.kept && !loaded.recovered && loaded.state.customExercises.length) {
     try {
       const keys = new Set(await allMediaKeys());
-      if (linkCustomsToLibrary(loaded.state, library, keys)) store.save(loaded.state);
+      const links = linkCustomsToLibrary(loaded.state, library, keys);
+      if (links.length && store.save(loaded.state)) {
+        const list = links.slice(0, 5).map((l) => `${l.from} → ${l.to}`).join(", ");
+        const more = links.length > 5 ? `, and ${links.length - 5} more` : "";
+        showBanner(`Linked ${links.length} exercise${links.length > 1 ? "s" : ""} to the library so they show drawings: ${list}${more}.`, { sticky: true, kind: "ok" });
+      }
     } catch {}
   }
   let blocked = false; // unreadable data that could not be set aside: no save until confirmed

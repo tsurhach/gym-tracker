@@ -4,15 +4,16 @@ import { looseMatch } from "./planfile.js";
 // little differently ("Dumbbell Bicep Curls") is replaced by the library exercise, so it gets its drawing.
 // Customs that have photos or video (mediaKeys) or whose name is not a near-miss are left alone. Every plan
 // item, the active workout and every past session moves to the library id; sets are never dropped: an
-// exercise that appears twice in one list has its sets joined. Returns true when anything changed.
+// exercise that appears twice in one list has its sets joined. Returns the links made, [{ from, to }] by name; empty means nothing changed.
 export function linkCustomsToLibrary(state, library, mediaKeys) {
   const links = new Map(); // custom id -> library exercise
+  const names = new Map(state.customExercises.map((c) => [c.id, c.name]));
   for (const c of state.customExercises) {
     if (mediaKeys.has(c.id)) continue;
     const lib = looseMatch(c.name, library);
     if (lib) links.set(c.id, lib);
   }
-  if (!links.size) return false;
+  if (!links.size) return [];
 
   const entries = (list) => {
     const out = [];
@@ -40,5 +41,5 @@ export function linkCustomsToLibrary(state, library, mediaKeys) {
   if (state.active) state.active.entries = entries(state.active.entries);
   for (const s of state.sessions) s.entries = entries(s.entries);
   state.customExercises = state.customExercises.filter((c) => !links.has(c.id));
-  return true;
+  return [...links].map(([cid, lib]) => ({ from: names.get(cid), to: lib.name }));
 }
