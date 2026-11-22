@@ -103,3 +103,27 @@ test("a custom exactly named like an old alias (Squat) is left alone", () => {
   linkCustomsToLibrary(s, lib, new Set());
   assert.ok(s.customExercises.some((c) => c.id === "c9"));
 });
+
+test("customs named like an alias added in the forgiving-match release are still linked, history moves", () => {
+  const s = {
+    version: 1, settings: {},
+    customExercises: [
+      { id: "k1", name: "Close-Grip Lat Pulldown", primary: "Back", secondary: [] },
+      { id: "k2", name: "Rope Pushdown", primary: "Triceps", secondary: [] },
+    ],
+    workouts: [{ id: "w", name: "W", items: [{ exerciseId: "k1" }, { exerciseId: "k2" }] }],
+    active: null,
+    sessions: [{ id: "s", startedAt: 1, entries: [
+      { exerciseId: "k1", name: "x", primary: "Back", sets: [set(8)] },
+      { exerciseId: "k2", name: "y", primary: "Triceps", sets: [set(12)] },
+    ] }],
+  };
+  assert.deepEqual(linkCustomsToLibrary(s, lib, new Set()), [
+    { from: "Close-Grip Lat Pulldown", to: "Close-Grip Front Lat Pulldown" },
+    { from: "Rope Pushdown", to: lib.find((e) => e.id === "rope-triceps-pushdown").name },
+  ]);
+  assert.deepEqual(s.customExercises, []);
+  assert.deepEqual(s.workouts[0].items.map((i) => i.exerciseId), ["close-grip-front-lat-pulldown", "rope-triceps-pushdown"]);
+  assert.deepEqual(s.sessions[0].entries.map((e) => e.exerciseId), ["close-grip-front-lat-pulldown", "rope-triceps-pushdown"]);
+  assert.deepEqual(linkCustomsToLibrary(s, lib, new Set()), []);
+});

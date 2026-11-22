@@ -220,8 +220,23 @@ function looseMap(library) {
 }
 
 // Only the forgiving step (no exact name or alias): "dumbbell bicep curls" -> Dumbbell Bicep Curl.
+// Aliases added with the forgiving matcher (e8763d3). A custom spelled exactly like one of these was made before
+// the alias existed, so it still counts as a near-miss; every other exact name or alias is a deliberate custom.
+const NEW_ALIASES = new Set(
+  [
+    "close grip lat pulldown",
+    "close grip pulldown",
+    "narrow grip lat pulldown",
+    "v bar lat pulldown",
+    "rope pushdown",
+    "cable rope pushdown",
+    "triceps rope pushdown",
+    "cable rope triceps pushdown",
+  ].map(norm),
+);
 export function looseMatch(name, library) {
-  if (!Array.isArray(library) || ALIASES.has(norm(name)) || library.some((e) => norm(e.name) === norm(name))) return null; // an exact name or alias is not a near-miss
+  const k = norm(name);
+  if (!Array.isArray(library) || (!NEW_ALIASES.has(k) && (ALIASES.has(k) || library.some((e) => norm(e.name) === k)))) return null; // an exact name or older alias is not a near-miss
   const id = looseMap(library).get(looseKey(name));
   return (id && library.find((e) => e.id === id)) || null;
 }
