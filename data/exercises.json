@@ -1159,5 +1159,424 @@
     "equipment": "other",
     "images": 2,
     "howto": "Bend forward at your hips with your hands supported and the balls of your feet on a raised edge. Rise up onto your toes, pause, then lower until you feel a stretch. Keep your knees straight."
+  },
+  {
+    "id": "cable-front-raise",
+    "name": "Cable Front Raise",
+    "primary": "Shoulders",
+    "secondary": [
+      "Chest"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand facing away from a low pulley with the handle in one hand between your legs. Raise your arm straight in front of you to shoulder height, then lower it slowly. Keep your body still and your elbow almost straight."
+  },
+  {
+    "id": "cable-upright-row",
+    "name": "Cable Upright Row",
+    "primary": "Shoulders",
+    "secondary": [
+      "Back",
+      "Biceps"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand at a low pulley holding the bar with an overhand grip, hands about shoulder width apart. Pull the bar up along your body to chest height, leading with your elbows. Lower it slowly without leaning back."
+  },
+  {
+    "id": "dumbbell-upright-row",
+    "name": "Dumbbell Upright Row",
+    "primary": "Shoulders",
+    "secondary": [
+      "Back",
+      "Biceps"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand tall with a dumbbell in each hand in front of your thighs. Pull them up close to your body until they reach chest height, elbows pointing out and up. Lower them under control."
+  },
+  {
+    "id": "cable-rear-delt-fly",
+    "name": "Cable Rear Delt Fly",
+    "primary": "Shoulders",
+    "secondary": [
+      "Back"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand beside a low pulley, bend forward from the hips and take the handle with the far hand. Raise your arm out to the side until it is level with your shoulder, then lower it slowly. Keep your back flat and your elbow slightly bent."
+  },
+  {
+    "id": "lying-leg-raise",
+    "name": "Lying Leg Raise",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie on your back with your legs straight and your hands under your hips. Raise your legs together until they point at the ceiling, then lower them almost to the floor. Keep your lower back pressed down and do not swing."
+  },
+  {
+    "id": "incline-dumbbell-shoulder-press",
+    "name": "Incline Dumbbell Shoulder Press",
+    "primary": "Shoulders",
+    "secondary": [
+      "Triceps",
+      "Chest"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Sit on a bench set at a steep angle with a dumbbell at each shoulder. Press them up until your arms are straight, then lower them back to shoulder height. Keep your back against the pad."
+  },
+  {
+    "id": "one-arm-dumbbell-shoulder-press",
+    "name": "One-Arm Dumbbell Shoulder Press",
+    "primary": "Shoulders",
+    "secondary": [
+      "Triceps"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand tall holding one dumbbell at your shoulder. Press it straight overhead until your arm is straight, then lower it back slowly. Keep your ribs down and do all the reps on one side before switching."
+  },
+  {
+    "id": "dumbbell-pullover",
+    "name": "Dumbbell Pullover",
+    "primary": "Chest",
+    "secondary": [
+      "Back",
+      "Triceps"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie across a bench holding one dumbbell with both hands above your chest. Lower it back behind your head in a smooth arc, elbows slightly bent, until you feel a stretch. Bring it back over your chest."
+  },
+  {
+    "id": "decline-dumbbell-bench-press",
+    "name": "Decline Dumbbell Bench Press",
+    "primary": "Chest",
+    "secondary": [
+      "Triceps",
+      "Shoulders"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie on a decline bench with a dumbbell in each hand at the sides of your chest. Press them up until your arms are straight, then lower them with control. Keep your feet locked in and your shoulder blades pinched."
+  },
+  {
+    "id": "incline-dumbbell-fly",
+    "name": "Incline Dumbbell Fly",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie on an incline bench with the dumbbells above your chest, palms facing each other. Open your arms out wide in an arc with a slight bend in the elbows. Squeeze the dumbbells back together over your chest."
+  },
+  {
+    "id": "smith-machine-bench-press",
+    "name": "Smith Machine Bench Press",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Lie on a flat bench under the Smith bar with your eyes below it. Unhook the bar, lower it to your mid chest, then press it back up. Set the bench so the bar comes down in line with your chest."
+  },
+  {
+    "id": "smith-machine-incline-bench-press",
+    "name": "Smith Machine Incline Bench Press",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Set an incline bench under the Smith bar and lie back with your feet flat. Unhook the bar, lower it to your upper chest, then press it up until your arms are straight. Keep your shoulder blades pinched."
+  },
+  {
+    "id": "inverted-row",
+    "name": "Inverted Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie under a bar set at about waist height and hold it with an overhand grip. Keep your body straight and pull your chest up to the bar. Lower yourself slowly until your arms are straight again."
+  },
+  {
+    "id": "reverse-grip-lat-pulldown",
+    "name": "Reverse-Grip Lat Pulldown",
+    "primary": "Back",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Sit at the pulldown machine and hold the bar with an underhand grip, hands shoulder width apart. Pull the bar down to your upper chest while you lean back slightly. Let it rise slowly until your arms are straight."
+  },
+  {
+    "id": "superman",
+    "name": "Superman",
+    "primary": "Back",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie face down with your arms stretched out in front of you. Lift your arms, chest and legs off the floor at the same time and squeeze your back and glutes. Hold for a second, then lower slowly."
+  },
+  {
+    "id": "walking-lunge",
+    "name": "Walking Lunge",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Hold a dumbbell in each hand and step forward into a lunge until both knees are bent about 90 degrees. Push through the front foot and step the back leg forward into the next lunge. Keep your chest up and take long steps."
+  },
+  {
+    "id": "barbell-reverse-lunge",
+    "name": "Barbell Reverse Lunge",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Rest a barbell across your upper back. Step one foot back and lower until your front thigh is parallel to the floor. Push through the front foot to stand up and repeat on the other side."
+  },
+  {
+    "id": "dumbbell-squat",
+    "name": "Dumbbell Squat",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand with your feet shoulder width apart and a dumbbell in each hand at your sides. Sit your hips back and down until your thighs are about parallel to the floor. Drive up through your heels."
+  },
+  {
+    "id": "overhead-squat",
+    "name": "Overhead Squat",
+    "primary": "Quads",
+    "secondary": [
+      "Shoulders",
+      "Glutes",
+      "Abs"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Hold a barbell locked out overhead with a wide grip. Squat down as low as you can while keeping the bar over your mid foot and your chest up. Stand back up, keeping your arms straight the whole time."
+  },
+  {
+    "id": "hip-adduction-machine",
+    "name": "Hip Adduction Machine",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Sit in the machine with your legs on the pads and the weight set so you can start with them apart. Squeeze your thighs together, pause, then let them open slowly. Keep your back against the seat."
+  },
+  {
+    "id": "seated-dip-machine",
+    "name": "Seated Dip Machine",
+    "primary": "Triceps",
+    "secondary": [
+      "Chest",
+      "Shoulders"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Sit in the machine with your back against the pad and your hands on the handles. Press the handles down until your arms are straight. Let them come back up slowly without letting your shoulders roll forward."
+  },
+  {
+    "id": "jm-press",
+    "name": "JM Press",
+    "primary": "Triceps",
+    "secondary": [
+      "Chest"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Lie on a flat bench and hold a barbell above your chest with a close grip. Bend your elbows to lower the bar towards your chin and upper chest, with your elbows pointing forward. Press it back up by straightening your arms."
+  },
+  {
+    "id": "dumbbell-skullcrusher",
+    "name": "Dumbbell Skullcrusher",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie on a flat bench with a dumbbell in each hand above your chest, palms facing each other. Bend your elbows to lower the dumbbells beside your head. Straighten your arms to bring them back up, keeping your upper arms still."
+  },
+  {
+    "id": "diamond-push-up",
+    "name": "Diamond Push-Up",
+    "primary": "Triceps",
+    "secondary": [
+      "Chest",
+      "Shoulders"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Get into a push-up position with your hands close together under your chest so your thumbs and fingers form a diamond. Lower your chest to your hands, keeping your elbows close to your body. Push back up until your arms are straight."
+  },
+  {
+    "id": "reverse-grip-triceps-pushdown",
+    "name": "Reverse-Grip Triceps Pushdown",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand at a high pulley and hold the bar with an underhand grip, elbows pinned to your sides. Push the bar down until your arms are straight. Let it rise slowly to chest height without moving your elbows."
+  },
+  {
+    "id": "barbell-overhead-triceps-extension",
+    "name": "Barbell Overhead Triceps Extension",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Sit on a bench with a barbell held overhead in both hands. Bend your elbows to lower the bar behind your head, keeping your upper arms close to your ears. Straighten your arms to lift it back up."
+  },
+  {
+    "id": "dumbbell-overhead-triceps-extension",
+    "name": "Dumbbell Overhead Triceps Extension",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand holding one dumbbell with both hands above your head. Bend your elbows to lower it behind your head, then straighten your arms to raise it again. Keep your elbows pointing forward and your core tight."
+  },
+  {
+    "id": "v-bar-triceps-pushdown",
+    "name": "V-Bar Triceps Pushdown",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand at a high pulley and grip the V-bar with your elbows tucked in at your sides. Push the bar down until your arms are straight. Let it come back up slowly, keeping your elbows still."
+  },
+  {
+    "id": "cross-body-hammer-curl",
+    "name": "Cross-Body Hammer Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand holding a dumbbell in each hand with your palms facing in. Curl one dumbbell up across your body towards the opposite shoulder, then lower it and switch arms. Keep your elbows by your sides."
+  },
+  {
+    "id": "drag-curl",
+    "name": "Drag Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Stand holding a barbell with an underhand grip. Curl it up by pulling your elbows back so the bar slides up close to your body. Lower it the same way, keeping the bar against you."
+  },
+  {
+    "id": "machine-preacher-curl",
+    "name": "Machine Preacher Curl",
+    "primary": "Biceps",
+    "secondary": [],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Sit at the machine with your upper arms resting flat on the pad and your hands on the handles. Curl the handles up until your hands are near your shoulders, then lower slowly. Do not let your arms swing off the pad."
+  },
+  {
+    "id": "one-arm-dumbbell-preacher-curl",
+    "name": "One-Arm Dumbbell Preacher Curl",
+    "primary": "Biceps",
+    "secondary": [],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Rest the back of one upper arm on a preacher pad or the top of an incline bench. Curl the dumbbell up towards your shoulder, then lower it slowly until your arm is nearly straight. Finish all the reps on one arm, then switch."
+  },
+  {
+    "id": "spider-curl",
+    "name": "Spider Curl",
+    "primary": "Biceps",
+    "secondary": [],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Lie face down on an incline bench and let your arms hang straight down holding a barbell. Curl the bar up towards your shoulders without moving your upper arms. Lower it slowly."
+  },
+  {
+    "id": "zottman-curl",
+    "name": "Zottman Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand with a dumbbell in each hand and curl them up with your palms facing up. At the top, turn your palms to face down and lower the weights slowly. Turn them back up at the bottom and repeat."
+  },
+  {
+    "id": "dumbbell-reverse-curl",
+    "name": "Dumbbell Reverse Curl",
+    "primary": "Forearms",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand holding a dumbbell in each hand with your palms facing down. Curl the weights up towards your shoulders, keeping your wrists straight. Lower them slowly and keep your elbows by your sides."
+  },
+  {
+    "id": "seated-one-leg-calf-raise",
+    "name": "Seated One-Leg Calf Raise",
+    "primary": "Calves",
+    "secondary": [],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Sit on a bench with the ball of one foot on a block and a dumbbell resting on that knee. Lift your heel as high as you can, pause, then lower it below the block for a stretch. Finish all the reps on one leg, then switch."
+  },
+  {
+    "id": "dumbbell-side-bend",
+    "name": "Dumbbell Side Bend",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand holding a dumbbell in one hand at your side. Bend sideways at your waist towards the weight, then use your side muscles to come back upright. Keep your hips still and do all reps on one side before switching."
+  },
+  {
+    "id": "bicycle-crunch",
+    "name": "Bicycle Crunch",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie on your back with your hands behind your head and your knees raised. Bring one elbow towards the opposite knee while you straighten the other leg, then switch sides in a pedalling motion. Keep your lower back pressed into the floor."
+  },
+  {
+    "id": "cross-body-crunch",
+    "name": "Cross-Body Crunch",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie on your back with your knees bent and your hands behind your head. Curl up and twist so one elbow moves towards the opposite knee. Lower back down and repeat to the other side."
   }
 ]

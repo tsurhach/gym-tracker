@@ -28,7 +28,7 @@ test("no .jpg left under img/ex, and no unreferenced files", () => {
 
 test("total picture size stays small", () => {
   const total = walk("img/ex/").reduce((n, f) => n + statSync(new URL(f, root)).size, 0);
-  assert.ok(total < 5 * 1024 * 1024, `${total} bytes`);
+  assert.ok(total < 10 * 1024 * 1024, `${total} bytes`);
 });
 
 test("0 pictures render nothing, 1 is still, 2 cross-fade", () => {

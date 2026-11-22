@@ -91,6 +91,12 @@ const SAME = {
   "Seated Calf Raise (Machine)": "seated-calf-raise",
   "Calf Raise (Smith Machine)": "smith-machine-calf-raise",
   "Cable Pull Through": "pull-through",
+  "Bench Press (Smith Machine)": "smith-machine-bench-press",
+  "Incline Bench Press (Smith Machine)": "smith-machine-incline-bench-press",
+  "Zottman Curl": "zottman-curl",
+  "Skullcrusher (Dumbbell)": "dumbbell-skullcrusher",
+  "Lunge (Walking)": "walking-lunge",
+  "Squat (Dumbbell)": "dumbbell-squat",
 };
 
 test("real-world names from Hevy, Strong, wger, free-exercise-db and everkinetic map to the library", () => {
@@ -104,22 +110,18 @@ test("real-world names from Hevy, Strong, wger, free-exercise-db and everkinetic
 // Different equipment or a different movement: these must NOT be linked (a wrong drawing is worse than none).
 test("near-misses with other equipment or another movement stay unmatched", () => {
   for (const n of [
-    "Bench Press (Smith Machine)",
-    "Incline Bench Press (Smith Machine)",
     "Incline Bench Press (Barbell) Close Grip",
     "Romanian Deadlift (Dumbbell)",
     "Deadlift (Dumbbell)",
     "Bent Over Row (Dumbbell)",
     "Lat Pulldown (Machine)",
     "Seated Row (Machine)",
-    "Squat (Dumbbell)",
     "Bodyweight Squat",
     "Bulgarian Split Squat",
     "Hip Thrust (Smith Machine)",
     "Glute Kickback (Machine)",
     "Hammer Curl (Machine)",
     "Preacher Curl (Dumbbell)",
-    "Skullcrusher (Dumbbell)",
     "Triceps Extension (Dumbbell)",
     "Weighted Pull Up",
     "Weighted Dips",
@@ -127,7 +129,6 @@ test("near-misses with other equipment or another movement stay unmatched", () =
     "Front Raise",
     "Shrug",
     "Leg Curl (Machine)",
-    "Lunge (Walking)",
     "Calf Raise (Seated, Dumbbell)",
     "Hack Squat (Barbell)",
     "Reverse Curl (Barbell)",

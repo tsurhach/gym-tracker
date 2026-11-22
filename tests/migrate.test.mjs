@@ -29,7 +29,7 @@ test("owner's names and common spellings match the library", () => {
 });
 
 test("names that are not in the library stay custom", () => {
-  for (const n of ["bicep curl", "curl", "Bicep Curls", "Reverse Curl Machine", "פשט", "נשיאה", "Zottman Curl", "Cable Crunch Twist"])
+  for (const n of ["bicep curl", "curl", "Bicep Curls", "Reverse Curl Machine", "פשט", "נשיאה", "Cable Crunch Twist"])
     assert.equal(id(n), null, n);
   const p = planFromFile(
     { format: "gym-tracker-plan", version: 1, name: "P", goal: "muscle", days: [{ name: "D", exercises: [{ name: "Bicep Curls", sets: 3, reps: [8, 10] }] }] },
@@ -44,7 +44,7 @@ const base = () => ({
   settings: { goal: "muscle" },
   customExercises: [
     { id: "c1", name: "Dumbbell Bicep Curls", primary: "Biceps", secondary: [] },
-    { id: "c2", name: "Zottman Curl", primary: "Biceps", secondary: [] },
+    { id: "c2", name: "Landmine Press", primary: "Biceps", secondary: [] },
     { id: "c3", name: "Crunches", primary: "Abs", secondary: [] },
   ],
   workouts: [
