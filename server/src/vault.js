@@ -3,6 +3,7 @@
 import {
   ID_RE,
   b64u,
+  unb64u,
   checkRegistration,
   checkSize,
   sha256b64u,
@@ -66,7 +67,14 @@ export class VaultCore {
     return acct;
   }
 
-  async handle(path, b) {
+  // One request at a time per account: the awaits inside would otherwise let two pushes both win a rev.
+  handle(path, b) {
+    const run = () => this.handleOne(path, b);
+    this.q = (this.q ?? Promise.resolve()).then(run, run);
+    return this.q;
+  }
+
+  async handleOne(path, b) {
     if (this.limited()) return { status: 429, body: { error: "slow down" } };
     if (path === "/auth/register") return this.register(b);
     if (path === "/auth/signin") return this.signin(b);
@@ -142,6 +150,15 @@ export class VaultCore {
       !(await verifyAssertion({ spki, ...b }, { ...this.o, now: this.now() }))
     )
       return NOT_FOUND;
+    // Single use: a captured assertion cannot be replayed within its two minutes.
+    let ch;
+    try {
+      ch = JSON.parse(new TextDecoder().decode(unb64u(b.clientDataJSON))).challenge;
+    } catch {}
+    const t = this.now();
+    acct.used = Object.fromEntries(Object.entries(acct.used ?? {}).filter(([, e]) => e > t));
+    if (typeof ch !== "string" || ch in acct.used) return NOT_FOUND;
+    acct.used[ch] = t + 5 * 60 * 1000;
     const token = await this.issueToken(acct);
     await this.touch(acct);
     return OK({ token, wrapPrf: acct.wrapPrf, wrapCode: acct.wrapCode });

@@ -4,5 +4,6 @@
   "compatibility_date": "2026-11-16",
   "vars": { "VAPID_PUBLIC_KEY": "BHKtgaMJrKosNvPeNtGIjG0KJH4VY6GGk2FNsf3bXmNxit1luCZpmY4fGOag-JWkdr2JFioQeeBpvD_xpCHUcwc" },
   "durable_objects": { "bindings": [{ "name": "REST", "class_name": "Rest" }, { "name": "VAULT", "class_name": "Vault" }] },
+  "ratelimits": [{ "name": "RL", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }],
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Rest"] }, { "tag": "v2", "new_sqlite_classes": ["Vault"] }]
 }

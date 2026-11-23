@@ -32,10 +32,8 @@ The same Worker also serves sync: `POST /auth/challenge|register|signin`, `/sync
 
 No new account is needed: this uses the same Cloudflare account and Worker as the rest server. Free plan only; over a limit requests fail, nothing is billed.
 
-### Optional: per-IP limit on account creation and sign-in
-Code uses a Rate Limiting binding named `RL` when present (60 per minute per account is already enforced inside each `Vault`). Add to `wrangler.jsonc` only if your plan allows it, then redeploy:
-`"ratelimits": [{ "name": "RL", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } }]`
-Not enabled by default because Cloudflare's page does not say it works on the free plan.
+### Per-IP limit
+`wrangler.jsonc` now declares a Rate Limiting binding `RL` (20 per 60 s per IP on challenge, register, sign-in and push). Each account also allows 60 requests a minute. If `npx wrangler deploy` refuses the `ratelimits` entry on your plan, delete that one line from `wrangler.jsonc` and deploy again (the code skips the check when `RL` is absent), and tell me so a daily registration cap can be added instead.
 
 ### Local checks
 `npm test` in the app root runs the server logic against an in-memory store (`tests/server-sync.test.mjs`, `tests/sync-flow.test.mjs`). Nothing here needs an account.
