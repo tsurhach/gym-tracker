@@ -1,5 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import { ORIGINS, MAX_BODY, parseBody, vapidJwt, authHeader } from "./lib.js";
+import { ID_RE, MAX_SYNC_BODY, makeChallenge, parseSyncBody } from "./syncauth.js";
+import { VaultCore } from "./vault.js";
+
+const SYNC_PATHS = new Set(["/auth/register", "/auth/signin", "/sync/pull", "/sync/push", "/account/rewrap", "/account/signout", "/account/delete"]);
 
 const json = (status, body, cors) =>
   new Response(JSON.stringify(body), {
@@ -22,6 +26,8 @@ export default {
     if (req.method === "OPTIONS")
       return new Response(null, { status: cors["access-control-allow-origin"] ? 204 : 403, headers: cors });
     const path = new URL(req.url).pathname;
+    if (req.method === "POST" && (path === "/auth/challenge" || SYNC_PATHS.has(path)))
+      return syncRoute(req, env, path, cors);
     if (req.method !== "POST" || (path !== "/schedule" && path !== "/cancel"))
       return json(400, { error: "bad request" }, cors);
     if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY)
@@ -36,6 +42,42 @@ export default {
     return json(200, { ok: true }, cors);
   },
 };
+
+// Sync routes. The server only passes sealed data along; it never sees a key or a workout.
+async function syncRoute(req, env, path, cors) {
+  const bad = () => json(400, { error: "bad request" }, cors);
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_SYNC_BODY) return bad();
+  // Optional per-IP limit (see README). The IP is only a counter key; nothing is stored or logged.
+  if (env.RL && (path === "/auth/challenge" || path === "/auth/register" || path === "/auth/signin")) {
+    const { success } = await env.RL.limit({ key: req.headers.get("cf-connecting-ip") ?? "x" });
+    if (!success) return json(429, { error: "slow down" }, cors);
+  }
+  if (!env.CHALLENGE_KEY) return json(503, { error: "not set up" }, cors);
+  if (path === "/auth/challenge") return json(200, { challenge: await makeChallenge(env.CHALLENGE_KEY) }, cors);
+  const body = parseSyncBody(await req.text());
+  // At sign-in the account id is the passkey's userHandle.
+  if (!body || !ID_RE.test(body.accountId ?? "")) return bad();
+  const stub = env.VAULT.get(env.VAULT.idFromName(body.accountId));
+  const r = await stub.call(path, body);
+  return json(r.status, r.body, cors);
+}
+
+export class Vault extends DurableObject {
+  core() {
+    const s = this.ctx.storage;
+    return new VaultCore(
+      { get: (k) => s.get(k), put: (k, v) => s.put(k, v), deleteAll: () => s.deleteAll(), setAlarm: (t) => s.setAlarm(t) },
+      { secret: this.env.CHALLENGE_KEY, origins: ORIGINS },
+    );
+  }
+  call(path, body) {
+    this.rate ??= this.core(); // one core per instance, so its rate counter lives as long as the object does
+    return this.rate.handle(path, body);
+  }
+  alarm() {
+    return this.core().alarm();
+  }
+}
 
 export class Rest extends DurableObject {
   async schedule(endpoint, at) {
