@@ -26,6 +26,7 @@ import {
 import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 import { runningVersion } from "../update.js";
+import { toggleSyncTrial } from "../sync.js";
 
 function move(arr, i, d) {
   const j = i + d;
@@ -238,6 +239,18 @@ export function render(root, ctx) {
     versionText = v ? `Version ${v}` : "Version: not installed";
     const el = root.querySelector("#app-version");
     if (el) el.textContent = versionText; // no redraw: typed values stay put
+  });
+
+  // Hidden owner switch: 5 taps on the version line within 3 s flips the sync trial and reloads.
+  let taps = [];
+  root.querySelector("#app-version")?.addEventListener("click", () => {
+    const now = Date.now();
+    taps = [...taps.filter((t) => now - t < 3000), now];
+    if (taps.length < 5) return;
+    taps = [];
+    const on = toggleSyncTrial();
+    alert(`Sync trial turned ${on ? "on" : "off"}. The app will reload.`);
+    location.reload();
   });
 
   current = { root, ctx };
