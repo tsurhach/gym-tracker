@@ -6,6 +6,9 @@ import { InviteCore, SHARE_PATHS, shareRoute } from "./share.js";
 
 const SYNC_PATHS = new Set(["/auth/register", "/auth/signin", "/sync/pull", "/sync/push", "/account/rewrap", "/account/signout", "/account/delete", "/media/list", "/media/put", "/media/get", "/media/delete", ...SHARE_PATHS]);
 
+// Per-IP limited: account creation, sign-in, pushes, and invite code entry (guessing).
+const RL_PATHS = new Set(["/auth/challenge", "/auth/register", "/auth/signin", "/sync/push", "/invite/peek", "/invite/accept"]);
+
 const json = (status, body, cors) =>
   new Response(JSON.stringify(body), {
     status,
@@ -51,7 +54,7 @@ async function syncRoute(req, env, path, cors) {
   if (Number(req.headers.get("content-length") ?? 0) > (put ? MEDIA_ITEM_MAX + 2000 : MAX_SYNC_BODY))
     return json(413, { error: "too big" }, cors);
   // Optional per-IP limit (see README). The IP is only a counter key; nothing is stored or logged.
-  if (env.RL && (path === "/auth/challenge" || path === "/auth/register" || path === "/auth/signin" || path === "/sync/push")) {
+  if (env.RL && RL_PATHS.has(path)) {
     const { success } = await env.RL.limit({ key: req.headers.get("cf-connecting-ip") ?? "x" });
     if (!success) return json(429, { error: "slow down" }, cors);
   }

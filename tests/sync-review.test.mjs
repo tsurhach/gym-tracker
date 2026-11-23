@@ -184,7 +184,7 @@ test("S2: foregrounding with nothing changed does not push", async () => {
   assert.equal(rev(), before);
 });
 
-test("S3: rate-limit binding is declared and covers push", () => {
+test("S3: rate-limit binding is declared and covers push and invite code entry", () => {
   const w = readFileSync(
     new URL("../server/wrangler.jsonc", import.meta.url),
     "utf8",
@@ -192,7 +192,7 @@ test("S3: rate-limit binding is declared and covers push", () => {
   assert.match(w, /"ratelimits"[\s\S]*"name": "RL"/);
   assert.match(
     readFileSync(new URL("../server/src/index.js", import.meta.url), "utf8"),
-    /"\/sync\/push"\)\s*\)\s*\{\s*const \{ success \} = await env\.RL/,
+    /RL_PATHS\.has\(path\)\)\s*\{\s*const \{ success \} = await env\.RL/,
   );
 });
 
