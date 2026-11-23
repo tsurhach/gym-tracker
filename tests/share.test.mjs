@@ -634,3 +634,49 @@ test("changing the copy tick republishes: the viewer sees canCopy only while it 
   await S.share.publish();
   assert.equal((await V.share.fetchView(p)).canCopy, false);
 });
+
+// ---------- phase 6 review fixes ----------
+import { plateDefault } from "../js/logic.js";
+const mk = (items, extra = {}) => cleanView({ canCopy: true, workouts: [{ id: "d", name: "D", muscles: ["Chest", "Bogus"], items }], ...extra });
+const it = (exerciseId, o = {}) => ({ exerciseId, sets: 3, repMin: 8, repMax: 12, step: 2.5, ...o });
+
+test("S1: equipment named like an Object property never counts as plate-loaded equipment", () => {
+  for (const e of ["constructor", "toString", "__proto__", "hasOwnProperty"])
+    assert.equal(plateDefault({ id: "c", name: "X", equipment: e }), null);
+  assert.equal(plateDefault({ id: "c", name: "X", equipment: "barbell" }), 20);
+});
+
+test("S2: counts and bounds follow the plan limits", () => {
+  const many = Array.from({ length: 60 }, (_, i) => it(i % 2 ? "bench" : "squat"));
+  const days = Array.from({ length: 50 }, (_, i) => ({ id: `d${i}`, name: `Day ${i}`, items: [it("bench", { sets: 99 })] }));
+  const r = copyPlan(cleanView({ canCopy: true, workouts: days }), emptyState(), hasId);
+  assert.equal(r.added.length, 14);
+  assert.ok(r.added.every((w) => w.items[0].sets <= 10));
+  assert.ok(copyDay(mk(many), "d", emptyState(), hasId).workout.items.length <= 20);
+});
+
+test("S3: the same exercise twice in a day is copied once", () => {
+  const w = copyDay(mk([it("bench"), it("bench", { sets: 5 }), it("squat")]), "d", emptyState(), hasId);
+  assert.deepEqual(w.workout.items.map((i) => i.exerciseId), ["bench", "squat"]);
+  assert.equal(w.skipped, 1);
+  const v = mk([it("c1"), it("c2")], { customExercises: [{ id: "c1", name: "Odd", primary: "Chest" }, { id: "c2", name: "odd", primary: "Chest" }] });
+  assert.equal(copyDay(v, "d", emptyState(), hasId).workout.items.length, 1); // two customs, one name
+});
+
+test("S4: step never becomes 0 or below the app minimum", () => {
+  for (const step of [0.004, 0.1, 0])
+    assert.ok(copyDay(mk([it("bench", { step })]), "d", emptyState(), hasId).workout.items[0].step >= 0.25);
+});
+
+test("N1/N3/N4: muscles filtered, duplicate day ids both copied, library name reused", () => {
+  const v = cleanView({ canCopy: true, customExercises: [{ id: "c", name: "Bench Press!", primary: "Chest" }], workouts: [
+    { id: "same", name: "A", muscles: ["Chest", "Bogus"], items: [it("c")] },
+    { id: "same", name: "B", items: [it("squat")] },
+  ] });
+  const cx = newCopy([{ id: "bench", name: "Bench Press" }]);
+  const r = copyPlan(v, emptyState(), hasId, cx);
+  assert.deepEqual(r.added.map((w) => w.name), ["A", "B"]);
+  assert.deepEqual(r.added[0].muscles, ["Chest"]);
+  assert.equal(r.added[0].items[0].exerciseId, "bench");
+  assert.equal(cx.fresh.length, 0);
+});

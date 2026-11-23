@@ -108,7 +108,7 @@ export function render(root, ctx) {
       b.onclick = async () => {
         const lib = new Set(ctx.library.map((e) => e.id));
         const has = (id) => lib.has(id);
-        const cx = newCopy();
+        const cx = newCopy(ctx.library);
         const one = ({ workout, skipped }) => ({ added: workout ? [workout] : [], skipped });
         const all = b.dataset.copy === "";
         const r = b.dataset.copySession !== undefined

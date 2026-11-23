@@ -2,6 +2,7 @@
 // Everything the server stores is sealed here first: names, roles, ticks and every shared workout.
 import * as sc from "./synccrypto.js";
 import { DEFAULT_STEP, MUSCLES } from "./constants.js";
+import { LIMITS, norm } from "./planfile.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -162,13 +163,16 @@ const copyName = (base, taken, suffixFirst) => {
   }
 };
 // One per copy action: remembers the customs made, so several days share them.
-export const newCopy = () => ({ map: new Map(), fresh: [] });
+// library (optional): a sharer custom named like a library exercise becomes that library exercise.
+export const newCopy = (library = []) => ({ map: new Map(), fresh: [], byName: new Map(library.map((e) => [norm(e.name), e.id]).reverse()) });
 function resolveEx(view, id, state, has, cx) {
   const c = arr(view.customExercises).find((x) => x.id === id);
   if (!c) return typeof id === "string" && has(id) ? id : null;
   if (cx.map.has(id)) return cx.map.get(id);
   const name = cap(c.name, 60);
   if (!name || !MUSCLES.includes(c.primary)) return null;
+  const lib = cx.byName.get(norm(name));
+  if (lib) return (cx.map.set(id, lib), lib);
   const mine = [...state.customExercises, ...cx.fresh].find((e) => e.name.toLowerCase() === name.toLowerCase());
   const ex = mine ?? {
     id: `custom-${crypto.randomUUID()}`,
@@ -186,9 +190,9 @@ const REFUSED = { workout: null, skipped: 0, refused: true };
 const make = (view, state, name, rows, cx, has, suffixFirst) => {
   const items = [];
   let skipped = 0;
-  for (const r of rows) {
+  for (const r of rows.slice(0, LIMITS.exercises[1])) {
     const exerciseId = resolveEx(view, r.exerciseId, state, has, cx);
-    if (!exerciseId) { skipped++; continue; }
+    if (!exerciseId || items.some((i) => i.exerciseId === exerciseId)) { skipped++; continue; } // no exercise twice in a day
     items.push({ exerciseId, ...r.rest });
   }
   if (!items.length) return { workout: null, skipped };
@@ -198,14 +202,16 @@ const make = (view, state, name, rows, cx, has, suffixFirst) => {
 export function copyDay(view, dayId, state, has, cx = newCopy()) {
   if (view?.canCopy !== true) return REFUSED;
   const d = arr(view.workouts).find((w) => w.id === dayId);
-  if (!d) return { workout: null, skipped: 0 };
+  return d ? dayCopy(view, d, state, has, cx) : { workout: null, skipped: 0 };
+}
+function dayCopy(view, d, state, has, cx) {
   const rows = arr(d.items).map((it) => {
     const repMin = clamp(it.repMin, 1, 100, 8);
-    const step = num(it.step) && it.step > 0 ? Math.min(25, Math.round(it.step * 100) / 100) : DEFAULT_STEP;
-    return { exerciseId: it.exerciseId, rest: { sets: clamp(it.sets, 1, 20, 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, 100, 12)), step } };
+    const step = num(it.step) && it.step > 0 ? Math.min(LIMITS.step[1], Math.max(LIMITS.step[0], Math.round(it.step * 100) / 100)) : DEFAULT_STEP;
+    return { exerciseId: it.exerciseId, rest: { sets: clamp(it.sets, 1, LIMITS.sets[1], 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, 100, 12)), step } };
   });
   const r = make(view, state, d.name, rows, cx, has, false);
-  if (r.workout) r.workout.muscles = arr(d.muscles).slice(0, 8).map((m) => cap(m, 30));
+  if (r.workout) r.workout.muscles = arr(d.muscles).filter((m) => MUSCLES.includes(m)).slice(0, 8);
   return r;
 }
 // A finished workout becomes a plan day: its exercises in order, sets = sets done, reps from the reps done.
@@ -217,7 +223,7 @@ export function dayFromSession(view, sessionId, state, has, cx = newCopy()) {
     .filter((e) => arr(e.sets).length)
     .map((e) => {
       const reps = e.sets.map((t) => clamp(t.reps, 1, 100, 1));
-      return { exerciseId: e.exerciseId, rest: { sets: clamp(e.sets.length, 1, 20, 1), repMin: Math.min(...reps), repMax: Math.max(...reps), step: DEFAULT_STEP } };
+      return { exerciseId: e.exerciseId, rest: { sets: clamp(e.sets.length, 1, LIMITS.sets[1], 1), repMin: Math.min(...reps), repMax: Math.max(...reps), step: DEFAULT_STEP } };
     });
   return make(view, state, s.workoutName, rows, cx, has, true);
 }
@@ -227,8 +233,8 @@ export function copyPlan(view, state, has, cx = newCopy()) {
   const added = [];
   let skipped = 0;
   const tmp = { ...state, workouts: [...state.workouts] };
-  for (const w of arr(view.workouts)) {
-    const r = copyDay(view, w.id, tmp, has, cx);
+  for (const w of arr(view.workouts).slice(0, LIMITS.days[1])) {
+    const r = dayCopy(view, w, tmp, has, cx);
     skipped += r.skipped;
     if (r.workout) (added.push(r.workout), tmp.workouts.push(r.workout));
   }

@@ -206,7 +206,7 @@ export function plateDefault(ex) {
   if (!ex) return null;
   if (/smith/i.test(ex.name ?? "")) return 0;
   if (PLATE_MACHINES.has(ex.id)) return 0;
-  return EMPTY_BY_EQUIPMENT[ex.equipment] ?? null;
+  return Object.hasOwn(EMPTY_BY_EQUIPMENT, ex.equipment) ? EMPTY_BY_EQUIPMENT[ex.equipment] : null; // own keys only: "constructor" is not an equipment
 }
 
 // Per-item overrides (it.plates, it.emptyKg) on top of the equipment default.
