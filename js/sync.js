@@ -4,27 +4,8 @@ import * as sc from "./synccrypto.js";
 import { allMediaKeys, readMedia, restoreMedia, deleteMedia, pendingDeletes, clearDeleted } from "./media.js";
 import { encodeMedia, decodeMedia } from "./backup.js";
 
-// Hidden by default: while false nothing below runs, no route, no link, no network.
-export const SYNC_ENABLED = false;
-// Owner-only trial: a hidden toggle (Plan, tap the version line 5 times) sets this key on one phone.
-export const TRIAL_KEY = "gymtracker.syncTrial";
-export function syncTrialOn(ls = globalThis.localStorage) {
-  try {
-    return ls.getItem(TRIAL_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-export function toggleSyncTrial(ls = globalThis.localStorage) {
-  const on = !syncTrialOn(ls);
-  try {
-    if (on) ls.setItem(TRIAL_KEY, "1");
-    else ls.removeItem(TRIAL_KEY);
-  } catch {}
-  return on;
-}
-// Effective flag, read once at app start. Local data is never touched by turning the trial off.
-export const SYNC_ON = SYNC_ENABLED || syncTrialOn();
+// Opt-in: nothing syncs until a person taps "Turn on sync" (Plan, Settings, Sync and sign-in).
+export const SYNC_ENABLED = true;
 export const SYNC_URL = SERVER; // the same Worker; sync adds routes to it
 export const SYNC_FORMAT = 1;
 const COLLECTIONS = ["customExercises", "workouts", "sessions", "bodyWeights"];

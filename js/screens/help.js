@@ -48,7 +48,7 @@ const SECTIONS = [
       <li>Tap the <b>⋮</b> menu (three dots, top right).</li>
       <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
     </ol>
-    <p><b>Important:</b> your data stays on this phone only. If you delete the app from your home screen, your data is deleted too. Use <b>Backup</b> first (see "Keep your data safe").</p>`,
+    <p><b>Important:</b> your data stays on this phone unless you turn on sync (see "Save with a passkey"). If you delete the app from your home screen, your data is deleted too. Use <b>Backup</b> first (see "Keep your data safe").</p>`,
   ],
   [
     "plan",
@@ -72,7 +72,7 @@ const SECTIONS = [
       <li>The weight and reps are filled in from last time.</li>
       <li>After each set, tap the <b>✓</b> to confirm it.</li>
       <li>To change a number, tap it and type.</li>
-      <li>Machine taken? On the exercise, tap <b>Swap exercise</b> to switch to a similar one.</li>
+      <li>Machine taken? On the exercise, tap <b>Swap exercise</b> to switch to a similar one. Ones you picked before show <b>★ Usual</b>.</li>
       <li>Tap <b>Done, back to list</b>, then pick the next exercise.</li>
       <li>At the end, tap <b>Finish workout</b>.</li>
     </ol>`,
@@ -91,7 +91,8 @@ const SECTIONS = [
     "Small helpers while you train.",
     `<p><b>Rest timer:</b> after you confirm a set, a countdown starts. Change its length in Plan, Settings.</p>
     <p><b>Plates per side:</b> for bar exercises the app shows which plates to put on each side.</p>
-    <p><b>New best:</b> a star shows when a set beats everything you did before.</p>`,
+    <p><b>New best:</b> a star shows when a set beats everything you did before.</p>
+    <p><b>Drawings:</b> each exercise has a small drawing that shows how to do it.</p>`,
   ],
   [
     "progress",
@@ -105,7 +106,7 @@ const SECTIONS = [
     "backup",
     "Keep your data safe",
     "Do this now and then.",
-    `<p>Your data lives only on this phone. A backup is a file you can save somewhere safe.</p>
+    `<p>Without sync, your data lives only on this phone. A backup is a file you can save somewhere safe.</p>
     <ol>
       <li>Go to <b>Plan</b>, then <b>Backup and export</b>.</li>
       <li>Tap <b>Export backup</b>. Do this about once a month, and before changing phones.</li>
@@ -115,23 +116,27 @@ const SECTIONS = [
   ],
 ];
 
-// Only listed when sync is switched on (see js/sync.js SYNC_ENABLED).
 const SYNC_SECTION = [
   "sync",
-  "Sync",
-  "Keep your workouts safe.",
-  `<p>Go to <b>Plan</b>, then <b>Settings</b>, then <b>Sync and sign-in</b> and tap <b>Turn on sync</b>. Approve with Face ID. Your workouts, plan, body weight and settings are locked on the phone before they are sent, so nobody else can read them.</p>
-    <p>Save the <b>recovery code</b> it shows. You only need it if Face ID cannot unlock your data (for example on an Android phone). We cannot reset it.</p>
-    <p>Photos and your rest sound sync too (up to 4 MB each, 25 MB in all). Videos stay on this phone and in your backup file. Your data stays safe if you lose the phone, as long as sync was on.</p>`,
+  "Save with a passkey (sync)",
+  "Optional. Keeps your workouts safe.",
+  `<p>Go to <b>Plan</b>, then <b>Settings</b>, then <b>Sync and sign-in</b>, and tap <b>Turn on sync with Face ID</b>. It is your choice; the app works fine without it.</p>
+    <p>It saves your workouts, plan, settings, photos and sound notes. Videos stay on the phone.</p>
+    <p>Everything is locked on your phone before it is sent. Nobody else can read it, not even the app's server.</p>
+    <p><b>Recovery code:</b> the app shows it once. Save it, for example in your iPhone Passwords. You only need it if you lose all your devices. We cannot reset it.</p>
+    <p><b>Second device:</b> open the app on it, go to <b>Sync and sign-in</b>, and tap <b>I already use sync</b>.</p>
+    <p>Tap <b>Sync now</b> to save right away. To stop, tap <b>Sign out on this device</b>, or <b>Delete my cloud data</b> to remove what was saved. Your data on the phone stays.</p>`,
 ];
 
 const SHARE_SECTION = [
   "sharing",
-  "Sharing",
+  "Sharing and copying",
   "Let a coach or friend look.",
-  `<p>Go to <b>Plan</b>, then <b>People</b>. Set your name, then tap <b>Invite someone</b> and choose <b>Coach</b> or <b>Friend</b>. Send them the code or link. It works once and lasts 7 days. When they enter it, you tap <b>Allow</b>. Nothing is shared before that.</p>
-    <p>They can only look, never change anything. A coach sees your workouts and plan. A friend sees your workouts, and your plan only if you tick it. Body weight goes to a coach only if you switch on <b>Show my body weight to my coach</b>; friends never see it.</p>
-    <p>Tap <b>Remove</b> to stop sharing with someone at once. <b>Honest limit:</b> a person you remove keeps whatever they already saw (it may be saved on their phone, or written down). Removing stops what comes next; it cannot take back the past. Turning body weight off works the same way.</p>`,
+  `<p>Needs sync to be on. Go to <b>Plan</b>, then <b>People</b>. Set your name, then tap <b>Invite someone</b> and choose <b>Coach</b> or <b>Friend</b>. Send them the code or link. It works once and lasts 7 days. When they enter it, you tap <b>Allow</b>. Nothing is shared before that.</p>
+    <p>They can only look. A coach sees your workouts and plan. A friend sees your workouts, and your plan only if you tick it. Your body weight is hidden from a coach unless you switch on <b>Show my body weight to my coach</b>. Friends never see it.</p>
+    <p>Tick <b>Let them copy my workouts and plan</b> (on the invite, or later on the People screen) if you want them to be able to copy.</p>
+    <p>Tap <b>Remove</b> to stop sharing with someone at once. They keep what they already saw. That cannot be taken back.</p>
+    <p><b>If someone shared with you and allowed copying:</b> open them in People. You can copy one day, or the whole plan, or tap <b>Make a day from this workout</b> on a finished workout. The copy is yours and does not change when theirs does.</p>`,
 ];
 
 export function render(root, ctx) {
@@ -139,7 +144,7 @@ export function render(root, ctx) {
   const open = (k) => (want ? k === want : k === "install" && !isInstalled());
   root.innerHTML = `<h1 class="title">How to use</h1>
     <p class="muted" style="margin:0 0 12px">About two minutes to read. Tap a heading to open it.</p>
-    ${[...SECTIONS, ...(ctx.sync ? [SYNC_SECTION, SHARE_SECTION] : [])].map(
+    ${[...SECTIONS, SYNC_SECTION, SHARE_SECTION].map(
       ([
         k,
         title,
@@ -147,7 +152,7 @@ export function render(root, ctx) {
         body,
       ]) => `<details class="card sec help" id="help-${k}"${open(k) ? " open" : ""}>
       <summary><span class="sec-title">${title}</span><span class="sec-count muted">${sub}</span></summary>
-      <div class="sec-body">${ctx.sync ? body.replace("your data stays on this phone only.", "your data stays on this phone unless sync is on.") : body}</div>
+      <div class="sec-body">${body}</div>
     </details>`,
     ).join("")}
     <a class="btn" href="#/today">Back to Today</a>`;

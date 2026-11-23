@@ -21,7 +21,7 @@ const sess = (id, updatedAt, extra = {}) => ({
 const st = (o = {}) => ({ ...emptyState(), ...o });
 const ids = (s) => s.sessions.map((x) => x.id).sort();
 
-test("sync is hidden by default", () => assert.equal(SYNC_ENABLED, false));
+test("sync is available as an opt-in", () => assert.equal(SYNC_ENABLED, true));
 
 test("merge keeps newer record", () => {
   const r = merge(
