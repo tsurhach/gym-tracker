@@ -20,10 +20,11 @@ export const dateMs = (date) => {
   return new Date(y, m - 1, d).getTime();
 };
 
-// One entry per day: logging an existing day replaces it. The list stays sorted by date.
+// One entry per day: logging an existing day replaces it, keeping its id (an edit, not a delete). The list stays sorted by date.
 export function logWeight(state, date, kg) {
+  const old = state.bodyWeights?.find((e) => e.date === date);
   const list = (state.bodyWeights ?? []).filter((e) => e.date !== date);
-  list.push({ id: crypto.randomUUID(), date, kg });
+  list.push({ id: old?.id ?? crypto.randomUUID(), date, kg });
   list.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   state.bodyWeights = list;
   return state;

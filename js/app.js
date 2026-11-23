@@ -14,6 +14,9 @@ import * as planimport from "./screens/planimport.js";
 import * as help from "./screens/help.js";
 import * as rest from "./rest.js";
 import { checkOnForeground, reloadOnUpdate } from "./update.js";
+import { SYNC_ENABLED, createSync } from "./sync.js";
+import * as sync from "./screens/sync.js";
+import * as passkey from "./passkey.js";
 
 const screens = {
   today,
@@ -27,6 +30,7 @@ const screens = {
   setup,
   import: planimport,
   help,
+  ...(SYNC_ENABLED ? { sync } : {}),
 };
 const NEEDS_ID = new Set(["exercise", "progress"]);
 const NO_TABS = new Set(["setup", "workout", "exercise"]);
@@ -38,6 +42,7 @@ const TAB_OF = {
   setup: "plan",
   import: "plan",
   help: "today",
+  sync: "plan",
 };
 
 function parseHash(hash) {
@@ -63,6 +68,36 @@ function browserStorage() {
     };
     return { getItem: fail, setItem: fail };
   }
+}
+
+// Sync (hidden unless SYNC_ENABLED). A pulled merge is applied only on a calm screen with no input
+// focused, or on the next navigation (which redraws anyway), so typing is never lost to a redraw.
+function startSync(ctx, store, render) {
+  const calm = () => {
+    const tag = document.activeElement?.tagName;
+    const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || document.activeElement?.isContentEditable;
+    return ["#/today", "#/history", "#/muscles"].includes(location.hash || "#/today") && !typing && !document.querySelector(".sheet");
+  };
+  const s = createSync({
+    getState: () => ctx.state,
+    setState: (state) => {
+      ctx.state = state;
+      store.save(state, { resetSnapshot: true });
+    },
+    isSafe: calm,
+    applied: () => {
+      render();
+      showBanner("Updated from your other device.", { kind: "ok" });
+    },
+    storage: browserStorage(),
+    passkey,
+  });
+  ctx.sync = s;
+  // Navigation redraws anyway: merge first so the new screen shows the combined data.
+  window.addEventListener("hashchange", () => s.applyHeld(true));
+  setInterval(() => s.hasHeld() && s.applyHeld(), 5000);
+  document.addEventListener("visibilitychange", () => (document.hidden ? s.flush() : s.syncNow()));
+  s.syncNow();
 }
 
 async function main() {
@@ -121,7 +156,7 @@ async function main() {
     },
     // Resolves true only when the store actually saved.
     // { render: false } saves without redrawing (used when the page is being hidden).
-    async save({ render: redraw = true } = {}) {
+    async save({ render: redraw = true, resetSnapshot = false } = {}) {
       if (blocked && !(await askOverwrite())) {
         showBanner("Changes are not saved. Your old data was left untouched.", {
           sticky: true,
@@ -130,13 +165,14 @@ async function main() {
         return false;
       }
       blocked = false;
-      const saved = store.save(ctx.state);
+      const saved = store.save(ctx.state, { resetSnapshot });
       if (!saved) {
         showBanner(
           "Could not save. Storage may be full or blocked. Export a backup if you can.",
           { sticky: true },
         );
       }
+      if (saved) ctx.sync?.changed(); // schedules a push; never awaited, never redraws
       if (redraw) render();
       return saved;
     },
@@ -201,6 +237,7 @@ async function main() {
     });
   }
 
+  if (SYNC_ENABLED) startSync(ctx, store, () => render());
   window.addEventListener("hashchange", render);
   render();
   // Ask the browser not to evict our data; the answer does not matter.

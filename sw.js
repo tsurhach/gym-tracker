@@ -1,6 +1,6 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files and the exercise drawings); a release is a new VERSION.
-const VERSION = "2790f1c04c17";
+const VERSION = "ca8aa6558cd2";
 const SHELL = `gym-tracker-shell-${VERSION}`;
 const IMG_VERSION = "49c81015c44b";
 const IMAGES = `gym-tracker-img-${IMG_VERSION}`; // drawings are cached per IMG_VERSION (hash of img/ex), so changed drawings replace the old cache on activate
@@ -29,6 +29,9 @@ const PRECACHE = [
   "./js/rest.js",
   "./js/session.js",
   "./js/store.js",
+  "./js/sync.js",
+  "./js/synccrypto.js",
+  "./js/passkey.js",
   "./js/ui.js",
   "./js/weight.js",
   "./js/update.js",
@@ -39,6 +42,7 @@ const PRECACHE = [
   "./js/screens/plan.js",
   "./js/screens/planimport.js",
   "./js/screens/setup.js",
+  "./js/screens/sync.js",
   "./js/screens/today.js",
   "./js/screens/weight.js",
   "./js/screens/workout.js",

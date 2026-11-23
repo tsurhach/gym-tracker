@@ -89,13 +89,84 @@ export function isValidState(o) {
     )
   )
     return false;
+  // Sync groundwork (all optional, so data from before them stays valid).
+  if (
+    o.deleted !== undefined &&
+    !(isObj(o.deleted) && Object.values(o.deleted).every(num))
+  )
+    return false;
+  if (o.settings.updatedAt !== undefined && !num(o.settings.updatedAt))
+    return false;
+  if (o.swapCounts !== undefined && !isObj(o.swapCounts)) return false;
+  if (
+    o.workoutOrder !== undefined &&
+    !(isObj(o.workoutOrder) && Array.isArray(o.workoutOrder.ids) && (o.workoutOrder.updatedAt === undefined || num(o.workoutOrder.updatedAt)))
+  )
+    return false;
+  if (o.swapCounts?.updatedAt !== undefined && !num(o.swapCounts.updatedAt))
+    return false;
+  const stamped = [
+    o.customExercises,
+    o.workouts,
+    o.sessions,
+    o.bodyWeights ?? [],
+  ];
+  if (
+    !stamped.every((c) =>
+      c.every(
+        (r) => !isObj(r) || r.updatedAt === undefined || num(r.updatedAt),
+      ),
+    )
+  )
+    return false;
   return o.sessions.every(
     (s) =>
       isObj(s) && str(s.id) && num(s.startedAt) && entriesOk(s.entries, false),
   );
 }
 
+const COLLECTIONS = ["customExercises", "workouts", "sessions", "bodyWeights"];
+// What counts as "changed": the record's JSON. Its updatedAt is in it but only written here, so it
+// matches the snapshot unless the record changed. Settings skip the per-device export time.
+// No replacer function: it made every save about 5x slower on a large history.
+const sig = (r) => JSON.stringify(r);
+const settingsSig = (s) => JSON.stringify({ ...s, lastExportAt: undefined });
+
+// id -> signature of every syncable record, plus "settings". Given the previous snapshot it first
+// stamps changed records and tombstones removed ones, all in place (screens hold references).
+function snapshotOf(state, prev = null) {
+  const now = Date.now();
+  const m = new Map();
+  m.upd = new Map(); // id -> updatedAt as last saved, so a tombstone can beat it
+  const add = (id, r, f) => {
+    let s = f(r);
+    if (prev && prev.get(id) !== s) {
+      r.updatedAt = Math.max(now, (r.updatedAt ?? 0) + 1);
+      s = f(r);
+    }
+    m.set(id, s);
+    m.upd.set(id, r.updatedAt ?? 0);
+  };
+  add("settings", state.settings, settingsSig);
+  // Plan-day order: one small record {ids, updatedAt}, written only when the plan's days changed
+  // (added, removed or reordered) since the last save. The later reorder wins on merge.
+  const ids = state.workouts.map((w) => w.id).filter(Boolean);
+  m.order = sig(ids);
+  if (prev && prev.order !== m.order)
+    state.workoutOrder = { ids, updatedAt: Math.max(now, (state.workoutOrder?.updatedAt ?? 0) + 1) };
+  // swapCounts is one small map, synced like settings (whole map, later edit wins); created on first swap.
+  if (state.swapCounts) add("swapCounts", state.swapCounts, sig);
+  for (const c of COLLECTIONS)
+    for (const r of state[c] ?? []) if (r && r.id) add(r.id, r, sig);
+  if (prev)
+    for (const id of prev.keys())
+      if (!m.has(id))
+        (state.deleted ??= {})[id] = Math.max(now, (prev.upd?.get(id) ?? 0) + 1, state.deleted?.[id] ?? 0);
+  return m;
+}
+
 export function createStore(storage) {
+  let snap = null; // null until load()/first save: then nothing is stamped or tombstoned
   return {
     load() {
       let raw = null;
@@ -105,12 +176,17 @@ export function createStore(storage) {
         // Unreadable: the shell blocks saving until the user confirms, so unseen data is not overwritten.
         return { state: emptyState(), recovered: true, kept: false };
       }
-      if (raw == null)
+      if (raw == null) {
+        snap = snapshotOf(emptyState());
         return { state: emptyState(), recovered: false, kept: true };
+      }
       try {
         const parsed = JSON.parse(raw);
-        if (isValidState(parsed))
+        if (isValidState(parsed)) {
+          for (const w of parsed.workouts) w.id ??= crypto.randomUUID();
+          snap = snapshotOf(parsed);
           return { state: parsed, recovered: false, kept: true };
+        }
       } catch {}
       let kept = true;
       try {
@@ -118,11 +194,15 @@ export function createStore(storage) {
       } catch {
         kept = false; // bad data could not be set aside; UI should warn before saving
       }
+      snap = snapshotOf(emptyState());
       return { state: emptyState(), recovered: true, kept };
     },
-    save(state) {
+    // resetSnapshot: the state was swapped wholesale (backup restore), so nothing counts as deleted or edited.
+    save(state, { resetSnapshot = false } = {}) {
       try {
+        const next = snapshotOf(state, resetSnapshot ? null : snap);
         storage.setItem(KEY, JSON.stringify(state));
+        snap = next; // only after a successful write
         return true;
       } catch {
         return false;

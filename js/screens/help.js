@@ -115,12 +115,22 @@ const SECTIONS = [
   ],
 ];
 
+// Only listed when sync is switched on (see js/sync.js SYNC_ENABLED).
+const SYNC_SECTION = [
+  "sync",
+  "Sync",
+  "Keep your workouts safe.",
+  `<p>Go to <b>Plan</b>, then <b>Settings</b>, then <b>Sync and sign-in</b> and tap <b>Turn on sync</b>. Approve with Face ID. Your workouts, plan, body weight and settings are locked on the phone before they are sent, so nobody else can read them.</p>
+    <p>Save the <b>recovery code</b> it shows. You only need it if Face ID cannot unlock your data (for example on an Android phone). We cannot reset it.</p>
+    <p>Photos, videos and your sound stay on this phone and in your backup file. Your data stays safe if you lose the phone, as long as sync was on.</p>`,
+];
+
 export function render(root, ctx) {
   const want = ctx.params.id; // "#/help/install" opens that section
   const open = (k) => (want ? k === want : k === "install" && !isInstalled());
   root.innerHTML = `<h1 class="title">How to use</h1>
     <p class="muted" style="margin:0 0 12px">About two minutes to read. Tap a heading to open it.</p>
-    ${SECTIONS.map(
+    ${[...SECTIONS, ...(ctx.sync ? [SYNC_SECTION] : [])].map(
       ([
         k,
         title,
@@ -128,7 +138,7 @@ export function render(root, ctx) {
         body,
       ]) => `<details class="card sec help" id="help-${k}"${open(k) ? " open" : ""}>
       <summary><span class="sec-title">${title}</span><span class="sec-count muted">${sub}</span></summary>
-      <div class="sec-body">${body}</div>
+      <div class="sec-body">${ctx.sync ? body.replace("your data stays on this phone only.", "your data stays on this phone unless sync is on.") : body}</div>
     </details>`,
     ).join("")}
     <a class="btn" href="#/today">Back to Today</a>`;
