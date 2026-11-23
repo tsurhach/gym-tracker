@@ -680,3 +680,15 @@ test("N1/N3/N4: muscles filtered, duplicate day ids both copied, library name re
   assert.equal(r.added[0].items[0].exerciseId, "bench");
   assert.equal(cx.fresh.length, 0);
 });
+
+test("invite tick: copy on at invite -> accepted person can copy; off -> cannot", async () => {
+  for (const [copy, want] of [[true, true], [false, false]]) {
+    const server = memServer({ now: () => clock });
+    const S = await person(server, "Dana");
+    const V = await person(server, "Ali", emptyState());
+    await connect(S, V, "friend", { plan: true, copy });
+    const view = await V.share.fetchView(await seeS(V, S));
+    assert.equal(view.canCopy, want);
+    assert.equal(copyPlan(view, emptyState(), hasId).added.length > 0, want);
+  }
+});

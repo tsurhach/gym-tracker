@@ -14,6 +14,7 @@ let text = ""; // what was typed in "Enter a code"
 let auto = false; // opened from a link: look the code up at once
 let pickRole = "coach";
 let pickPlan = false;
+let pickCopy = false;
 
 const role = (r) => (r === "coach" ? "coach" : "friend");
 const label = (r) => (r === "coach" ? "Coach" : "Friend");
@@ -87,6 +88,7 @@ function html(ctx, sh) {
       <section class="card">
         <label class="setting">They are my <select data-role><option value="coach"${pickRole === "coach" ? " selected" : ""}>Coach</option><option value="friend"${pickRole === "friend" ? " selected" : ""}>Friend</option></select></label>
         ${pickRole === "friend" ? `<label class="setting">Also show my plan <input type="checkbox" data-plan${pickPlan ? " checked" : ""} /></label>` : ""}
+        <label class="setting">Let them copy my workouts and plan <input type="checkbox" data-copyinv${pickCopy ? " checked" : ""} /></label>
         <p class="muted small">They only see your workouts, never change anything. You choose who sees what, and can remove them at any time.</p>
       </section>${err}
       <button class="btn btn-primary" data-act="make"${dis}>Make a code</button><button class="btn" data-act="home">Cancel</button>`;
@@ -207,7 +209,7 @@ function wire(root, ctx, sh, draw) {
       run(async () => {
         made = await sh.invite(
           pickRole,
-          pickRole === "friend" ? { plan: pickPlan } : {},
+          { ...(pickRole === "friend" ? { plan: pickPlan } : {}), copy: pickCopy }, // sealed in the invite, like the plan tick
         );
         view = "code";
       }),
@@ -261,6 +263,7 @@ function wire(root, ctx, sh, draw) {
       pickRole = t.value;
       draw();
     } else if (t.matches("[data-plan]")) pickPlan = t.checked;
+    else if (t.matches("[data-copyinv]")) pickCopy = t.checked;
     else if (t.matches("[data-ticks],[data-copyok]")) {
       const v = find("viewers", t.dataset.id);
       run(() => sh.setTicks(v, { ...v.ticks, [t.matches("[data-copyok]") ? "copy" : "plan"]: t.checked }));
