@@ -277,6 +277,8 @@ test("another viewer cannot read it, and the server never sees names, roles or c
     JSON.stringify(server.seen) +
     JSON.stringify([...server.vaults.values()].map((v) => [...v.st.m])) +
     JSON.stringify([...server.invites.values()].map((v) => [...v.st.m]));
+  // Short words can appear inside random base64 by chance, so look for them as whole JSON strings:
+  // quotes never occur in base64, so a hit means a real leak (plain or inside an escaped string).
   for (const plain of [
     "Zebra",
     "Dana",
@@ -288,7 +290,8 @@ test("another viewer cannot read it, and the server never sees names, roles or c
     "Odd press",
     "Push day",
   ])
-    assert.ok(!dump.includes(plain), plain);
+    assert.ok(!dump.includes(`"${plain}"`) && !dump.includes(`\\"${plain}\\"`), plain);
+  assert.ok(!dump.includes("Odd press") && !dump.includes("Zebra Dana"));
 });
 
 test("body weight reaches a coach only with the switch on; a friend never gets it", async () => {
