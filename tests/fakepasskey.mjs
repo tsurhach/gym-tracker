@@ -1,5 +1,5 @@
 // Test helpers: a fake authenticator (ES256 passkeys like a phone makes them) and an in-memory server.
-import { makeChallenge } from "../server/src/syncauth.js";
+import { makeChallenge, parseMediaFrame } from "../server/src/syncauth.js";
 import { VaultCore } from "../server/src/vault.js";
 import { b64u } from "../js/synccrypto.js";
 
@@ -94,6 +94,7 @@ export function memStorage() {
     alarm: null,
     get: async (k) => structuredClone(m.get(k)),
     put: async (k, v) => void m.set(k, structuredClone(v)),
+    delete: async (k) => void m.delete(k),
     deleteAll: async () => m.clear(),
     async setAlarm(t) {
       this.alarm = t;
@@ -119,7 +120,10 @@ export function memServer({ now = () => Date.now() } = {}) {
     seen.push(body);
     const path = new URL(url).pathname;
     let r;
-    if (path === "/auth/challenge")
+    if (path === "/media/put") {
+      const b = parseMediaFrame(body);
+      r = await core(b.accountId).core.handle(path, b);
+    } else if (path === "/auth/challenge")
       r = {
         status: 200,
         body: { challenge: await makeChallenge(SECRET, now()) },
@@ -128,7 +132,7 @@ export function memServer({ now = () => Date.now() } = {}) {
       const b = JSON.parse(body);
       r = await core(b.accountId).core.handle(path, b);
     }
-    return { status: r.status, json: async () => r.body };
+    return { status: r.status, json: async () => r.body, arrayBuffer: async () => r.body.bytes.buffer };
   }
   return { vaults, core, seen, fetch: fetchFn };
 }

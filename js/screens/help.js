@@ -122,7 +122,7 @@ const SYNC_SECTION = [
   "Keep your workouts safe.",
   `<p>Go to <b>Plan</b>, then <b>Settings</b>, then <b>Sync and sign-in</b> and tap <b>Turn on sync</b>. Approve with Face ID. Your workouts, plan, body weight and settings are locked on the phone before they are sent, so nobody else can read them.</p>
     <p>Save the <b>recovery code</b> it shows. You only need it if Face ID cannot unlock your data (for example on an Android phone). We cannot reset it.</p>
-    <p>Photos, videos and your sound stay on this phone and in your backup file. Your data stays safe if you lose the phone, as long as sync was on.</p>`,
+    <p>Photos and your rest sound sync too (up to 4 MB each, 25 MB in all). Videos stay on this phone and in your backup file. Your data stays safe if you lose the phone, as long as sync was on.</p>`,
 ];
 
 export function render(root, ctx) {

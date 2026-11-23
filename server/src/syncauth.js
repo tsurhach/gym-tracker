@@ -192,6 +192,17 @@ export function parseSyncBody(text, max = MAX_SYNC_BODY) {
     return null;
   }
 }
+// Binary media upload body: 4-byte big-endian header length, header JSON { accountId, token, id }, then the
+// sealed file. Sent as text/plain, so the browser needs no preflight. -> { ...header, bytes } or null.
+export function parseMediaFrame(buf) {
+  const u = new Uint8Array(buf);
+  if (u.length < 5) return null;
+  const n = new DataView(u.buffer, u.byteOffset).getUint32(0);
+  if (n < 2 || n > 1000 || 4 + n > u.length) return null;
+  const h = parseSyncBody(new TextDecoder().decode(u.subarray(4, 4 + n)), 1000);
+  return h && { ...h, bytes: u.slice(4 + n) };
+}
+
 export const checkSize = (blob) =>
   typeof blob === "string" &&
   blob.length > 0 &&

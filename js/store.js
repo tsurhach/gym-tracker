@@ -75,6 +75,12 @@ export function isValidState(o) {
     )
   )
     return false;
+  // Photo and sound references used by sync: { [mediaKey]: { id: sealed-file id or null (deleted), updatedAt } }.
+  if (
+    o.mediaRefs !== undefined &&
+    !(isObj(o.mediaRefs) && Object.values(o.mediaRefs).every((m) => isObj(m) && (m.id === null || str(m.id)) && num(m.updatedAt)))
+  )
+    return false;
   if (
     o.bodyWeights !== undefined &&
     !(

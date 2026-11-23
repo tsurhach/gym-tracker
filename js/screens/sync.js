@@ -52,7 +52,7 @@ function html(sync) {
   if (sync.active())
     return `<h1 class="title">Sync</h1>
       <section class="card"><b>${esc(sync.status())}</b>
-        <p class="muted small">Videos stay on this phone and in your backup file. Photos and sound are not synced yet.</p></section>
+        <p class="muted small">Photos and your rest sound sync too, locked like the rest. Videos stay on this phone and in your backup file.</p>${sync.mediaNote() ? `<p class="small" role="status">${esc(sync.mediaNote())}</p>` : ""}</section>
       ${err()}
       <button class="btn" data-act="now"${dis()}>Sync now</button>
       <button class="btn" data-act="newcode"${dis()}>Make a new recovery code</button>

@@ -1,9 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import { ORIGINS, MAX_BODY, parseBody, vapidJwt, authHeader } from "./lib.js";
-import { ID_RE, MAX_SYNC_BODY, makeChallenge, parseSyncBody } from "./syncauth.js";
-import { VaultCore } from "./vault.js";
+import { ID_RE, MAX_SYNC_BODY, makeChallenge, parseMediaFrame, parseSyncBody } from "./syncauth.js";
+import { MEDIA_ITEM_MAX, VaultCore } from "./vault.js";
 
-const SYNC_PATHS = new Set(["/auth/register", "/auth/signin", "/sync/pull", "/sync/push", "/account/rewrap", "/account/signout", "/account/delete"]);
+const SYNC_PATHS = new Set(["/auth/register", "/auth/signin", "/sync/pull", "/sync/push", "/account/rewrap", "/account/signout", "/account/delete", "/media/list", "/media/put", "/media/get", "/media/delete"]);
 
 const json = (status, body, cors) =>
   new Response(JSON.stringify(body), {
@@ -46,7 +46,9 @@ export default {
 // Sync routes. The server only passes sealed data along; it never sees a key or a workout.
 async function syncRoute(req, env, path, cors) {
   const bad = () => json(400, { error: "bad request" }, cors);
-  if (Number(req.headers.get("content-length") ?? 0) > MAX_SYNC_BODY) return bad();
+  const put = path === "/media/put";
+  if (Number(req.headers.get("content-length") ?? 0) > (put ? MEDIA_ITEM_MAX + 2000 : MAX_SYNC_BODY))
+    return json(413, { error: "too big" }, cors);
   // Optional per-IP limit (see README). The IP is only a counter key; nothing is stored or logged.
   if (env.RL && (path === "/auth/challenge" || path === "/auth/register" || path === "/auth/signin" || path === "/sync/push")) {
     const { success } = await env.RL.limit({ key: req.headers.get("cf-connecting-ip") ?? "x" });
@@ -54,11 +56,12 @@ async function syncRoute(req, env, path, cors) {
   }
   if (!env.CHALLENGE_KEY) return json(503, { error: "not set up" }, cors);
   if (path === "/auth/challenge") return json(200, { challenge: await makeChallenge(env.CHALLENGE_KEY) }, cors);
-  const body = parseSyncBody(await req.text());
+  const body = put ? parseMediaFrame(await req.arrayBuffer()) : parseSyncBody(await req.text());
   // At sign-in the account id is the passkey's userHandle.
   if (!body || !ID_RE.test(body.accountId ?? "")) return bad();
   const stub = env.VAULT.get(env.VAULT.idFromName(body.accountId));
   const r = await stub.run(path, body);
+  if (r.body?.bytes) return new Response(r.body.bytes, { headers: { "content-type": "application/octet-stream", ...cors } });
   return json(r.status, r.body, cors);
 }
 
@@ -66,7 +69,7 @@ export class Vault extends DurableObject {
   core() {
     const s = this.ctx.storage;
     return new VaultCore(
-      { get: (k) => s.get(k), put: (k, v) => s.put(k, v), deleteAll: () => s.deleteAll(), setAlarm: (t) => s.setAlarm(t) },
+      { get: (k) => s.get(k), put: (k, v) => s.put(k, v), delete: (k) => s.delete(k), deleteAll: () => s.deleteAll(), setAlarm: (t) => s.setAlarm(t) },
       { secret: this.env.CHALLENGE_KEY, origins: ORIGINS },
     );
   }

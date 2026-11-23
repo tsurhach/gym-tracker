@@ -1,6 +1,8 @@
 import { isValidState } from "./store.js";
 import { SERVER } from "./push.js";
 import * as sc from "./synccrypto.js";
+import { allMediaKeys, readMedia, restoreMedia, deleteBlob } from "./media.js";
+import { encodeMedia, decodeMedia } from "./backup.js";
 
 // Hidden by default: while false nothing below runs, no route, no link, no network.
 export const SYNC_ENABLED = false;
@@ -54,6 +56,12 @@ export function merge(local, remote) {
     ...newer(local.settings, remote.settings, settingsSig),
     lastExportAt: local.settings.lastExportAt ?? null,
   };
+  // Photo and sound references: per key the later one wins; { id: null } is a delete.
+  if (local.mediaRefs || remote.mediaRefs) {
+    out.mediaRefs = {};
+    for (const k of new Set([...Object.keys(local.mediaRefs ?? {}), ...Object.keys(remote.mediaRefs ?? {})]))
+      out.mediaRefs[k] = newer(local.mediaRefs?.[k], remote.mediaRefs?.[k]);
+  }
   const sw = newer(local.swapCounts, remote.swapCounts);
   if (sw) out.swapCounts = sw;
   out.active = local.active; // the workout in progress never syncs
@@ -69,6 +77,7 @@ export function addBackup(local, imported, now = Date.now()) {
   const add = {
     ...imported,
     deleted: {},
+    mediaRefs: local.mediaRefs, // the file's own photos arrive through the media pass, not through its references
     settings: local.settings,
     swapCounts: local.swapCounts,
   };
@@ -116,6 +125,13 @@ export function readEnvelope(env) {
 
 const SESSION_KEY = "gymtracker.sync";
 const KEEPALIVE_MAX = 60 * 1024;
+const DAY = 24 * 3600 * 1000;
+const NOTE_BIG = "A photo or sound is too big to sync (4 MB limit). It stays on this phone.";
+const NOTE_FULL = "Your cloud space for photos and sound is full (25 MB). New ones stay on this phone.";
+const NOTE_LATER = "Some photos or sounds could not sync yet. They will be tried again.";
+// Cheap change check for a stored photo or sound; the real hash is only computed when this differs.
+const sigOf = (v) =>
+  v instanceof Blob ? `b:${v.type}:${v.size}` : `${v.kind}:${v.blob?.type}:${v.blob?.size}:${v.thumb?.size ?? 0}`;
 const PUSH_DELAY = 3000;
 
 function idb(fn) {
@@ -158,6 +174,8 @@ export function createSync(h) {
   let again = false; // a save happened while a sync was running
   let pending = null; // sign-in waiting for the recovery code
   let status = "";
+  let mnote = ""; // plain message about photos and sound, shown on the sync screen
+  const files = h.media ?? { keys: allMediaKeys, read: readMedia, write: (k, v) => restoreMedia([{ key: k, value: v }]), remove: deleteBlob };
 
   try {
     session = JSON.parse(h.storage.getItem(SESSION_KEY));
@@ -215,6 +233,111 @@ export function createSync(h) {
     return true;
   }
 
+  // Photos and sound: each file is sealed with the data key and sent on its own under a random id; the
+  // state only holds { key: { id, h (hash), updatedAt } }. Runs before the state push, so a reference
+  // never points at a file that is not up. A failed or missing file is skipped and tried again next time;
+  // it never stops the state sync and never touches local media. Videos are never synced.
+  async function mediaPass() {
+    const out = { changed: false };
+    try {
+      const t = now();
+      const refs = { ...(withHeld().mediaRefs ?? {}) };
+      const seen = (session.mseen ??= {}); // key -> { h, sig } of what is in sync on this device
+      const trash = (session.mtrash ??= []); // server copies to delete once the state naming the change is up
+      const mine = {};
+      let note = "";
+      let onServer = null;
+      if (t - (session.mlistAt ?? 0) > DAY) {
+        const l = await post("/media/list", auth());
+        if (l.status === 200) {
+          onServer = new Set(Object.keys(l.json.items ?? {}));
+          session.mlistAt = t;
+        }
+      }
+      const have = new Set(await files.keys());
+      const put = async (key, local, lh) => {
+        const r = refs[key];
+        const bytes = await sc.sealMedia(dataKey, await encodeMedia(key, local));
+        if (bytes.length > 4 * 1024 * 1024) return void (note = NOTE_BIG);
+        const id = sc.b64u(sc.randomBytes(16));
+        const head = new TextEncoder().encode(JSON.stringify({ ...auth(), id }));
+        const frame = new Uint8Array(4 + head.length + bytes.length);
+        new DataView(frame.buffer).setUint32(0, head.length);
+        frame.set(head, 4);
+        frame.set(bytes, 4 + head.length);
+        const res = await doFetch(url + "/media/put", { method: "POST", headers: { "content-type": "text/plain" }, body: frame });
+        if (res.status === 413) {
+          const e = await res.json().catch(() => ({}));
+          return void (note = e.error === "account" ? NOTE_FULL : NOTE_BIG);
+        }
+        if (res.status !== 200) throw new Error("media");
+        if (r?.id) trash.push(r.id);
+        refs[key] = mine[key] = { id, h: lh, updatedAt: Math.max(t, (r?.updatedAt ?? 0) + 1) };
+        seen[key] = { h: lh, sig: sigOf(local) };
+      };
+      const get = async (key, r) => {
+        const res = await doFetch(url + "/media/get", {
+          method: "POST",
+          headers: { "content-type": "text/plain" },
+          body: JSON.stringify({ ...auth(), id: r.id }),
+        });
+        if (res.status !== 200) return; // not on the server (any more): keep what we have, try again later
+        const text = await sc.openMedia(dataKey, new Uint8Array(await res.arrayBuffer()));
+        const item = decodeMedia(JSON.parse(text));
+        if (item.key !== key) throw new Error("media");
+        await files.write(key, item.value);
+        seen[key] = { h: await sc.sha256hex(text), sig: sigOf(item.value) };
+      };
+      for (const key of new Set([...have, ...Object.keys(refs)])) {
+        try {
+          const local = have.has(key) ? await files.read(key) : null;
+          if (local?.kind === "video") continue;
+          const r = refs[key];
+          const live = r?.id ? r : null;
+          const sn = seen[key];
+          let lh = null;
+          if (local) {
+            let enc = null;
+            if (sn?.sig !== sigOf(local)) {
+              enc = await encodeMedia(key, local);
+              if (!enc) continue; // not a photo or sound we know
+            }
+            lh = enc ? await sc.sha256hex(enc) : sn.h;
+          }
+          const unchanged = !!local && sn?.h === lh; // same as the last time it was in sync
+          if (local && live && lh === live.h) {
+            if (onServer && !onServer.has(live.id)) await put(key, local, lh); // cleaned off the server: send again
+            else seen[key] = { h: lh, sig: sigOf(local) };
+          } else if (local && live && unchanged) await get(key, live); // only the other device changed it
+          else if (local && r && !live && unchanged) {
+            await files.remove(key); // deleted on another device
+            delete seen[key];
+          } else if (local) await put(key, local, lh);
+          else if (live && sn) {
+            // deleted here: tell the other devices; the server copy goes after the state is up
+            trash.push(live.id);
+            refs[key] = mine[key] = { id: null, updatedAt: Math.max(t, live.updatedAt + 1) };
+            delete seen[key];
+          } else if (live) await get(key, live);
+          else delete seen[key];
+        } catch {
+          note ||= NOTE_LATER;
+        }
+      }
+      if (Object.keys(mine).length) {
+        out.changed = true;
+        const st = h.getState();
+        st.mediaRefs = { ...(st.mediaRefs ?? {}), ...mine };
+        if (h.saveMedia) h.saveMedia(st.mediaRefs);
+        else h.setState(st);
+      }
+      mnote = note;
+    } catch {
+      mnote = NOTE_LATER;
+    }
+    return out;
+  }
+
   async function syncNow() {
     if (running) return running;
     running = (async () => {
@@ -256,9 +379,10 @@ export function createSync(h) {
             }
           }
           session.rev = p.json.rev;
+          const mp = await mediaPass(); // files go up before the state that names them
           const mine = makeEnvelope(withHeld());
           // Push only when we have something the cloud lacks.
-          if (!(need || p.json.rev === 0 || (remoteDoc && sig(mine.data) !== sig(makeEnvelope(remoteDoc).data)))) {
+          if (!(need || mp.changed || p.json.rev === 0 || (remoteDoc && sig(mine.data) !== sig(makeEnvelope(remoteDoc).data)))) {
             ok = true;
             break;
           }
@@ -276,6 +400,11 @@ export function createSync(h) {
           if (q.status !== 200) throw new Error("push");
           session.rev = q.json.rev;
           ok = true;
+          if (session.mtrash?.length)
+            try {
+              const d = await post("/media/delete", { ...auth(), ids: session.mtrash.slice(0, 200) });
+              if (d.status === 200) session.mtrash = session.mtrash.slice(200);
+            } catch {} // the server copy goes next time
         }
         if (ok) {
           session.lastSyncAt = now();
@@ -460,6 +589,7 @@ export function createSync(h) {
           ? `Last synced ${Math.max(0, Math.round((now() - session.lastSyncAt) / 60000))} min ago`
           : "Not synced yet"
         : "Sync off"),
+    mediaNote: () => mnote,
     hasHeld: () => !!held,
     changed,
     syncNow,

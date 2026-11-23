@@ -84,6 +84,10 @@ function startSync(ctx, store, render) {
       ctx.state = state;
       store.save(state, { resetSnapshot: true });
     },
+    saveMedia: (media) => {
+      ctx.state.mediaRefs = media;
+      store.save(ctx.state); // normal save (stamps edits), no redraw
+    },
     isSafe: calm,
     applied: () => {
       render();

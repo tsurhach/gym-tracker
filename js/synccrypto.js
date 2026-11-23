@@ -73,27 +73,39 @@ export async function unwrapDataKey(wrapped, secret, kind) {
 }
 
 const AAD = enc.encode("gym-tracker data v1");
+const MEDIA_AAD = enc.encode("gym-tracker media v1"); // a media file can never pass for the state blob
 async function pipe(bytes, stream) {
   return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
 }
-// object -> gzip -> AES-GCM -> base64url (iv || ciphertext)
-export async function seal(dataKey, obj) {
+// bytes -> gzip -> AES-GCM -> iv || ciphertext. A fresh random 12-byte IV for every call, never reused.
+export async function sealBytes(dataKey, bytes, aad = AAD) {
   const iv = randomBytes(12);
-  const zipped = await pipe(enc.encode(JSON.stringify(obj)), new CompressionStream("gzip"));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: AAD }, dataKey, zipped));
+  const zipped = await pipe(bytes, new CompressionStream("gzip"));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aad }, dataKey, zipped));
   const all = new Uint8Array(12 + ct.length);
   all.set(iv);
   all.set(ct, 12);
-  return b64u(all);
+  return all;
 }
 // Throws on a wrong key or any tampering.
-export async function open(dataKey, blob) {
-  const all = unb64u(blob);
+export async function openBytes(dataKey, all, aad = AAD) {
   const zipped = new Uint8Array(
-    await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12), additionalData: AAD }, dataKey, all.slice(12)),
+    await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12), additionalData: aad }, dataKey, all.slice(12)),
   );
-  return JSON.parse(dec.decode(await pipe(zipped, new DecompressionStream("gzip"))));
+  return pipe(zipped, new DecompressionStream("gzip"));
 }
+// object -> base64url sealed text (the state blob)
+export async function seal(dataKey, obj) {
+  return b64u(await sealBytes(dataKey, enc.encode(JSON.stringify(obj))));
+}
+export async function open(dataKey, blob) {
+  return JSON.parse(dec.decode(await openBytes(dataKey, unb64u(blob))));
+}
+// One photo or sound file (its JSON text from encodeMedia) <-> raw sealed bytes for a binary upload.
+export const sealMedia = (dataKey, text) => sealBytes(dataKey, enc.encode(text), MEDIA_AAD);
+export const openMedia = async (dataKey, bytes) => dec.decode(await openBytes(dataKey, bytes, MEDIA_AAD));
+export const sha256hex = async (text) =>
+  [...new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(text)))].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 export const PRF_SALT_TEXT = "gym-tracker sync prf v1";
 export const prfSalt = async () => new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(PRF_SALT_TEXT)));
