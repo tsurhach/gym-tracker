@@ -97,6 +97,9 @@ export function isValidState(o) {
     return false;
   if (o.settings.updatedAt !== undefined && !num(o.settings.updatedAt))
     return false;
+  if (o.swapCounts !== undefined && !isObj(o.swapCounts)) return false;
+  if (o.swapCounts?.updatedAt !== undefined && !num(o.swapCounts.updatedAt))
+    return false;
   const stamped = [
     o.customExercises,
     o.workouts,
@@ -138,6 +141,8 @@ function snapshotOf(state, prev = null) {
     m.set(id, s);
   };
   add("settings", state.settings, settingsSig);
+  // swapCounts is one small map, synced like settings (whole map, later edit wins); created on first swap.
+  if (state.swapCounts) add("swapCounts", state.swapCounts, sig);
   for (const c of COLLECTIONS)
     for (const r of state[c] ?? []) if (r && r.id) add(r.id, r, sig);
   if (prev)

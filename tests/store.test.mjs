@@ -420,3 +420,21 @@ test("re-logging a day's body weight is an edit: same id, stamped, no tombstone"
   assert.equal(typeof s.bodyWeights[0].updatedAt, "number");
   assert.equal(s.deleted, undefined);
 });
+
+test("swapCounts is stamped like settings: only when it changes, and bad stamps are invalid", () => {
+  const { store, m, state } = loaded();
+  store.save(state);
+  assert.equal("swapCounts" in saved(m), false);
+  state.swapCounts = { "a|b": 1 };
+  store.save(state);
+  const t = saved(m).swapCounts.updatedAt;
+  assert.equal(typeof t, "number");
+  store.save(state);
+  assert.equal(saved(m).swapCounts.updatedAt, t);
+  state.swapCounts = { ...state.swapCounts, "a|b": 2 };
+  store.save(state);
+  assert.ok(saved(m).swapCounts.updatedAt > t);
+  assert.equal(saved(m).deleted, undefined);
+  assert.ok(importJson(exportJson(state)));
+  assert.throws(() => importJson(JSON.stringify({ ...state, swapCounts: { updatedAt: "x" } })), /not a Gym Tracker backup/);
+});
