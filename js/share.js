@@ -1,6 +1,7 @@
 // Sharing with a coach or friends (view only). Hidden while SYNC_ENABLED is false (js/sync.js).
 // Everything the server stores is sealed here first: names, roles, ticks and every shared workout.
 import * as sc from "./synccrypto.js";
+import { DEFAULT_STEP } from "./constants.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -143,6 +144,53 @@ export function cleanView(v) {
     }));
   if (o.bodyWeights) out.bodyWeights = arr(o.bodyWeights).map((w) => ({ id: String(w?.id), date: String(w?.date ?? ""), kg: n0(w?.kg) }));
   return out;
+}
+
+// ---------- copying a shared plan day into my own plan ----------
+// Built only from cleanView output. A copy is a plain new workout: new id, no link back; the store stamps it on save.
+// has(id) = is this exercise in MY list (library or my customs). The sharer's custom exercises are skipped (not copied).
+const clamp = (x, lo, hi, d) => (num(x) ? Math.min(hi, Math.max(lo, Math.round(x))) : d);
+const uniqueName = (name, taken) => {
+  const t = new Set(taken.map((n) => n.toLowerCase()));
+  let out = name;
+  for (let i = 1; t.has(out.toLowerCase()); i++) out = `${name} (copy${i > 1 ? ` ${i}` : ""})`;
+  return out;
+};
+// -> { workout | null, skipped }. Does not touch state; the caller pushes the workout and saves.
+export function copyDay(view, dayId, state, has) {
+  const d = arr(view?.workouts).find((w) => w.id === dayId);
+  if (!d) return { workout: null, skipped: 0 };
+  const items = [];
+  let skipped = 0;
+  for (const it of arr(d.items)) {
+    if (typeof it.exerciseId !== "string" || !has(it.exerciseId)) { skipped++; continue; }
+    const repMin = clamp(it.repMin, 1, 100, 8);
+    const step = num(it.step) && it.step > 0 ? Math.min(25, Math.round(it.step * 100) / 100) : DEFAULT_STEP;
+    items.push({ exerciseId: it.exerciseId, sets: clamp(it.sets, 1, 20, 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, 100, 12)), step });
+  }
+  if (!items.length) return { workout: null, skipped };
+  const base = String(d.name).trim().slice(0, 40) || "Workout";
+  return {
+    workout: {
+      id: crypto.randomUUID(),
+      name: uniqueName(base, state.workouts.map((w) => w.name)),
+      muscles: arr(d.muscles).slice(0, 8).map((m) => String(m).slice(0, 30)),
+      items,
+    },
+    skipped,
+  };
+}
+// Every day, one by one (names checked against the days added so far). Adds; never replaces.
+export function copyPlan(view, state, has) {
+  const added = [];
+  let skipped = 0;
+  const tmp = { workouts: [...state.workouts] };
+  for (const w of arr(view?.workouts)) {
+    const r = copyDay(view, w.id, tmp, has);
+    skipped += r.skipped;
+    if (r.workout) (added.push(r.workout), tmp.workouts.push(r.workout));
+  }
+  return { added, skipped };
 }
 
 // h = friend, hp = friend with plan or coach, hpw = coach with body weight. The weight switch is one setting for any coach.

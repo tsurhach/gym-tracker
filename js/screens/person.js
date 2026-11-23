@@ -1,6 +1,7 @@
 // #/person/<id>: someone else's shared workouts, read only. Only reachable when SYNC_ENABLED (js/sync.js).
 // Their data is cached apart from yours (gymtracker.shared) and never touches your own history or backups.
-import { esc, fmtDate, fmtKg } from "../ui.js";
+import { esc, fmtDate, fmtKg, confirmSheet, showBanner } from "../ui.js";
+import { copyDay, copyPlan } from "../share.js";
 import { exerciseHistory } from "../logic.js";
 import {
   chartHtml,
@@ -52,10 +53,11 @@ export function planHtml(view, ctx) {
       e.name,
     ]),
   );
-  return view.workouts
+  const copy = (a, label) => (ctx.save ? `<button class="btn" data-copy="${a}">${label}</button>` : "");
+  return copy("", "Copy whole plan") + view.workouts
     .map(
       (w) => `<section class="card"><b>${esc(w.name)}</b>
-      ${w.items.map((it) => `<div class="row"><span class="grow ex-name">${esc(names.get(it.exerciseId) ?? "Exercise")}</span><span class="muted small">${esc(it.sets)} × ${esc(it.repMin)}–${esc(it.repMax)}</span></div>`).join("")}</section>`,
+      ${w.items.map((it) => `<div class="row"><span class="grow ex-name">${esc(names.get(it.exerciseId) ?? "Exercise")}</span><span class="muted small">${esc(it.sets)} × ${esc(it.repMin)}–${esc(it.repMax)}</span></div>`).join("")}${copy(esc(w.id), "Copy to my plan")}</section>`,
     )
     .join("");
 }
@@ -102,6 +104,17 @@ export function render(root, ctx) {
       }`;
     for (const b of root.querySelectorAll("[data-tab]"))
       b.onclick = () => ((tab = b.dataset.tab), draw());
+    for (const b of root.querySelectorAll("[data-copy]"))
+      b.onclick = async () => {
+        const has = (id) => !!ctx.lookup(id);
+        const all = b.dataset.copy === "";
+        const r = all ? copyPlan(view, ctx.state, has) : (({ workout, skipped }) => ({ added: workout ? [workout] : [], skipped }))(copyDay(view, b.dataset.copy, ctx.state, has));
+        if (!r.added.length) return showBanner("Nothing to copy: you do not have these exercises.");
+        const what = all ? `${r.added.length} days` : `"${r.added[0].name}"`;
+        if (!(await confirmSheet(`Add ${what} to your plan?${r.skipped ? ` ${r.skipped} exercise(s) are not in your list and will be left out.` : ""}`, "Add"))) return;
+        ctx.state.workouts.push(...r.added);
+        if (await ctx.save({ render: false })) showBanner(`Added ${what} to your plan.`, { kind: "ok" });
+      };
     const l = root.querySelector("[data-leave]");
     if (l)
       l.onclick = async () => {

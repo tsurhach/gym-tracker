@@ -459,3 +459,80 @@ test("a joiner id the server swapped is ignored", async () => {
   st.m.set("share", d);
   assert.equal((await S.share.list()).pending.length, 0);
 });
+
+// ---------- phase 6: copying a shared plan day ----------
+import { copyDay, copyPlan } from "../js/share.js";
+const hasId = (id) => ["bench", "squat"].includes(id);
+const sharedView = () =>
+  cleanView({
+    name: "Dana",
+    bodyWeights: [{ id: "b", date: "2026-01-01", kg: 80 }],
+    workouts: [
+      { id: "d1", name: "Push", muscles: ["Chest"], items: [
+        { exerciseId: "bench", sets: 4, repMin: 6, repMax: 10, step: 2.5 },
+        { exerciseId: "dana-custom", sets: 3, repMin: 8, repMax: 12, step: 2.5 },
+      ] },
+      { id: "d2", name: "Legs", muscles: [], items: [{ exerciseId: "squat", sets: 3, repMin: 5, repMax: 5, step: 5 }] },
+    ],
+  });
+
+test("copied day gets new ids and is independent of the view", () => {
+  const view = sharedView();
+  const st = emptyState();
+  const { workout, skipped } = copyDay(view, "d1", st, hasId);
+  assert.notEqual(workout.id, "d1");
+  assert.equal(skipped, 1); // unknown exercise skipped, no crash
+  assert.equal(workout.items.length, 1);
+  workout.items[0].sets = 9;
+  workout.name = "Mine";
+  assert.equal(view.workouts[0].items[0].sets, 4);
+  assert.equal(view.workouts[0].name, "Push");
+  view.workouts[0].items[0].repMax = 99;
+  assert.equal(workout.items[0].repMax, 10);
+  st.workouts.push(workout);
+  assert.equal(isValidState(st), true);
+});
+
+test("copy has no body weight, no link back, only allowed fields", () => {
+  const { workout } = copyDay(sharedView(), "d1", emptyState(), hasId);
+  assert.deepEqual(Object.keys(workout).sort(), ["id", "items", "muscles", "name"]);
+  assert.ok(!JSON.stringify(workout).includes("80"));
+});
+
+test("copy coerces hostile values and caps names", () => {
+  const view = cleanView({ workouts: [{ id: "x", name: " <img onerror=1>" + "z".repeat(100), muscles: Array(20).fill("m".repeat(99)), items: [
+    { exerciseId: "bench", sets: "9e9", repMin: 500, repMax: -5, step: -1 },
+    { exerciseId: "squat", sets: 1e9, repMin: 20, repMax: 3, step: NaN },
+  ] }] });
+  const { workout } = copyDay(view, "x", emptyState(), hasId);
+  assert.ok(workout.name.length <= 40 && workout.muscles.length <= 8 && workout.muscles.every((m) => m.length <= 30));
+  for (const it of workout.items) {
+    for (const k of ["sets", "repMin", "repMax", "step"]) assert.ok(Number.isFinite(it[k]) && it[k] > 0);
+    assert.ok(it.sets <= 20 && it.repMin <= it.repMax && it.repMax <= 100 && it.step <= 25);
+  }
+  assert.equal(copyDay(view, "nope", emptyState(), hasId).workout, null);
+});
+
+test("name clash adds (copy), never overwrites", () => {
+  const st = emptyState();
+  st.workouts.push({ id: "mine", name: "push", muscles: [], items: [] });
+  const a = copyDay(sharedView(), "d1", st, hasId).workout;
+  assert.equal(a.name, "Push (copy)");
+  st.workouts.push(a);
+  assert.equal(copyDay(sharedView(), "d1", st, hasId).workout.name, "Push (copy 2)");
+  assert.equal(st.workouts.length, 2);
+  assert.equal(st.workouts[0].id, "mine");
+});
+
+test("copy plan adds and never replaces; day of only unknown exercises is skipped", () => {
+  const st = emptyState();
+  st.workouts.push({ id: "mine", name: "Legs", muscles: [], items: [] });
+  const r = copyPlan(sharedView(), st, hasId);
+  assert.deepEqual(r.added.map((w) => w.name), ["Push", "Legs (copy)"]);
+  assert.equal(st.workouts.length, 1);
+  assert.equal(copyPlan(sharedView(), st, () => false).added.length, 0);
+});
+
+test("old saved state still loads (no new fields needed)", () => {
+  assert.equal(isValidState(emptyState()), true);
+});
