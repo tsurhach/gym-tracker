@@ -28,6 +28,7 @@ export function merge(local, remote) {
   const deleted = { ...(local.deleted ?? {}) };
   for (const [id, t] of Object.entries(remote.deleted ?? {}))
     deleted[id] = Math.max(t, deleted[id] ?? 0);
+  // Top-level keys not handled here stay local-only: a new synced collection needs a SYNC_FORMAT bump.
   const out = { ...local };
   for (const c of COLLECTIONS) {
     if (!local[c] && !remote[c]) continue;
@@ -41,6 +42,13 @@ export function merge(local, remote) {
       .concat(loose);
   }
   if (local.deleted || Object.keys(deleted).length) out.deleted = deleted;
+  // Plan-day order: the later reorder wins; days it does not list keep their place at the end.
+  const wo = newer(local.workoutOrder, remote.workoutOrder);
+  if (wo && out.workouts) {
+    out.workoutOrder = wo;
+    const at = new Map(wo.ids.map((id, i) => [id, i]));
+    out.workouts = out.workouts.map((w, i) => [w, i]).sort((a, b) => (at.get(a[0].id) ?? 1e9) - (at.get(b[0].id) ?? 1e9) || a[1] - b[1]).map((x) => x[0]);
+  }
   // Whole-map records: the later edit wins. lastExportAt stays this device's own.
   out.settings = {
     ...newer(local.settings, remote.settings, settingsSig),
@@ -147,6 +155,7 @@ export function createSync(h) {
   let held = null; // remote state waiting for a safe moment
   let timer = 0;
   let running = null;
+  let again = false; // a save happened while a sync was running
   let pending = null; // sign-in waiting for the recovery code
   let status = "";
 
@@ -188,11 +197,18 @@ export function createSync(h) {
     status = "Sync was turned off on another device.";
   }
 
+  // Local state plus any remote data we hold but have not applied yet (what the cloud copy must contain).
+  const withHeld = () => (held ? merge(h.getState(), held).state : h.getState());
+
   // Merge what the other devices left into this one, but only when it cannot disturb typing.
   function applyHeld(force = false) {
     if (!held || !(force || h.isSafe())) return false;
     const r = merge(h.getState(), held);
     held = null;
+    if (session) {
+      session.needFull = false;
+      persist();
+    }
     if (!r.changed) return false;
     h.setState(r.state);
     h.applied();
@@ -202,70 +218,81 @@ export function createSync(h) {
   async function syncNow() {
     if (running) return running;
     running = (async () => {
+      const d0 = session?.dirty;
+      again = false;
+      let ok = false;
       try {
         if (!session || !(await ensureKey())) return;
-        for (let attempt = 0; attempt < 2; attempt++) {
-          const p = await post("/sync/pull", { ...auth(), rev: session.rev });
+        for (let attempt = 0; attempt < 2 && !ok; attempt++) {
+          const need = session.dirty;
+          session.dirty = false; // before reading local state: a save during the sync marks it dirty again
+          // needFull: remote data was held but never applied (app closed): ask for the blob again.
+          const p = await post("/sync/pull", { ...auth(), rev: session.needFull ? -1 : session.rev });
           if (p.status === 404) return gone();
           if (p.status !== 200) throw new Error("pull");
-          let local = h.getState();
           let remoteDoc = null;
           if (p.json.blob) {
-            const env = readEnvelope(await sc.open(dataKey, p.json.blob));
+            let env;
+            try {
+              env = readEnvelope(await sc.open(dataKey, p.json.blob));
+            } catch {
+              status = "Sync stopped: the cloud copy could not be read.";
+              return;
+            }
             if (env.error) {
-              status =
-                env.error === "update"
-                  ? "Update the app to keep syncing."
-                  : "Sync stopped: the cloud copy could not be read.";
+              status = env.error === "update" ? "Update the app to keep syncing." : "Sync stopped: the cloud copy could not be read.";
               return;
             }
             remoteDoc = env.state;
-            const m = merge(local, remoteDoc);
+            const m = merge(h.getState(), remoteDoc);
             if (m.error) {
               status = "Sync stopped: the cloud copy could not be combined.";
               return;
             }
             if (m.changed) {
-              held = remoteDoc;
-              local = m.state;
+              held = held ? merge(held, remoteDoc).state : remoteDoc;
+              session.needFull = true;
               applyHeld();
             }
           }
           session.rev = p.json.rev;
-          const mine = makeEnvelope(local);
-          // Push the combined data when we have something the cloud lacks.
-          if (!(
-            session.dirty ||
-            !remoteDoc ||
-            sig(mine.data) !== sig(makeEnvelope(remoteDoc).data)
-          ))
+          const mine = makeEnvelope(withHeld());
+          // Push only when we have something the cloud lacks.
+          if (!(need || p.json.rev === 0 || (remoteDoc && sig(mine.data) !== sig(makeEnvelope(remoteDoc).data)))) {
+            ok = true;
             break;
-          session.dirty = false;
-          const q = await post("/sync/push", {
-            ...auth(),
-            rev: session.rev,
-            blob: await sc.seal(dataKey, mine),
-          });
+          }
+          const q = await post("/sync/push", { ...auth(), rev: session.rev, blob: await sc.seal(dataKey, mine) });
           if (q.status === 409) {
             session.dirty = true;
             session.rev = q.json.rev;
             continue; // someone pushed in between: pull, merge, push once more
           }
           if (q.status === 404) return gone();
-          if (q.status !== 200) {
-            session.dirty = true;
-            throw new Error("push");
+          if (q.status === 413) {
+            status = "Too much data to sync. Make a backup file.";
+            return;
           }
+          if (q.status !== 200) throw new Error("push");
           session.rev = q.json.rev;
-          break;
+          ok = true;
         }
-        session.lastSyncAt = now();
-        status = "";
+        if (ok) {
+          session.lastSyncAt = now();
+          status = "";
+        }
       } catch {
-        if (session) status = "Waiting for internet";
+        if (session) {
+          session.dirty = session.dirty || d0;
+          status = "Waiting for internet";
+        }
       } finally {
         persist();
         running = null;
+        if (again && session) {
+          clearTimeout(timer);
+          timer = setTimeout(syncNow, PUSH_DELAY);
+        }
       }
     })();
     return running;
@@ -275,6 +302,7 @@ export function createSync(h) {
   function changed() {
     if (!session) return;
     session.dirty = true;
+    again = true;
     persist();
     clearTimeout(timer);
     timer = setTimeout(syncNow, PUSH_DELAY);
@@ -284,24 +312,15 @@ export function createSync(h) {
   async function flush() {
     try {
       if (!session || !session.dirty || !(await ensureKey())) return;
-      const blob = await sc.seal(dataKey, makeEnvelope(h.getState()));
+      const blob = await sc.seal(dataKey, makeEnvelope(withHeld()));
       if (blob.length > KEEPALIVE_MAX) return;
-      session.dirty = false;
-      persist();
-      const q = await post(
-        "/sync/push",
-        { ...auth(), rev: session.rev, blob },
-        true,
-      );
-      if (q.status === 200) session.rev = q.json.rev;
-      else session.dirty = true;
-      persist();
-    } catch {
-      if (session) {
-        session.dirty = true;
-        persist();
+      const q = await post("/sync/push", { ...auth(), rev: session.rev, blob }, true);
+      if (q.status === 200) {
+        session.rev = q.json.rev;
+        session.dirty = false;
       }
-    }
+      persist();
+    } catch {}
   }
 
   async function finish(accountId, token, key) {

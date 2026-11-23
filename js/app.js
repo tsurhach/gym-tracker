@@ -76,7 +76,7 @@ function startSync(ctx, store, render) {
   const calm = () => {
     const tag = document.activeElement?.tagName;
     const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || document.activeElement?.isContentEditable;
-    return ["#/today", "#/history", "#/muscles"].includes(location.hash || "#/today") && !typing;
+    return ["#/today", "#/history", "#/muscles"].includes(location.hash || "#/today") && !typing && !document.querySelector(".sheet");
   };
   const s = createSync({
     getState: () => ctx.state,

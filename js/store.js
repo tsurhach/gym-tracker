@@ -98,6 +98,11 @@ export function isValidState(o) {
   if (o.settings.updatedAt !== undefined && !num(o.settings.updatedAt))
     return false;
   if (o.swapCounts !== undefined && !isObj(o.swapCounts)) return false;
+  if (
+    o.workoutOrder !== undefined &&
+    !(isObj(o.workoutOrder) && Array.isArray(o.workoutOrder.ids) && (o.workoutOrder.updatedAt === undefined || num(o.workoutOrder.updatedAt)))
+  )
+    return false;
   if (o.swapCounts?.updatedAt !== undefined && !num(o.swapCounts.updatedAt))
     return false;
   const stamped = [
@@ -132,6 +137,7 @@ const settingsSig = (s) => JSON.stringify({ ...s, lastExportAt: undefined });
 function snapshotOf(state, prev = null) {
   const now = Date.now();
   const m = new Map();
+  m.upd = new Map(); // id -> updatedAt as last saved, so a tombstone can beat it
   const add = (id, r, f) => {
     let s = f(r);
     if (prev && prev.get(id) !== s) {
@@ -139,8 +145,15 @@ function snapshotOf(state, prev = null) {
       s = f(r);
     }
     m.set(id, s);
+    m.upd.set(id, r.updatedAt ?? 0);
   };
   add("settings", state.settings, settingsSig);
+  // Plan-day order: one small record {ids, updatedAt}, written only when the plan's days changed
+  // (added, removed or reordered) since the last save. The later reorder wins on merge.
+  const ids = state.workouts.map((w) => w.id).filter(Boolean);
+  m.order = sig(ids);
+  if (prev && prev.order !== m.order)
+    state.workoutOrder = { ids, updatedAt: Math.max(now, (state.workoutOrder?.updatedAt ?? 0) + 1) };
   // swapCounts is one small map, synced like settings (whole map, later edit wins); created on first swap.
   if (state.swapCounts) add("swapCounts", state.swapCounts, sig);
   for (const c of COLLECTIONS)
@@ -148,7 +161,7 @@ function snapshotOf(state, prev = null) {
   if (prev)
     for (const id of prev.keys())
       if (!m.has(id))
-        (state.deleted ??= {})[id] = Math.max(now, state.deleted?.[id] ?? 0);
+        (state.deleted ??= {})[id] = Math.max(now, (prev.upd?.get(id) ?? 0) + 1, state.deleted?.[id] ?? 0);
   return m;
 }
 
