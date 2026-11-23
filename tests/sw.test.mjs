@@ -53,6 +53,23 @@ test("sw.js VERSION matches the precached files", () => {
   );
 });
 
+test("sw.js IMG_VERSION matches the exercise drawings", () => {
+  assert.equal(sw.match(/const IMG_VERSION = "([^"]*)";/)[1], computeImageVersion(), "run `npm run stamp` and commit sw.js");
+});
+
+test("changing a drawing changes VERSION and IMG_VERSION", () => {
+  const dir = mkdtempSync(join(tmpdir(), "stamp-"));
+  mkdirSync(join(dir, "img/ex/a"), { recursive: true });
+  writeFileSync(join(dir, "index.html"), "x");
+  writeFileSync(join(dir, "img/ex/a/0.svg"), "<svg/>");
+  const root = pathToFileURL(dir + "/");
+  const swText = `const PRECACHE = ["./"];`;
+  const [v1, i1] = [computeVersion(swText, root), computeImageVersion(root)];
+  writeFileSync(join(dir, "img/ex/a/0.svg"), "<svg>2</svg>");
+  assert.notEqual(computeVersion(swText, root), v1);
+  assert.notEqual(computeImageVersion(root), i1);
+});
+
 // --- behaviour, run against sw.js in a vm with in-memory caches and no network ---
 function boot({ failOn } = {}) {
   const stores = new Map();
