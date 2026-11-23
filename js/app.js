@@ -16,6 +16,9 @@ import * as rest from "./rest.js";
 import { checkOnForeground, reloadOnUpdate } from "./update.js";
 import { SYNC_ENABLED, createSync } from "./sync.js";
 import * as sync from "./screens/sync.js";
+import * as people from "./screens/people.js";
+import * as person from "./screens/person.js";
+import { createShare } from "./share.js";
 import * as passkey from "./passkey.js";
 
 const screens = {
@@ -30,9 +33,9 @@ const screens = {
   setup,
   import: planimport,
   help,
-  ...(SYNC_ENABLED ? { sync } : {}),
+  ...(SYNC_ENABLED ? { sync, people, person, join: { render: people.renderJoin } } : {}),
 };
-const NEEDS_ID = new Set(["exercise", "progress"]);
+const NEEDS_ID = new Set(["exercise", "progress", "person", "join"]);
 const NO_TABS = new Set(["setup", "workout", "exercise"]);
 const TAB_OF = {
   workout: "today",
@@ -43,6 +46,9 @@ const TAB_OF = {
   import: "plan",
   help: "today",
   sync: "plan",
+  people: "plan",
+  person: "plan",
+  join: "plan",
 };
 
 function parseHash(hash) {
@@ -95,8 +101,11 @@ function startSync(ctx, store, render) {
     },
     storage: browserStorage(),
     passkey,
+    afterSync: () => ctx.share.publish(), // sharing: send what changed to the people allowed to see it
+    signedOut: () => ctx.share.forget(),
   });
   ctx.sync = s;
+  ctx.share = createShare({ link: s.link, getState: () => ctx.state, storage: browserStorage() });
   // Navigation redraws anyway: merge first so the new screen shows the combined data.
   window.addEventListener("hashchange", () => s.applyHeld(true));
   setInterval(() => s.hasHeld() && s.applyHeld(), 5000);

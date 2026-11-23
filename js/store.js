@@ -103,6 +103,9 @@ export function isValidState(o) {
     return false;
   if (o.settings.updatedAt !== undefined && !num(o.settings.updatedAt))
     return false;
+  // Sharing (all optional): the name others see, and the one switch for body weight to a coach.
+  if (o.settings.shareName !== undefined && !str(o.settings.shareName)) return false;
+  if (o.settings.shareWeight !== undefined && typeof o.settings.shareWeight !== "boolean") return false;
   if (o.swapCounts !== undefined && !isObj(o.swapCounts)) return false;
   if (
     o.workoutOrder !== undefined &&

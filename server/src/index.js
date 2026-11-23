@@ -2,8 +2,9 @@ import { DurableObject } from "cloudflare:workers";
 import { ORIGINS, MAX_BODY, parseBody, vapidJwt, authHeader } from "./lib.js";
 import { ID_RE, MAX_SYNC_BODY, makeChallenge, parseMediaFrame, parseSyncBody } from "./syncauth.js";
 import { MEDIA_ITEM_MAX, VaultCore } from "./vault.js";
+import { InviteCore, SHARE_PATHS, shareRoute } from "./share.js";
 
-const SYNC_PATHS = new Set(["/auth/register", "/auth/signin", "/sync/pull", "/sync/push", "/account/rewrap", "/account/signout", "/account/delete", "/media/list", "/media/put", "/media/get", "/media/delete"]);
+const SYNC_PATHS = new Set(["/auth/register", "/auth/signin", "/sync/pull", "/sync/push", "/account/rewrap", "/account/signout", "/account/delete", "/media/list", "/media/put", "/media/get", "/media/delete", ...SHARE_PATHS]);
 
 const json = (status, body, cors) =>
   new Response(JSON.stringify(body), {
@@ -60,9 +61,28 @@ async function syncRoute(req, env, path, cors) {
   // At sign-in the account id is the passkey's userHandle.
   if (!body || !ID_RE.test(body.accountId ?? "")) return bad();
   const stub = env.VAULT.get(env.VAULT.idFromName(body.accountId));
-  const r = await stub.run(path, body);
+  const r = SHARE_PATHS.includes(path) || path === "/account/delete" ? await shareRoute(path, body, shareCtx(env)) : await stub.run(path, body);
   if (r.body?.bytes) return new Response(r.body.bytes, { headers: { "content-type": "application/octet-stream", ...cors } });
   return json(r.status, r.body, cors);
+}
+
+// How the sharing code reaches other accounts' Vaults and the one-per-invite objects.
+const shareCtx = (env) => ({
+  vault: (id) => (p, b) => env.VAULT.get(env.VAULT.idFromName(id)).run(p, b),
+  invite: (lookup) => (p, b) => env.INVITE.get(env.INVITE.idFromName(lookup)).run(p, b),
+});
+
+export class Invite extends DurableObject {
+  core() {
+    const s = this.ctx.storage;
+    return new InviteCore({ get: (k) => s.get(k), put: (k, v) => s.put(k, v), delete: (k) => s.delete(k), deleteAll: () => s.deleteAll(), setAlarm: (t) => s.setAlarm(t) });
+  }
+  run(path, body) {
+    return this.core().run(path, body);
+  }
+  alarm() {
+    return this.core().alarm();
+  }
 }
 
 export class Vault extends DurableObject {

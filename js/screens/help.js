@@ -125,12 +125,21 @@ const SYNC_SECTION = [
     <p>Photos and your rest sound sync too (up to 4 MB each, 25 MB in all). Videos stay on this phone and in your backup file. Your data stays safe if you lose the phone, as long as sync was on.</p>`,
 ];
 
+const SHARE_SECTION = [
+  "sharing",
+  "Sharing",
+  "Let a coach or friend look.",
+  `<p>Go to <b>Plan</b>, then <b>People</b>. Set your name, then tap <b>Invite someone</b> and choose <b>Coach</b> or <b>Friend</b>. Send them the code or link. It works once and lasts 7 days. When they enter it, you tap <b>Allow</b>. Nothing is shared before that.</p>
+    <p>They can only look, never change anything. A coach sees your workouts and plan. A friend sees your workouts, and your plan only if you tick it. Body weight goes to a coach only if you switch on <b>Show my body weight to my coach</b>; friends never see it.</p>
+    <p>Tap <b>Remove</b> to stop sharing with someone at once. <b>Honest limit:</b> a person you remove keeps whatever they already saw (it may be saved on their phone, or written down). Removing stops what comes next; it cannot take back the past. Turning body weight off works the same way.</p>`,
+];
+
 export function render(root, ctx) {
   const want = ctx.params.id; // "#/help/install" opens that section
   const open = (k) => (want ? k === want : k === "install" && !isInstalled());
   root.innerHTML = `<h1 class="title">How to use</h1>
     <p class="muted" style="margin:0 0 12px">About two minutes to read. Tap a heading to open it.</p>
-    ${[...SECTIONS, ...(ctx.sync ? [SYNC_SECTION] : [])].map(
+    ${[...SECTIONS, ...(ctx.sync ? [SYNC_SECTION, SHARE_SECTION] : [])].map(
       ([
         k,
         title,

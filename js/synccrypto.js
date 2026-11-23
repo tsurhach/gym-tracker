@@ -15,7 +15,7 @@ export function unb64u(str) {
 export const randomBytes = (n) => crypto.getRandomValues(new Uint8Array(n));
 
 // Recovery code: 128 random bits as 26 Crockford base32 characters, shown in groups of four.
-const ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+export const ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 export function makeRecoveryCode(bytes = randomBytes(16)) {
   let bits = "";
   for (const b of bytes) bits += b.toString(2).padStart(8, "0");
@@ -104,6 +104,22 @@ export async function open(dataKey, blob) {
 // One photo or sound file (its JSON text from encodeMedia) <-> raw sealed bytes for a binary upload.
 export const sealMedia = (dataKey, text) => sealBytes(dataKey, enc.encode(text), MEDIA_AAD);
 export const openMedia = async (dataKey, bytes) => dec.decode(await openBytes(dataKey, bytes, MEDIA_AAD));
+// Sharing: a share blob can never pass for the state blob or a media file (different AAD).
+export const SHARE_AAD = enc.encode("gym-tracker share v1");
+// ECDH P-256 key pair as base64url: pub = raw point (plain, goes on the server), priv = pkcs8 (sealed before it leaves).
+export async function newShareKeyPair() {
+  const k = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  return {
+    pub: b64u(await crypto.subtle.exportKey("raw", k.publicKey)),
+    priv: b64u(await crypto.subtle.exportKey("pkcs8", k.privateKey)),
+  };
+}
+// 32-byte shared secret of my private key and their public key. The same from both sides, never stored.
+export async function ecdhBits(priv, theirPub) {
+  const p = await crypto.subtle.importKey("pkcs8", unb64u(priv), { name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
+  const q = await crypto.subtle.importKey("raw", unb64u(theirPub), { name: "ECDH", namedCurve: "P-256" }, false, []);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: q }, p, 256));
+}
 export const sha256hex = async (text) =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(text)))].map((b) => b.toString(16).padStart(2, "0")).join("");
 

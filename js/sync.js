@@ -210,6 +210,7 @@ export function createSync(h) {
     session = null;
     dataKey = null;
     held = null;
+    h.signedOut?.();
     persist();
     keys.set(null).catch(() => {});
     status = "Sync was turned off on another device.";
@@ -423,6 +424,7 @@ export function createSync(h) {
             } catch {} // the server copy goes next time
           session.lastSyncAt = now();
           status = "";
+          Promise.resolve(h.afterSync?.()).catch(() => {}); // sharing publishes what changed; never awaited, never renders
         }
       } catch {
         if (session) {
@@ -594,7 +596,18 @@ export function createSync(h) {
     status = "";
   }
 
+  // For js/share.js: the signed-in account, its data key and an authenticated call.
+  const link = {
+    get id() {
+      return session?.accountId;
+    },
+    active: () => !!session,
+    key: ensureKey,
+    call: (path, body) => post(path, { ...auth(), ...body }),
+  };
+
   return {
+    link,
     active: () => !!session,
     status: () =>
       status ||

@@ -47,7 +47,7 @@ export function progressText(r) {
   return `${fmtKg(r.first)} → ${fmtKg(r.latest)} kg`;
 }
 
-const setsText = (sets) =>
+export const setsText = (sets) =>
   sets.map((s) => `${fmtKg(s.weight)} × ${s.reps}`).join(", ");
 
 const CW = 320;

@@ -209,7 +209,8 @@ export function render(root, ctx) {
       </label>
       ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
       <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
-      ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}`,
+      ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}
+      ${ctx.share ? `<a class="card weight-card" href="#/people"><span>People: coach and friends</span><span class="muted small">View only</span></a>` : ""}`,
     )}
     ${section(
       "g:plates",

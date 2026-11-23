@@ -9,6 +9,7 @@ import {
   sha256b64u,
   verifyAssertion,
 } from "./syncauth.js";
+import { vaultShare } from "./share.js";
 
 const MONTH = 30 * 24 * 3600 * 1000;
 export const IDLE_DELETE = 36 * MONTH; // 36 months without the owner's devices
@@ -82,6 +83,8 @@ export class VaultCore {
   }
 
   async handleOne(path, b) {
+    // /in/ calls come only from the Worker's own sharing code (never from a client route): no token, no limit.
+    if (path.startsWith("/in/")) return vaultShare(this, path, b);
     if (this.limited(path.startsWith("/media/"))) return { status: 429, body: { error: "slow down" } };
     if (path === "/auth/register") return this.register(b);
     if (path === "/auth/signin") return this.signin(b);
@@ -108,6 +111,21 @@ export class VaultCore {
       case "/media/get":
       case "/media/delete":
         return this.media(path, b, acct);
+      case "/share/key":
+      case "/share/who":
+      case "/share/guess":
+      case "/share/list":
+      case "/share/add":
+      case "/share/cansee":
+      case "/share/allow":
+      case "/share/decline":
+      case "/share/remove":
+      case "/share/publish":
+      case "/share/leave":
+      case "/invite/create":
+      case "/invite/cancel":
+        if (path !== "/share/who") await this.touch(acct);
+        return vaultShare(this, path, b, acct);
       case "/account/rewrap": {
         for (const k of ["wrapCode", "wrapPrf"]) {
           if (b[k] === undefined) continue;
