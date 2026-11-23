@@ -232,9 +232,7 @@ export function render(root, ctx) {
         <input type="file" data-field="import" accept="application/json,.json" />
       </label>
       <p class="muted small" id="app-version">${versionText}</p>
-      <p class="muted small" id="credits"><b>Credits.</b> Exercise illustrations: <a href="https://everkinetic.com" target="_blank" rel="noopener">Everkinetic</a> (everkinetic.com) by Greg Priday, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener">github.com/everkinetic/data</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Some drawings modified or newly drawn in the same style; these are CC BY-SA 4.0 too.</p>
-      <!-- TEMP-PASSKEY-SPIKE: remove this line and the spike/ folder after the passkey test -->
-      <p class="muted small"><a href="spike/passkey.html">Passkey test (temporary)</a></p>`,
+      <p class="muted small" id="credits"><b>Credits.</b> Exercise illustrations: <a href="https://everkinetic.com" target="_blank" rel="noopener">Everkinetic</a> (everkinetic.com) by Greg Priday, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener">github.com/everkinetic/data</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Some drawings modified or newly drawn in the same style; these are CC BY-SA 4.0 too.</p>`,
     )}`;
   runningVersion().then((v) => {
     versionText = v ? `Version ${v}` : "Version: not installed";
