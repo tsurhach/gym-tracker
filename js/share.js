@@ -111,6 +111,40 @@ export function buildView(
   return view;
 }
 
+// What another person's phone sent is data, not trusted: every number is made a number, lists are lists.
+// (Strings are escaped where they are drawn; numbers are drawn as they are, so they must be numbers.)
+const n0 = (x) => (num(x) ? x : 0);
+const arr = (x) => (Array.isArray(x) ? x : []);
+export function cleanView(v) {
+  const o = v && typeof v === "object" ? v : {};
+  const out = {
+    name: String(o.name ?? ""),
+    updatedAt: n0(o.updatedAt),
+    customExercises: arr(o.customExercises).map((c) => ({ id: String(c?.id), name: String(c?.name ?? ""), primary: String(c?.primary ?? ""), secondary: arr(c?.secondary).map(String), equipment: c?.equipment === undefined ? undefined : String(c.equipment) })),
+    sessions: arr(o.sessions).map((s) => ({
+      id: String(s?.id),
+      workoutName: String(s?.workoutName ?? ""),
+      startedAt: n0(s?.startedAt),
+      finishedAt: n0(s?.finishedAt),
+      entries: arr(s?.entries).map((e) => ({
+        exerciseId: String(e?.exerciseId),
+        name: String(e?.name ?? ""),
+        primary: e?.primary === undefined ? undefined : String(e.primary),
+        sets: arr(e?.sets).map((t) => ({ weight: n0(t?.weight), reps: n0(t?.reps), done: true })),
+      })),
+    })),
+  };
+  if (o.workouts)
+    out.workouts = arr(o.workouts).map((w) => ({
+      id: String(w?.id),
+      name: String(w?.name ?? ""),
+      muscles: arr(w?.muscles).map(String),
+      items: arr(w?.items).map((it) => ({ exerciseId: String(it?.exerciseId), sets: n0(it?.sets), repMin: n0(it?.repMin), repMax: n0(it?.repMax), step: n0(it?.step) })),
+    }));
+  if (o.bodyWeights) out.bodyWeights = arr(o.bodyWeights).map((w) => ({ id: String(w?.id), date: String(w?.date ?? ""), kg: n0(w?.kg) }));
+  return out;
+}
+
 // h = friend, hp = friend with plan or coach, hpw = coach with body weight. The weight switch is one setting for any coach.
 const OPTS = { h: {}, hp: { plan: true }, hpw: { plan: true, weight: true } };
 export const variantOf = (v, weightOn) =>
@@ -152,15 +186,16 @@ export function createShare(h) {
       const k = await sc.newShareKeyPair();
       r = await call("/share/key", {
         pub: k.pub,
-        sealedPriv: await sc.seal(dk, k.priv),
+        sealedPriv: await sc.seal(dk, { priv: k.priv, pub: k.pub }), // pub inside too: the plain copy on the server is never trusted
       });
       if (r.status === 200) return (keys = k);
       if (r.status === 409) r = await call("/share/key"); // another device was first
     }
     if (r.status !== 200) fail(r);
+    const own = await sc.open(dk, r.json.sealedPriv);
     return (keys = {
-      pub: r.json.pub,
-      priv: await sc.open(dk, r.json.sealedPriv),
+      pub: own.pub,
+      priv: own.priv,
     });
   }
 
@@ -284,8 +319,9 @@ export function createShare(h) {
         wantsBack: !!wantsBack,
       }),
       sealedCanSee: await sc.seal(dk, { id, name, pub, role }),
+      // Sharing back takes effect only when they Allow: the server adds this viewer then (friend, no plan).
+      ...(wantsBack ? { sealedBack: await sc.seal(dk, { name, role: "friend", ticks: {}, pub }) } : {}),
     });
-    if (wantsBack) await addViewer({ id, name, pub }, "friend", {}); // sharing back: they see me as a friend, no plan
     people = null;
     publish().catch(() => {});
   }
@@ -431,10 +467,15 @@ export function createShare(h) {
       await sc.ecdhBits(kp.priv, p.pub),
       pairKind(p.id, h.link.id),
     ); // their key from my own record, never from the server
-    const view = JSON.parse(
-      dec.decode(await sc.openBytes(kc, sc.unb64u(r.json.blob), sc.SHARE_AAD)),
+    const view = cleanView(
+      JSON.parse(dec.decode(await sc.openBytes(kc, sc.unb64u(r.json.blob), sc.SHARE_AAD))),
     );
-    putCache({ ...cache(), [p.id]: { view, updatedAt: r.json.updatedAt } });
+    const first = !cache()[p.id];
+    putCache({ ...cache(), [p.id]: { view, updatedAt: num(r.json.updatedAt) ? r.json.updatedAt : 0 } });
+    if (first) {
+      people = null; // they may have just allowed my share-back: send them my workouts now
+      publish().catch(() => {});
+    }
     return view;
   }
   async function leave(p) {
@@ -468,6 +509,10 @@ export function createShare(h) {
     cached: (id) => cache()[id] ?? null,
     forget: () => {
       keys = people = null;
+      for (const k of [SHARED_KEY, HASH_KEY])
+        try {
+          h.storage.removeItem(k);
+        } catch {}
     },
   };
 }

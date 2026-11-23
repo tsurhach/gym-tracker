@@ -45,7 +45,7 @@ function historyHtml(view) {
       .join("")}`;
 }
 
-function planHtml(view, ctx) {
+export function planHtml(view, ctx) {
   const names = new Map(
     [...ctx.library, ...(view.customExercises ?? [])].map((e) => [
       e.id,
@@ -55,7 +55,7 @@ function planHtml(view, ctx) {
   return view.workouts
     .map(
       (w) => `<section class="card"><b>${esc(w.name)}</b>
-      ${w.items.map((it) => `<div class="row"><span class="grow ex-name">${esc(names.get(it.exerciseId) ?? "Exercise")}</span><span class="muted small">${it.sets} × ${it.repMin}–${it.repMax}</span></div>`).join("")}</section>`,
+      ${w.items.map((it) => `<div class="row"><span class="grow ex-name">${esc(names.get(it.exerciseId) ?? "Exercise")}</span><span class="muted small">${esc(it.sets)} × ${esc(it.repMin)}–${esc(it.repMax)}</span></div>`).join("")}</section>`,
     )
     .join("");
 }
@@ -91,7 +91,7 @@ export function render(root, ctx) {
     root.innerHTML = `<div class="row topbar"><a class="back" href="#/people">‹ People</a></div>
       <h1 class="title">${esc(name)}</h1>
       <p class="muted small">${esc(name)}'s workouts · view only${at ? ` · updated ${esc(ago(at))}` : ""}</p>
-      ${gone ? `<section class="card"><p>${esc(name)} stopped sharing. What you saw before is gone from this phone.</p><button class="btn" data-leave>Remove from my list</button></section>` : ""}
+      ${gone ? `<section class="card"><p>Nothing shared yet, or ${esc(name)} stopped sharing. What you saw before is gone from this phone.</p><button class="btn" data-leave>Remove from my list</button></section>` : ""}
       ${err ? `<p role="alert">${esc(err)}</p>` : ""}
       ${!gone && !view ? `<p class="muted">Loading…</p>` : ""}
       ${

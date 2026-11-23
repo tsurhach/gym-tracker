@@ -312,3 +312,22 @@ test("the server stores only sealed strings and ids for sharing", async () => {
   ]);
   assert.deepEqual(Object.keys(d.viewers[V.id]), ["sealed"]);
 });
+
+test("leave names no account that exists: nothing is stored in made-up vaults", async () => {
+  const server = await setup();
+  const V = await newAccount(server);
+  const ghost = (await newAccount(server)).id.replace(/.$/, (c) => (c === "A" ? "B" : "A"));
+  assert.equal((await V.post("/share/leave", { sharerId: ghost })).status, 200);
+  assert.equal(server.vaults.get(ghost)?.st.m.size ?? 0, 0);
+  const { S } = await connected(server);
+  await S.post("/account/delete");
+  assert.equal((await V.post("/share/leave", { sharerId: S.id })).status, 200);
+  assert.equal(server.core(S.id).st.m.size, 0); // a deleted account is not revived
+});
+
+test("publish does not accept inherited names as a variant", async () => {
+  const server = await setup();
+  const { S, V } = await connected(server);
+  const r = await S.post("/share/publish", { blobs: { h: blob("b") }, envelopes: { [V.id]: { v: "toString", env: sealed("e") } } });
+  assert.equal(r.status, 400);
+});

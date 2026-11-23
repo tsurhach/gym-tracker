@@ -1,9 +1,11 @@
 // Sharing with the real client code (js/share.js) against the real VaultCore and InviteCore in memory.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { planHtml } from "../js/screens/person.js";
 import * as sc from "../js/synccrypto.js";
 import {
   buildView,
+  cleanView,
   createShare,
   makeInviteCode,
   parseInviteCode,
@@ -221,14 +223,15 @@ async function person(server, name, state = fullState()) {
       return { status: r.status, json: r.body };
     },
   };
+  const storage = mem();
   const share = createShare({
     link,
     getState: () => st,
-    storage: mem(),
+    storage,
     now: () => clock,
     base: "https://x/app/",
   });
-  return { a, st, share, id: a.id, key };
+  return { a, st, share, id: a.id, key, storage };
 }
 async function connect(S, V, role = "coach", ticks = {}) {
   const { code } = await S.share.invite(role, ticks);
@@ -338,7 +341,7 @@ test("removed viewer cannot read the next publish", async () => {
   );
   assert.ok(fresh.includes("s3"));
   // the key V held opens the old blob only, never the new one, and the new envelope is not for V
-  const kv = await sc.open(V.key, (await V.a.post("/share/key")).body.sealedPriv);
+  const kv = (await sc.open(V.key, (await V.a.post("/share/key")).body.sealedPriv)).priv;
   const pair = await sc.ecdhBits(kv, mine.pub);
   const kind = `share ${S.id}>${V.id}`;
   const oldKc = await sc.unwrapDataKey(oldGet.body.env, pair, kind);
@@ -362,18 +365,86 @@ test("unchanged view is not republished", async () => {
   assert.ok(server.core(S.id).st.m.get("share").sharedAt > at);
 });
 
-test("sharing back: the joiner is allowed at once and the sharer sees them after Allow", async () => {
+test("sharing back takes effect only on Allow, never on decline or cancel", async () => {
   const server = memServer({ now: () => clock });
   const S = await person(server, "Dana");
   const V = await person(server, "Ali");
   const { code } = await S.share.invite("friend", {});
   await V.share.accept(await V.share.peek(code), true);
   await V.share.publish();
+  assert.equal((await V.share.list()).viewers.length, 0); // nothing granted yet
+  assert.equal((await S.a.post("/share/get", { from: V.id })).status, 404);
   const [p] = (await S.share.list()).pending;
   assert.equal(p.wantsBack, true);
   await S.share.allow(p);
+  assert.equal((await V.share.list()).viewers[0].name, "Dana"); // granted now
+  await V.share.publish();
   const back = await S.share.fetchView((await S.share.list()).canSee[0]);
   assert.equal(back.name, "Ali");
+  // declined: nothing is ever granted
+  const X = await person(server, "Xena");
+  const c2 = await S.share.invite("friend", {});
+  await X.share.accept(await X.share.peek(c2.code), true);
+  await S.share.decline((await S.share.list()).pending[0]);
+  assert.equal((await X.share.list()).viewers.length, 0);
+  // cancelled while waiting: same
+  const Y = await person(server, "Yan");
+  const c3 = await S.share.invite("friend", {});
+  await Y.share.accept(await Y.share.peek(c3.code), true);
+  await S.share.cancelInvite((await S.share.list()).invites[0]);
+  assert.equal((await Y.share.list()).viewers.length, 0);
+});
+
+test("a server that swaps my plain public key changes nothing I send", async () => {
+  const server = memServer({ now: () => clock });
+  const S = await person(server, "Dana");
+  const V = await person(server, "Ali");
+  assert.equal((await S.share.invite("coach", {})).code.length, 10); // makes the pair
+  const real = (await S.a.post("/share/key")).body;
+  const st = server.core(S.id).st;
+  const d = st.m.get("share");
+  d.shareKey.pub = (await sc.newShareKeyPair()).pub; // the server's own key
+  st.m.set("share", d);
+  const again = createShare({ link: { id: S.id, active: () => true, key: async () => S.key, call: async (p, b) => { const r = await S.a.post(p, b); return { status: r.status, json: r.body }; } }, getState: () => S.st, storage: mem(), now: () => clock });
+  const { code } = await again.invite("coach", {});
+  const peeked = await V.share.peek(code);
+  assert.equal(peeked.from.pub, real.pub); // what V is told is my real key
+});
+
+test("a view from another person is made of numbers and lists, and the plan is escaped", async () => {
+  const evil = "<img src=x onerror=alert(1)>";
+  const v = cleanView({ name: evil, sessions: [{ id: "s", startedAt: evil, entries: [{ exerciseId: "x", name: evil, sets: [{ weight: evil, reps: "9" }] }] }], workouts: [{ id: "w", name: "d", items: [{ exerciseId: "x", sets: evil, repMin: evil, repMax: evil }] }], bodyWeights: [{ date: "d", kg: evil }], customExercises: "no" });
+  assert.equal(v.sessions[0].startedAt, 0);
+  assert.deepEqual(v.sessions[0].entries[0].sets, [{ weight: 0, reps: 0, done: true }]);
+  assert.deepEqual(v.workouts[0].items[0], { exerciseId: "x", sets: 0, repMin: 0, repMax: 0, step: 0 });
+  assert.equal(v.bodyWeights[0].kg, 0);
+  assert.deepEqual(v.customExercises, []);
+  const html = planHtml({ workouts: [{ name: evil, items: [{ exerciseId: "x", sets: evil, repMin: evil, repMax: evil }] }] }, { library: [] });
+  assert.ok(!html.includes("<img"));
+});
+
+test("a stored view is made safe when opened", async () => {
+  const server = memServer({ now: () => clock });
+  const S = await person(server, "Dana");
+  S.st.workouts[0].items[0].repMin = "<b>x</b>";
+  const V = await person(server, "Ali", emptyState());
+  await connect(S, V);
+  const view = await V.share.fetchView(await seeS(V, S));
+  assert.equal(view.workouts[0].items[0].repMin, 0);
+  assert.equal(V.share.cached(S.id).view.workouts[0].items[0].repMin, 0);
+});
+
+test("signing out wipes other people's cached workouts and the publish hash", async () => {
+  const server = memServer({ now: () => clock });
+  const S = await person(server, "Dana");
+  const V = await person(server, "Ali", emptyState());
+  await connect(S, V);
+  await V.share.fetchView(await seeS(V, S));
+  await S.share.publish();
+  V.share.forget();
+  S.share.forget();
+  assert.equal(V.share.cached(S.id), null);
+  assert.equal(S.storage.getItem("gymtracker.sharehash"), null);
 });
 
 test("a joiner id the server swapped is ignored", async () => {

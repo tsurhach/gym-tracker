@@ -84,7 +84,8 @@ export class VaultCore {
 
   async handleOne(path, b) {
     // /in/ calls come only from the Worker's own sharing code (never from a client route): no token, no limit.
-    if (path.startsWith("/in/")) return vaultShare(this, path, b);
+    // No account here (never made, or deleted): nothing is written, so no stray storage in made-up ids.
+    if (path.startsWith("/in/")) return (await this.s.get("acct")) ? vaultShare(this, path, b) : NOT_FOUND;
     if (this.limited(path.startsWith("/media/"))) return { status: 429, body: { error: "slow down" } };
     if (path === "/auth/register") return this.register(b);
     if (path === "/auth/signin") return this.signin(b);

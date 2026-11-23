@@ -150,7 +150,7 @@ export async function vaultShare(v, path, b, acct) {
       d.viewers[b.joinerId] = { sealed: b.sealedMeta };
       delete d.pending[b.joinerId];
       delete d.invites[p.lookup];
-      return ok({ lookup: p.lookup });
+      return ok({ lookup: p.lookup, back: p.back });
     }
     case "/share/decline": {
       const p = d.pending[b.joinerId];
@@ -180,7 +180,7 @@ export async function vaultShare(v, path, b, acct) {
       if (!Object.values(blobs).every(checkSize)) return BAD;
       for (const [id, e] of Object.entries(env)) {
         if (!d.viewers[id]) return BAD; // only people who were allowed
-        if (!(e && e.v in blobs && sealed(e.env))) return BAD;
+        if (!(e && Object.hasOwn(blobs, e.v) && sealed(e.env))) return BAD;
       }
       for (const k of BLOBS)
         k in blobs
@@ -197,10 +197,15 @@ export async function vaultShare(v, path, b, acct) {
       return ok();
     case "/in/pending": {
       if (count(d.viewers) + count(d.pending) >= MAX_PEOPLE) return FULL;
-      d.pending[b.joinerId] = { sealedJ: b.sealedJ, lookup: b.lookup };
+      d.pending[b.joinerId] = { sealedJ: b.sealedJ, lookup: b.lookup, back: b.back };
       return ok();
     }
+    case "/in/addviewer": // the share-back of someone who just got allowed
+      if (!d.viewers[b.viewerId] && count(d.viewers) + count(d.pending) >= MAX_PEOPLE) return FULL;
+      d.viewers[b.viewerId] = { sealed: b.sealedMeta };
+      return ok();
     case "/in/dropviewer":
+      if (!d.viewers[b.viewerId] && !d.env[b.viewerId]) return OK(); // nothing to drop: write nothing
       delete d.viewers[b.viewerId];
       delete d.env[b.viewerId];
       return ok();
@@ -245,7 +250,8 @@ export async function shareRoute(path, b, ctx) {
       if (
         !LOOKUP_RE.test(b.lookup ?? "") ||
         !sealed(b.sealedJ) ||
-        !sealed(b.sealedCanSee)
+        !sealed(b.sealedCanSee) ||
+        (b.sealedBack !== undefined && !sealed(b.sealedBack))
       )
         return BAD;
       const g = await me("/share/guess", {});
@@ -255,7 +261,7 @@ export async function shareRoute(path, b, ctx) {
       const sid = c.body.sharerId;
       let r = await me("/share/cansee", { sharerId: sid, sealed: b.sealedCanSee });
       if (r.status === 200) {
-        r = await ctx.vault(sid)("/in/pending", { joinerId: b.accountId, sealedJ: b.sealedJ, lookup: b.lookup });
+        r = await ctx.vault(sid)("/in/pending", { joinerId: b.accountId, sealedJ: b.sealedJ, lookup: b.lookup, back: b.sealedBack });
         if (r.status !== 200) await me("/share/leave", { sharerId: sid });
       }
       if (r.status !== 200) await inv("/unclaim", {});
@@ -265,6 +271,7 @@ export async function shareRoute(path, b, ctx) {
     case "/share/decline": {
       const r = await me();
       if (r.status === 200) await ctx.invite(r.body.lookup)("/delete", { sharerId: b.accountId }); // lookup comes from the pending record
+      if (r.status === 200 && r.body.back) await ctx.vault(b.joinerId)("/in/addviewer", { viewerId: b.accountId, sealedMeta: r.body.back }); // their share-back, now that I allowed
       return r.status === 200 ? OK() : r;
     }
     case "/share/leave": {
