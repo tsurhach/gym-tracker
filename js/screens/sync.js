@@ -1,7 +1,7 @@
 // #/sync: turn on, sign in, recovery code, sign out, delete. Only reachable when SYNC_ENABLED (js/sync.js).
 // Redraws only itself (never ctx.save / render), so nothing typed elsewhere is touched.
 import { esc, confirmSheet, showBanner } from "../ui.js";
-import { friendlyError } from "../friendly.js";
+import { friendlyError, syncOutcome } from "../friendly.js";
 import { supported } from "../passkey.js";
 
 let view = "home"; // home | code | needcode
@@ -109,7 +109,10 @@ function wire(root, sync, draw, ctx) {
         else ctx.go("#/plan");
       }),
     now: async () => {
-      if (await run(() => sync.syncNow())) showBanner("Synced.", { kind: "ok" });
+      if (await run(() => sync.syncNow())) {
+        const o = syncOutcome(sync.status());
+        showBanner(o.text, { kind: o.kind });
+      }
     },
     newcode: async () => {
       if (!(await confirmSheet("Make a new recovery code? Your old code stops working.", "Make new code"))) return;

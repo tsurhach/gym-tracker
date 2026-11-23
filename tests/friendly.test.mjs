@@ -21,3 +21,9 @@ test("friendlyError hides raw network errors and keeps real messages", () => {
   assert.equal(friendlyError(new Error("That code does not open this data")), "That code does not open this data");
   assert.equal(friendlyError(null), "Something went wrong.");
 });
+
+import { syncOutcome } from "../js/friendly.js";
+test("syncOutcome: success only when status says Synced", () => {
+  assert.deepEqual(syncOutcome("Synced just now"), { text: "Synced.", kind: "ok" });
+  assert.deepEqual(syncOutcome("Offline. Will retry."), { text: "Offline. Will retry.", kind: "error" });
+});

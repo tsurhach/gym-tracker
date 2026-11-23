@@ -17,3 +17,7 @@ export function friendlyError(e) {
     return "No internet connection. Try again when you are online.";
   return e?.message || "Something went wrong.";
 }
+
+// syncNow() never throws: judge the result by the status text. Banner kind "ok" only when it really synced.
+export const syncOutcome = (status) =>
+  /^Synced/.test(status) ? { text: "Synced.", kind: "ok" } : { text: status, kind: "error" };
