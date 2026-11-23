@@ -3,6 +3,7 @@ import { PLATE_SIZES, gymPlates, parseNum, plateRule } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
 import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
 import { exportCsv, exportJson } from "../store.js";
+import { addBackup } from "../sync.js";
 import { buildFullBackup, fmtSize, readBackup } from "../backup.js";
 import { openPicker } from "../picker.js";
 import {
@@ -207,7 +208,8 @@ export function render(root, ctx) {
         <input type="checkbox" data-field="notifyRest"${settings.notifyRest ? " checked" : ""}${push.supported() ? "" : " disabled"} />
       </label>
       ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
-      <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>`,
+      <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
+      ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}`,
     )}
     ${section(
       "g:plates",
@@ -679,18 +681,22 @@ async function importFile(input, ctx) {
     showBanner(err.message);
     return;
   }
+  // With sync on, a replace would delete everything missing from the file on every device: add instead.
+  const adding = !!ctx.sync?.active();
   if (
     !(await confirmSheet(
-      "Replace all your data with this backup? This cannot be undone." +
-        (ctx.state.active ? " The workout in progress will be lost." : ""),
-      "Replace everything",
+      adding
+        ? "Add this backup to your data? Nothing you have now is removed."
+        : "Replace all your data with this backup? This cannot be undone." +
+            (ctx.state.active ? " The workout in progress will be lost." : ""),
+      adding ? "Add this backup to your data" : "Replace everything",
     ))
   )
     return;
   // Data first: it is the part that can fail on a full phone, and nothing else is touched until it is saved.
   current = null; // the old screen's fields must not be copied into the imported data
   const previous = ctx.state;
-  ctx.state = imported;
+  ctx.state = adding ? addBackup(previous, imported).state : imported;
   if (!(await ctx.save({ render: false, resetSnapshot: true }))) {
     ctx.state = previous; // not saved: put the old data back so nothing later persists the import
     window.dispatchEvent(new HashChangeEvent("hashchange"));
