@@ -265,27 +265,89 @@ test("server: item over 4 MB and account over 25 MB get 413", async () => {
   assert.ok([...st.m.keys()].filter((k) => k.startsWith("m:")).length >= 24);
 });
 
-test("server: a copy nobody used for 36 months is deleted; the device that still has it sends it again", async () => {
+test("a photo that is still referenced survives 36 months; an unreferenced old copy goes (B1, S2)", async () => {
   let t = 1_000_000_000_000;
   const now = () => t;
-  const { server, a } = await pair({
-    now,
-    a: { media: { "ex-1": photo("P1") } },
-  });
+  const { server, a } = await pair({ now, a: { media: { "ex-1": photo("P1") } } });
   a.sync.changed();
   await a.sync.syncNow();
   const id = a.state.mediaRefs["ex-1"].id;
-  assert.ok(idx(server)[id]);
-  // the owner keeps using the account (so the sign-in does not expire); only the unused file is cleaned
+  // an old upload that no reference names (an interrupted pass), and a fresh one (another device mid-push)
+  const v = [...server.vaults.values()][0];
+  const orphan = sc.b64u(new Uint8Array(16).fill(7));
+  const fresh = sc.b64u(new Uint8Array(16).fill(8));
+  v.st.m.set("mindex", { ...idx(server), [orphan]: { size: 40, n: 1, used: t }, [fresh]: { size: 40, n: 1, used: t + 6 * IDLE_DELETE } });
+  v.st.m.set(`m:${orphan}:0`, new Uint8Array(40));
+  // the owner keeps using the account for 36 months; the photo is never downloaded again
   for (let i = 0; i < 6; i++) {
     t += IDLE_DELETE / 6 + 1000;
     a.sync.changed();
     await a.sync.syncNow();
   }
-  assert.notEqual(a.state.mediaRefs["ex-1"].id, id, "re-uploaded under a new id");
-  assert.equal(idx(server)[id], undefined);
-  assert.ok(idx(server)[a.state.mediaRefs["ex-1"].id]);
+  assert.equal(a.state.mediaRefs["ex-1"].id, id, "still the same cloud copy");
+  assert.ok(idx(server)[id], "in-use photo kept");
+  assert.equal(idx(server)[orphan], undefined, "old unreferenced copy cleaned");
+  assert.ok(idx(server)[fresh], "recent unreferenced copy waits");
 });
+
+test("server: without keep, an unused file is dropped after 36 months; with keep it stays", async () => {
+  let t = 1_000_000_000_000;
+  const st = memStorage();
+  const core = new VaultCore(st, { secret: SECRET, origins: [ORIGIN], now: () => t });
+  const h = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("tok"))).toString("base64url");
+  await st.put("acct", { tokens: { [h]: t }, rev: 0, credentials: {} });
+  const id = sc.b64u(new Uint8Array(16).fill(1));
+  await core.handle("/media/put", { token: "tok", id, bytes: new Uint8Array(40) });
+  t += IDLE_DELETE - 10_000;
+  await st.put("acct", { tokens: { [h]: t }, rev: 0, credentials: {}, touchedAt: t });
+  assert.ok((await core.handle("/media/list", { token: "tok", keep: [id] })).body.items[id]);
+  t += IDLE_DELETE - 10_000;
+  await st.put("acct", { tokens: { [h]: t }, rev: 0, credentials: {}, touchedAt: t });
+  assert.ok((await core.handle("/media/list", { token: "tok", keep: [id] })).body.items[id], "kept while referenced");
+  t += IDLE_DELETE + 1;
+  await st.put("acct", { tokens: { [h]: t }, rev: 0, credentials: {}, touchedAt: t });
+  assert.equal((await core.handle("/media/list", { token: "tok" })).body.items[id], undefined);
+});
+
+test("a device that never synced a photo takes the cloud copy, never overwrites it (S1)", async () => {
+  const { server, a, b } = await pair({ a: { media: { "ex-1": photo("NEW") } }, b: { media: { "ex-1": photo("OLD") } } });
+  a.sync.changed();
+  await a.sync.syncNow();
+  const id = a.state.mediaRefs["ex-1"].id;
+  await b.sync.syncNow();
+  assert.equal(await text(b.media.get("ex-1")), "NEW");
+  assert.equal(await text(a.media.get("ex-1")), "NEW");
+  assert.equal(a.state.mediaRefs["ex-1"].id, id);
+  assert.ok(idx(server)[id]);
+});
+
+test("a ref is saved as soon as its file is up, so an interrupted pass leaves nothing orphaned (S2)", async () => {
+  const server = memServer();
+  const auth = authenticator();
+  const a = device(server, auth, { media: { "ex-1": photo("P1"), "ex-2": photo("P2") } });
+  let puts = 0;
+  let seenAtSecond = null;
+  a.fetch = async (url, o) => {
+    if (new URL(url).pathname === "/media/put" && ++puts === 2) seenAtSecond = Object.keys(a.state.mediaRefs ?? {});
+    return server.fetch(url, o);
+  };
+  await a.sync.enable();
+  await a.sync.syncNow();
+  assert.deepEqual(seenAtSecond.length, 1, "first ref already saved when the second upload started");
+});
+
+test("photos missing all at once are not read as deleted (S3)", async () => {
+  const { a, b } = await pair({ a: { media: { p1: photo("1"), p2: photo("2"), p3: photo("3") } } });
+  a.sync.changed();
+  await a.sync.syncNow();
+  a.media.clear(); // e.g. the browser cleared its media store
+  a.sync.changed();
+  await a.sync.syncNow();
+  assert.ok(Object.values(a.state.mediaRefs).every((r) => r.id), "no delete markers");
+  await b.sync.syncNow();
+  assert.equal(b.media.size, 3);
+});
+
 
 test("every sealed file uses a fresh IV and opens only with the media label", async () => {
   const key = await sc.newDataKey();

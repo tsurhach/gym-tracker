@@ -248,13 +248,26 @@ export function createSync(h) {
       let note = "";
       let onServer = null;
       if (t - (session.mlistAt ?? 0) > DAY) {
-        const l = await post("/media/list", auth());
+        const keep = Object.values(refs).filter((r) => r.id).map((r) => r.id);
+        const l = await post("/media/list", { ...auth(), keep });
         if (l.status === 200) {
           onServer = new Set(Object.keys(l.json.items ?? {}));
           session.mlistAt = t;
+          // Files no reference names (an interrupted upload) and older than a day (another device's
+          // state push may still be on its way) are deleted, so they do not fill the 25 MB for good.
+          const named = new Set(keep);
+          for (const [id, used] of Object.entries(l.json.used ?? {}))
+            if (!named.has(id) && !trash.includes(id) && t - used > DAY) trash.push(id);
         }
       }
       const have = new Set(await files.keys());
+      const saveRefs = () => {
+        const st = h.getState();
+        st.mediaRefs = { ...(st.mediaRefs ?? {}), ...mine };
+        if (h.saveMedia) h.saveMedia(st.mediaRefs);
+        else h.setState(st);
+        persist();
+      };
       const put = async (key, local, lh) => {
         const r = refs[key];
         const bytes = await sc.sealMedia(dataKey, await encodeMedia(key, local));
@@ -273,6 +286,7 @@ export function createSync(h) {
         if (res.status !== 200) throw new Error("media");
         if (r?.id) trash.push(r.id);
         refs[key] = mine[key] = { id, h: lh, updatedAt: Math.max(t, (r?.updatedAt ?? 0) + 1) };
+        saveRefs(); // right away: an app killed mid-pass must not leave a file nobody names
         seen[key] = { h: lh, sig: sigOf(local) };
       };
       const get = async (key, r) => {
@@ -284,7 +298,7 @@ export function createSync(h) {
         if (res.status !== 200) return; // not on the server (any more): keep what we have, try again later
         const text = await sc.openMedia(dataKey, new Uint8Array(await res.arrayBuffer()));
         const item = decodeMedia(JSON.parse(text));
-        if (item.key !== key) throw new Error("media");
+        if (item.key !== key || (await sc.sha256hex(text)) !== r.h) throw new Error("media"); // wrong or rolled-back file
         await files.write(key, item.value);
         seen[key] = { h: await sc.sha256hex(text), sig: sigOf(item.value) };
       };
@@ -312,8 +326,12 @@ export function createSync(h) {
           else if (local && r && !live && unchanged) {
             await files.remove(key); // deleted on another device
             delete seen[key];
-          } else if (local) await put(key, local, lh);
-          else if (live && sn) {
+          } else if (local && live && !sn) await get(key, live); // never in sync here: the cloud copy wins, nothing is overwritten
+          else if (local) await put(key, local, lh);
+          else if (live && sn && have.size === 0 && Object.keys(seen).length >= 3) {
+            // ponytail: every photo gone at once looks like a cleared browser, not a delete; touch nothing
+            note ||= NOTE_LATER;
+          } else if (live && sn) {
             // deleted here: tell the other devices; the server copy goes after the state is up
             trash.push(live.id);
             refs[key] = mine[key] = { id: null, updatedAt: Math.max(t, live.updatedAt + 1) };
@@ -326,10 +344,7 @@ export function createSync(h) {
       }
       if (Object.keys(mine).length) {
         out.changed = true;
-        const st = h.getState();
-        st.mediaRefs = { ...(st.mediaRefs ?? {}), ...mine };
-        if (h.saveMedia) h.saveMedia(st.mediaRefs);
-        else h.setState(st);
+        saveRefs();
       }
       mnote = note;
     } catch {
@@ -400,13 +415,13 @@ export function createSync(h) {
           if (q.status !== 200) throw new Error("push");
           session.rev = q.json.rev;
           ok = true;
+        }
+        if (ok) {
           if (session.mtrash?.length)
             try {
               const d = await post("/media/delete", { ...auth(), ids: session.mtrash.slice(0, 200) });
               if (d.status === 200) session.mtrash = session.mtrash.slice(200);
             } catch {} // the server copy goes next time
-        }
-        if (ok) {
           session.lastSyncAt = now();
           status = "";
         }

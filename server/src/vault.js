@@ -18,6 +18,7 @@ const RATE = 60; // requests per account per minute
 const MEDIA_RATE = 300; // photos and sound go one file per request, so a first sync needs many
 export const MEDIA_ITEM_MAX = 4 * 1024 * 1024; // sealed bytes per photo or sound
 export const MEDIA_CAP = 25 * 1024 * 1024; // sealed bytes per account
+const MEDIA_FILES = 2000; // keeps the index small enough for one 2 MB value
 const CHUNK = 1024 * 1024; // a Durable Object value holds 2 MB, so files are stored in 1 MB pieces
 const NOT_FOUND = { status: 404, body: { error: "not found" } }; // same for "no account" and "wrong token"
 const BAD = { status: 400, body: { error: "bad request" } };
@@ -141,11 +142,14 @@ export class VaultCore {
     if (path === "/media/list") {
       // Cleanup, lazily on every list: a file nobody used for 36 months goes. A device that still has
       // the photo uploads it again (its reference points at a file the list no longer shows).
+      // The device says which ids it still uses; those count as used now (a photo that is never
+      // downloaded again must not expire while it is in use).
+      for (const id of Array.isArray(b.keep) ? b.keep : []) if (idx[id]) idx[id].used = t;
       const old = Object.keys(idx).filter((id) => t - idx[id].used >= IDLE_DELETE);
       for (const id of old) await this.dropMedia(idx, id);
-      if (old.length) await this.s.put("mindex", idx);
+      await this.s.put("mindex", idx);
       await this.touch(acct);
-      return OK({ items: Object.fromEntries(Object.entries(idx).map(([id, e]) => [id, e.size])), total: total(), cap: MEDIA_CAP });
+      return OK({ items: Object.fromEntries(Object.entries(idx).map(([id, e]) => [id, e.size])), used: Object.fromEntries(Object.entries(idx).map(([id, e]) => [id, e.used])), total: total(), cap: MEDIA_CAP });
     }
     if (path === "/media/delete") {
       const ids = Array.isArray(b.ids) ? b.ids.filter((id) => ID_RE.test(id)).slice(0, 200) : [];
@@ -173,6 +177,7 @@ export class VaultCore {
     if (!(f instanceof Uint8Array) || f.length < 29) return BAD;
     if (f.length > MEDIA_ITEM_MAX) return { status: 413, body: { error: "item" } };
     if (total() - (idx[b.id]?.size ?? 0) + f.length > MEDIA_CAP) return { status: 413, body: { error: "account" } };
+    if (!idx[b.id] && Object.keys(idx).length >= MEDIA_FILES) return { status: 413, body: { error: "account" } };
     await this.dropMedia(idx, b.id);
     const n = Math.ceil(f.length / CHUNK);
     for (let i = 0; i < n; i++) await this.s.put(`m:${b.id}:${i}`, f.slice(i * CHUNK, (i + 1) * CHUNK));
