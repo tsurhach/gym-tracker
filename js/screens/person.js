@@ -1,7 +1,7 @@
 // #/person/<id>: someone else's shared workouts, read only. Only reachable when SYNC_ENABLED (js/sync.js).
 // Their data is cached apart from yours (gymtracker.shared) and never touches your own history or backups.
 import { esc, fmtDate, fmtKg, confirmSheet, showBanner } from "../ui.js";
-import { copyDay, copyPlan } from "../share.js";
+import { copyDay, copyPlan, dayFromSession, newCopy } from "../share.js";
 import { exerciseHistory } from "../logic.js";
 import {
   chartHtml,
@@ -23,7 +23,7 @@ const ago = (ms) => {
 };
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-function historyHtml(view) {
+function historyHtml(view, ctx) {
   const sessions = [...view.sessions].sort((a, b) => b.startedAt - a.startedAt);
   if (!sessions.length)
     return `<section class="card"><p class="muted">No workouts yet.</p></section>`;
@@ -32,7 +32,7 @@ function historyHtml(view) {
       (
         s,
       ) => `<details class="card"><summary><b class="ex-name">${esc(s.workoutName)}</b> <span class="muted small">${esc(fmtDate(s.startedAt))} · ${plural(s.entries.length, "exercise", "exercises")} · ${durationMin(s)} min</span></summary>
-      ${s.entries.map((e) => `<p><b class="ex-name">${esc(e.name)}</b><br /><span class="muted small">${esc(setsText(e.sets))}</span></p>`).join("")}</details>`,
+      ${s.entries.map((e) => `<p><b class="ex-name">${esc(e.name)}</b><br /><span class="muted small">${esc(setsText(e.sets))}</span></p>`).join("")}${ctx.save && view.canCopy ? `<button class="btn" data-copy-session="${esc(s.id)}">Make a day from this workout</button>` : ""}</details>`,
     )
     .join("")}
     <h3>Progress</h3>
@@ -53,7 +53,7 @@ export function planHtml(view, ctx) {
       e.name,
     ]),
   );
-  const copy = (a, label) => (ctx.save ? `<button class="btn" data-copy="${a}">${label}</button>` : "");
+  const copy = (a, label) => (ctx.save && view.canCopy ? `<button class="btn" data-copy="${a}">${label}</button>` : "");
   return copy("", "Copy whole plan") + view.workouts
     .map(
       (w) => `<section class="card"><b>${esc(w.name)}</b>
@@ -99,19 +99,26 @@ export function render(root, ctx) {
       ${
         !gone && view
           ? `${tabs.length > 1 ? `<div class="row">${tabs.map(([k, l]) => `<button class="btn${k === tab ? " btn-primary" : ""}" data-tab="${k}">${l}</button>`).join("")}</div>` : ""}
-        ${tab === "plan" ? planHtml(view, ctx) : tab === "weight" ? weightHtml(view) : historyHtml(view)}`
+        ${tab === "plan" ? planHtml(view, ctx) : tab === "weight" ? weightHtml(view) : historyHtml(view, ctx)}`
           : ""
       }`;
     for (const b of root.querySelectorAll("[data-tab]"))
       b.onclick = () => ((tab = b.dataset.tab), draw());
-    for (const b of root.querySelectorAll("[data-copy]"))
+    for (const b of root.querySelectorAll("[data-copy],[data-copy-session]"))
       b.onclick = async () => {
-        const has = (id) => !!ctx.lookup(id);
+        const lib = new Set(ctx.library.map((e) => e.id));
+        const has = (id) => lib.has(id);
+        const cx = newCopy();
+        const one = ({ workout, skipped }) => ({ added: workout ? [workout] : [], skipped });
         const all = b.dataset.copy === "";
-        const r = all ? copyPlan(view, ctx.state, has) : (({ workout, skipped }) => ({ added: workout ? [workout] : [], skipped }))(copyDay(view, b.dataset.copy, ctx.state, has));
-        if (!r.added.length) return showBanner("Nothing to copy: you do not have these exercises.");
+        const r = b.dataset.copySession !== undefined
+          ? one(dayFromSession(view, b.dataset.copySession, ctx.state, has, cx))
+          : all ? copyPlan(view, ctx.state, has, cx) : one(copyDay(view, b.dataset.copy, ctx.state, has, cx));
+        if (!r.added.length) return showBanner("Nothing to copy: you do not have these exercises, or copying is not allowed.");
         const what = all ? `${r.added.length} days` : `"${r.added[0].name}"`;
-        if (!(await confirmSheet(`Add ${what} to your plan?${r.skipped ? ` ${r.skipped} exercise(s) are not in your list and will be left out.` : ""}`, "Add"))) return;
+        const extra = cx.fresh.length ? ` ${cx.fresh.length} exercise(s) of theirs will be added to your exercises (no photos).` : "";
+        if (!(await confirmSheet(`Add ${what} to your plan?${r.skipped ? ` ${r.skipped} exercise(s) are not available and will be left out.` : ""}${extra}`, "Add"))) return;
+        ctx.state.customExercises.push(...cx.fresh);
         ctx.state.workouts.push(...r.added);
         if (await ctx.save({ render: false })) showBanner(`Added ${what} to your plan.`, { kind: "ok" });
       };

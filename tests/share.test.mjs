@@ -464,11 +464,12 @@ test("a joiner id the server swapped is ignored", async () => {
 });
 
 // ---------- phase 6: copying a shared plan day ----------
-import { copyDay, copyPlan } from "../js/share.js";
+import { copyDay, copyPlan, dayFromSession, newCopy } from "../js/share.js";
 const hasId = (id) => ["bench", "squat"].includes(id);
 const sharedView = () =>
   cleanView({
     name: "Dana",
+    canCopy: true,
     bodyWeights: [{ id: "b", date: "2026-01-01", kg: 80 }],
     workouts: [
       { id: "d1", name: "Push", muscles: ["Chest"], items: [
@@ -503,7 +504,7 @@ test("copy has no body weight, no link back, only allowed fields", () => {
 });
 
 test("copy coerces hostile values and caps names", () => {
-  const view = cleanView({ workouts: [{ id: "x", name: " <img onerror=1>" + "z".repeat(100), muscles: Array(20).fill("m".repeat(99)), items: [
+  const view = cleanView({ canCopy: true, workouts: [{ id: "x", name: " <img onerror=1>" + "z".repeat(100), muscles: Array(20).fill("m".repeat(99)), items: [
     { exerciseId: "bench", sets: "9e9", repMin: 500, repMax: -5, step: -1 },
     { exerciseId: "squat", sets: 1e9, repMin: 20, repMax: 3, step: NaN },
   ] }] });
@@ -538,4 +539,98 @@ test("copy plan adds and never replaces; day of only unknown exercises is skippe
 
 test("old saved state still loads (no new fields needed)", () => {
   assert.equal(isValidState(emptyState()), true);
+});
+
+const withCustoms = () =>
+  cleanView({
+    canCopy: true,
+    customExercises: [
+      { id: "c1", name: "Odd press", primary: "Chest", secondary: ["Triceps", "Nonsense", "Chest"], equipment: "<b>bar</b>" + "e".repeat(99), images: 5, ext: "mp4", photo: "data:x" },
+      { id: "c2", name: "<img src=x onerror=1>" + "n".repeat(200), primary: "NotAMuscle" },
+    ],
+    workouts: [{ id: "d", name: "Mix", items: [
+      { exerciseId: "c1", sets: 3, repMin: 8, repMax: 12, step: 2.5 },
+      { exerciseId: "bench", sets: 3, repMin: 8, repMax: 12, step: 2.5 },
+      { exerciseId: "c2", sets: 3, repMin: 8, repMax: 12, step: 2.5 },
+    ] }, { id: "e", name: "Again", items: [{ exerciseId: "c1", sets: 2, repMin: 5, repMax: 5, step: 5 }] }],
+    sessions: [{ id: "s", workoutName: "Heavy", startedAt: 1, finishedAt: 2, entries: [
+      { exerciseId: "bench", name: "Bench", sets: [{ weight: 60, reps: 10 }, { weight: 60, reps: 6 }, { weight: 60, reps: 8 }] },
+      { exerciseId: "c1", name: "Odd press", sets: [{ weight: 1, reps: 1e9 }] },
+      { exerciseId: "squat", name: "Squat", sets: [] },
+      { exerciseId: "ghost", name: "G", sets: [{ weight: 1, reps: 5 }] },
+    ] }],
+  });
+
+test("copy refused when the tick is off, for day, plan and workout", () => {
+  const v = withCustoms();
+  v.canCopy = false;
+  for (const r of [copyDay(v, "d", emptyState(), hasId), dayFromSession(v, "s", emptyState(), hasId)]) assert.equal(r.workout, null);
+  assert.equal(copyPlan(v, emptyState(), hasId).added.length, 0);
+  assert.equal(cleanView({ ...v, canCopy: "yes" }).canCopy, false);
+});
+
+test("the tick is a sealed part of the view: only the right variant carries it", () => {
+  const st = fullState();
+  assert.equal(variantOf({ role: "friend", ticks: { plan: true, copy: true } }, false), "hpc");
+  assert.equal(variantOf({ role: "coach", ticks: {} }, true), "hpw");
+  assert.equal(variantOf({ role: "friend", ticks: { copy: true } }, false), "hc");
+  assert.equal(buildView(st, { plan: true }).canCopy, undefined);
+  assert.equal(buildView(st, { plan: true, copy: true }).canCopy, true);
+});
+
+test("sharer's custom exercises are re-made as mine: new id, capped, no media, reused by name", () => {
+  const view = withCustoms();
+  const st = emptyState();
+  const cx = newCopy();
+  const r = copyPlan(view, st, hasId, cx);
+  assert.equal(r.skipped, 1); // bad custom (not a muscle) skipped
+  assert.equal(cx.fresh.length, 1); // c1 made once, shared by both days
+  const c = cx.fresh[0];
+  assert.ok(c.id.startsWith("custom-") && c.id !== "c1");
+  assert.deepEqual(c.secondary, ["Triceps"]);
+  assert.equal(c.images, 0);
+  assert.ok(!("ext" in c) && !("photo" in c) && c.equipment.length <= 30);
+  assert.deepEqual(r.added[0].items.map((i) => i.exerciseId), [c.id, "bench"]);
+  assert.equal(r.added[1].items[0].exerciseId, c.id);
+  // I already have one with that name: reuse it, add nothing
+  const mine = { id: "custom-mine", name: "odd PRESS", primary: "Chest", secondary: [], images: 0 };
+  const st2 = { ...emptyState(), customExercises: [mine] };
+  const cx2 = newCopy();
+  const r2 = copyDay(view, "d", st2, hasId, cx2);
+  assert.equal(r2.workout.items[0].exerciseId, "custom-mine");
+  assert.equal(cx2.fresh.length, 0);
+  st.customExercises.push(...cx.fresh);
+  st.workouts.push(...r.added);
+  assert.equal(isValidState(st), true);
+});
+
+test("day from a shared workout: order, sets done, reps done, name with clash", () => {
+  const view = withCustoms();
+  const st = emptyState();
+  st.workouts.push({ id: "m", name: "Heavy (copy)", muscles: [], items: [] });
+  const cx = newCopy();
+  const { workout, skipped } = dayFromSession(view, "s", st, hasId, cx);
+  assert.equal(skipped, 1); // ghost
+  assert.equal(workout.name, "Heavy (copy 2)");
+  assert.deepEqual(workout.items.map((i) => i.exerciseId), ["bench", cx.fresh[0].id]); // empty squat entry dropped
+  assert.deepEqual([workout.items[0].sets, workout.items[0].repMin, workout.items[0].repMax], [3, 6, 10]);
+  assert.deepEqual([workout.items[1].sets, workout.items[1].repMax], [1, 100]); // hostile reps bounded
+  assert.equal(dayFromSession(view, "nope", st, hasId).workout, null);
+  assert.equal(st.workouts.length, 1);
+});
+
+test("changing the copy tick republishes: the viewer sees canCopy only while it is on", async () => {
+  const server = memServer({ now: () => clock });
+  const S = await person(server, "Dana");
+  const V = await person(server, "Ali", emptyState());
+  await connect(S, V, "friend", { plan: true });
+  const p = await seeS(V, S);
+  assert.equal((await V.share.fetchView(p)).canCopy, false);
+  const [v] = (await S.share.list()).viewers;
+  await S.share.setTicks(v, { ...v.ticks, copy: true });
+  await S.share.publish();
+  assert.equal((await V.share.fetchView(p)).canCopy, true);
+  await S.share.setTicks(v, { ...v.ticks, copy: false });
+  await S.share.publish();
+  assert.equal((await V.share.fetchView(p)).canCopy, false);
 });

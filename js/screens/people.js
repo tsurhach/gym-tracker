@@ -124,6 +124,7 @@ function html(ctx, sh) {
         v,
       ) => `<section class="card"><div class="row"><b class="grow">${esc(v.name)}</b><span class="muted">${label(v.role)}</span></div>
         ${v.role === "coach" ? "" : `<label class="setting">Also show my plan <input type="checkbox" data-ticks data-id="${esc(v.id)}"${v.ticks?.plan ? " checked" : ""} /></label>`}
+        <label class="setting">Let them copy my workouts and plan <input type="checkbox" data-copyok data-id="${esc(v.id)}"${v.ticks?.copy ? " checked" : ""} /></label>
         <button class="btn btn-warn" data-act="remove" data-id="${esc(v.id)}"${dis}>Remove</button></section>`,
     )
     .join("");
@@ -260,9 +261,9 @@ function wire(root, ctx, sh, draw) {
       pickRole = t.value;
       draw();
     } else if (t.matches("[data-plan]")) pickPlan = t.checked;
-    else if (t.matches("[data-ticks]"))
-      run(() =>
-        sh.setTicks(find("viewers", t.dataset.id), { plan: t.checked }),
-      );
+    else if (t.matches("[data-ticks],[data-copyok]")) {
+      const v = find("viewers", t.dataset.id);
+      run(() => sh.setTicks(v, { ...v.ticks, [t.matches("[data-copyok]") ? "copy" : "plan"]: t.checked }));
+    }
   };
 }

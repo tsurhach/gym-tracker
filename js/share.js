@@ -1,7 +1,7 @@
 // Sharing with a coach or friends (view only). Hidden while SYNC_ENABLED is false (js/sync.js).
 // Everything the server stores is sealed here first: names, roles, ticks and every shared workout.
 import * as sc from "./synccrypto.js";
-import { DEFAULT_STEP } from "./constants.js";
+import { DEFAULT_STEP, MUSCLES } from "./constants.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -71,7 +71,7 @@ const num = (x) => typeof x === "number" && Number.isFinite(x);
 // plan: workout days. weight: body weight log (only ever for a coach, only with the switch on).
 export function buildView(
   state,
-  { plan = false, weight = false, name = "", now = Date.now() } = {},
+  { plan = false, weight = false, copy = false, name = "", now = Date.now() } = {},
 ) {
   const sessions = state.sessions
     .filter((s) => s.finishedAt !== null) // never a workout in progress
@@ -105,6 +105,7 @@ export function buildView(
       .map((c) => pick(c, ["id", "name", "primary", "secondary", "equipment"])),
   };
   if (workouts) view.workouts = workouts;
+  if (copy) view.canCopy = true; // the sharer's "let them copy" tick, sealed inside the view
   if (weight)
     view.bodyWeights = (state.bodyWeights ?? []).map((w) =>
       pick(w, ["id", "date", "kg"]),
@@ -121,6 +122,7 @@ export function cleanView(v) {
   const out = {
     name: String(o.name ?? ""),
     updatedAt: n0(o.updatedAt),
+    canCopy: o.canCopy === true,
     customExercises: arr(o.customExercises).map((c) => ({ id: String(c?.id), name: String(c?.name ?? ""), primary: String(c?.primary ?? ""), secondary: arr(c?.secondary).map(String), equipment: c?.equipment === undefined ? undefined : String(c.equipment) })),
     sessions: arr(o.sessions).map((s) => ({
       id: String(s?.id),
@@ -146,57 +148,98 @@ export function cleanView(v) {
   return out;
 }
 
-// ---------- copying a shared plan day into my own plan ----------
-// Built only from cleanView output. A copy is a plain new workout: new id, no link back; the store stamps it on save.
-// has(id) = is this exercise in MY list (library or my customs). The sharer's custom exercises are skipped (not copied).
+// ---------- copying from a shared view into my own plan ----------
+// Built only from cleanView output, and only when the sharer allowed it (view.canCopy, sealed in the view).
+// A copy is plain new records: new ids, no link back; the store stamps them on save.
+// has(id) = is this a library exercise. The sharer's custom exercises are re-made as mine (matched by name, no media).
 const clamp = (x, lo, hi, d) => (num(x) ? Math.min(hi, Math.max(lo, Math.round(x))) : d);
-const uniqueName = (name, taken) => {
+const cap = (x, n) => String(x ?? "").trim().slice(0, n);
+const copyName = (base, taken, suffixFirst) => {
   const t = new Set(taken.map((n) => n.toLowerCase()));
-  let out = name;
-  for (let i = 1; t.has(out.toLowerCase()); i++) out = `${name} (copy${i > 1 ? ` ${i}` : ""})`;
-  return out;
+  for (let i = suffixFirst ? 1 : 0; ; i++) {
+    const out = i === 0 ? base : `${base} (copy${i > 1 ? ` ${i}` : ""})`;
+    if (!t.has(out.toLowerCase())) return out;
+  }
 };
-// -> { workout | null, skipped }. Does not touch state; the caller pushes the workout and saves.
-export function copyDay(view, dayId, state, has) {
-  const d = arr(view?.workouts).find((w) => w.id === dayId);
-  if (!d) return { workout: null, skipped: 0 };
+// One per copy action: remembers the customs made, so several days share them.
+export const newCopy = () => ({ map: new Map(), fresh: [] });
+function resolveEx(view, id, state, has, cx) {
+  const c = arr(view.customExercises).find((x) => x.id === id);
+  if (!c) return typeof id === "string" && has(id) ? id : null;
+  if (cx.map.has(id)) return cx.map.get(id);
+  const name = cap(c.name, 60);
+  if (!name || !MUSCLES.includes(c.primary)) return null;
+  const mine = [...state.customExercises, ...cx.fresh].find((e) => e.name.toLowerCase() === name.toLowerCase());
+  const ex = mine ?? {
+    id: `custom-${crypto.randomUUID()}`,
+    name,
+    primary: c.primary,
+    secondary: arr(c.secondary).filter((m) => MUSCLES.includes(m) && m !== c.primary).slice(0, 6),
+    images: 0, // photos and videos are not copied
+    ...(c.equipment ? { equipment: cap(c.equipment, 30) } : {}),
+  };
+  if (!mine) cx.fresh.push(ex);
+  cx.map.set(id, ex.id);
+  return ex.id;
+}
+const REFUSED = { workout: null, skipped: 0, refused: true };
+const make = (view, state, name, rows, cx, has, suffixFirst) => {
   const items = [];
   let skipped = 0;
-  for (const it of arr(d.items)) {
-    if (typeof it.exerciseId !== "string" || !has(it.exerciseId)) { skipped++; continue; }
-    const repMin = clamp(it.repMin, 1, 100, 8);
-    const step = num(it.step) && it.step > 0 ? Math.min(25, Math.round(it.step * 100) / 100) : DEFAULT_STEP;
-    items.push({ exerciseId: it.exerciseId, sets: clamp(it.sets, 1, 20, 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, 100, 12)), step });
+  for (const r of rows) {
+    const exerciseId = resolveEx(view, r.exerciseId, state, has, cx);
+    if (!exerciseId) { skipped++; continue; }
+    items.push({ exerciseId, ...r.rest });
   }
   if (!items.length) return { workout: null, skipped };
-  const base = String(d.name).trim().slice(0, 40) || "Workout";
-  return {
-    workout: {
-      id: crypto.randomUUID(),
-      name: uniqueName(base, state.workouts.map((w) => w.name)),
-      muscles: arr(d.muscles).slice(0, 8).map((m) => String(m).slice(0, 30)),
-      items,
-    },
-    skipped,
-  };
+  return { workout: { id: crypto.randomUUID(), name: copyName(cap(name, 40) || "Workout", state.workouts.map((w) => w.name), suffixFirst), muscles: [], items }, skipped };
+};
+// -> { workout | null, skipped }. Does not touch state; the caller pushes cx.fresh (new customs) and the workout, then saves.
+export function copyDay(view, dayId, state, has, cx = newCopy()) {
+  if (view?.canCopy !== true) return REFUSED;
+  const d = arr(view.workouts).find((w) => w.id === dayId);
+  if (!d) return { workout: null, skipped: 0 };
+  const rows = arr(d.items).map((it) => {
+    const repMin = clamp(it.repMin, 1, 100, 8);
+    const step = num(it.step) && it.step > 0 ? Math.min(25, Math.round(it.step * 100) / 100) : DEFAULT_STEP;
+    return { exerciseId: it.exerciseId, rest: { sets: clamp(it.sets, 1, 20, 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, 100, 12)), step } };
+  });
+  const r = make(view, state, d.name, rows, cx, has, false);
+  if (r.workout) r.workout.muscles = arr(d.muscles).slice(0, 8).map((m) => cap(m, 30));
+  return r;
+}
+// A finished workout becomes a plan day: its exercises in order, sets = sets done, reps from the reps done.
+export function dayFromSession(view, sessionId, state, has, cx = newCopy()) {
+  if (view?.canCopy !== true) return REFUSED;
+  const s = arr(view.sessions).find((x) => x.id === sessionId);
+  if (!s) return { workout: null, skipped: 0 };
+  const rows = arr(s.entries)
+    .filter((e) => arr(e.sets).length)
+    .map((e) => {
+      const reps = e.sets.map((t) => clamp(t.reps, 1, 100, 1));
+      return { exerciseId: e.exerciseId, rest: { sets: clamp(e.sets.length, 1, 20, 1), repMin: Math.min(...reps), repMax: Math.max(...reps), step: DEFAULT_STEP } };
+    });
+  return make(view, state, s.workoutName, rows, cx, has, true);
 }
 // Every day, one by one (names checked against the days added so far). Adds; never replaces.
-export function copyPlan(view, state, has) {
+export function copyPlan(view, state, has, cx = newCopy()) {
+  if (view?.canCopy !== true) return { added: [], skipped: 0, refused: true, cx };
   const added = [];
   let skipped = 0;
-  const tmp = { workouts: [...state.workouts] };
-  for (const w of arr(view?.workouts)) {
-    const r = copyDay(view, w.id, tmp, has);
+  const tmp = { ...state, workouts: [...state.workouts] };
+  for (const w of arr(view.workouts)) {
+    const r = copyDay(view, w.id, tmp, has, cx);
     skipped += r.skipped;
     if (r.workout) (added.push(r.workout), tmp.workouts.push(r.workout));
   }
-  return { added, skipped };
+  return { added, skipped, cx };
 }
 
 // h = friend, hp = friend with plan or coach, hpw = coach with body weight. The weight switch is one setting for any coach.
 const OPTS = { h: {}, hp: { plan: true }, hpw: { plan: true, weight: true } };
+for (const k of Object.keys(OPTS)) OPTS[k + "c"] = { ...OPTS[k], copy: true }; // + "c": may copy
 export const variantOf = (v, weightOn) =>
-  v.role === "coach" ? (weightOn ? "hpw" : "hp") : v.ticks?.plan ? "hp" : "h";
+  (v.role === "coach" ? (weightOn ? "hpw" : "hp") : v.ticks?.plan ? "hp" : "h") + (v.ticks?.copy ? "c" : "");
 const pairKind = (sharer, viewer) => `share ${sharer}>${viewer}`;
 
 export const MSG = {
