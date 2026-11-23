@@ -87,6 +87,7 @@ export function confirmSheet(
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
+  { danger = false } = {},
 ) {
   return new Promise((resolve) => {
     const scrim = document.createElement("div");
@@ -98,7 +99,7 @@ export function confirmSheet(
     const p = document.createElement("p");
     p.textContent = message;
     const ok = document.createElement("button");
-    ok.className = "btn btn-primary";
+    ok.className = danger ? "btn btn-warn" : "btn btn-primary";
     ok.textContent = confirmLabel;
     const no = document.createElement("button");
     no.className = "btn";

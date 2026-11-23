@@ -48,7 +48,7 @@ const SECTIONS = [
       <li>Tap the <b>⋮</b> menu (three dots, top right).</li>
       <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
     </ol>
-    <p><b>Important:</b> your data stays on this phone unless you turn on sync (see "Save with a passkey"). If you delete the app from your home screen, your data is deleted too. Use <b>Backup</b> first (see "Keep your data safe").</p>`,
+    <p><b>Important:</b> your data is kept on this phone. If you delete the app from your home screen, it is deleted too, unless sync is on or you saved a backup file. See "Sync" and "Backup file".</p>`,
   ],
   [
     "plan",
@@ -82,17 +82,18 @@ const SECTIONS = [
     "“Go heavier” advice",
     "Only a suggestion.",
     `<p>If you did all your reps on every set last time, the app says something like "Try 42.5 kg today". It means you may be ready for a bit more weight.</p>
-    <p>For body-weight exercises like push-ups, it suggests one more rep, or a little added weight if you have it. You can turn this off, and the Stuck reminder too, in Plan, Settings.</p>
+    <p>For body-weight exercises like push-ups, it suggests one more rep, or a little added weight if you have it. You can turn this off, and the Stuck reminder too, in <b>Plan</b>, then <b>Settings</b>.</p>
     <p>It is only a suggestion. Use the weight that feels right.</p>`,
   ],
   [
     "extras",
-    "Rest timer, plates, New best",
+    "Rest timer, photos, sound",
     "Small helpers while you train.",
-    `<p><b>Rest timer:</b> after you confirm a set, a countdown starts. Change its length in Plan, Settings.</p>
+    `<p><b>Rest timer:</b> after you tick a set, a countdown starts. Tap <b>−15s</b> or <b>+15s</b> to change it, or <b>Skip</b>. Set its length in <b>Plan</b>, then <b>Settings</b>.</p>
+    <p><b>Rest-over sound:</b> in <b>Settings</b> you can record your own sound or pick an audio file. Turn on <b>Notify me when rest is over</b> to get an alert when the phone is locked.</p>
+    <p><b>Your own photo or video:</b> on an exercise you added yourself, tap <b>Add photo or video</b>.</p>
     <p><b>Plates per side:</b> for bar exercises the app shows which plates to put on each side.</p>
-    <p><b>New best:</b> a star shows when a set beats everything you did before.</p>
-    <p><b>Drawings:</b> each exercise has a small drawing that shows how to do it.</p>`,
+    <p><b>New best:</b> a star shows when a set beats everything you did before.</p>`,
   ],
   [
     "progress",
@@ -102,49 +103,53 @@ const SECTIONS = [
     <p><b>Muscles:</b> how many sets each muscle got in the last 7 days, and which ones you missed.</p>
     <p><b>Body weight:</b> on Today, tap <b>Body weight</b> to log your weight now and then.</p>`,
   ],
-  [
-    "backup",
-    "Keep your data safe",
-    "Do this now and then.",
-    `<p>Without sync, your data lives only on this phone. A backup is a file you can save somewhere safe.</p>
-    <ol>
-      <li>Go to <b>Plan</b>, then <b>Backup and export</b>.</li>
-      <li>Tap <b>Export backup</b>. Do this about once a month, and before changing phones.</li>
-      <li>Tap <b>Full backup</b> instead if you added your own photos or videos. It keeps them too.</li>
-    </ol>
-    <p>To get your data back, tap <b>Import backup</b> and choose the file.</p>`,
-  ],
 ];
 
 const SYNC_SECTION = [
   "sync",
-  "Save with a passkey (sync)",
-  "Optional. Keeps your workouts safe.",
-  `<p>Go to <b>Plan</b>, then <b>Settings</b>, then <b>Sync and sign-in</b>, and tap <b>Turn on sync with Face ID</b>. It is your choice; the app works fine without it.</p>
-    <p>It saves your workouts, plan, settings, photos and sound notes. Videos stay on the phone.</p>
-    <p>Everything is locked on your phone before it is sent. Nobody else can read it, not even the app's server.</p>
-    <p><b>Recovery code:</b> the app shows it once. Save it, for example in your iPhone Passwords. You only need it if you lose all your devices. We cannot reset it.</p>
-    <p><b>Second device:</b> open the app on it, go to <b>Sync and sign-in</b>, and tap <b>I already use sync</b>.</p>
-    <p>Tap <b>Sync now</b> to save right away. To stop, tap <b>Sign out on this device</b>, or <b>Delete my cloud data</b> to remove what was saved. Your data on the phone stays.</p>`,
+  "Sync",
+  "Optional. Keeps your data if you lose your phone.",
+  `<p>Go to <b>Plan</b>, then <b>Sync and sign-in</b>, and tap <b>Turn on sync with Face ID</b>. The app works fine without it.</p>
+    <p>It saves your workouts, plan, settings, photos and rest sound. Videos stay on this phone. Your data is locked before it leaves the phone, so nobody else can read it, not even us.</p>
+    <p><b>Recovery code:</b> the app shows it once. Tap <b>Save in iPhone Passwords</b>. You need it if Face ID alone cannot open your data, for example on an Android phone. Nobody can reset it.</p>
+    <p><b>Another phone or iPad:</b> open the app there, go to <b>Sync and sign-in</b>, and tap <b>I already use sync</b>.</p>
+    <p>Syncing happens by itself. <b>Sign out on this device</b> stops it on this phone. <b>Delete my cloud data</b> removes the saved copy. Either way, your data on the phone stays.</p>`,
+];
+
+const BACKUP_SECTION = [
+  "backup",
+  "Backup file",
+  "A copy you keep yourself.",
+  `<p>A backup is a file you save somewhere safe, like Files or iCloud Drive. Do it about once a month, and before changing phones.</p>
+    <ol>
+      <li>Go to <b>Plan</b>, then <b>Backup and export</b>.</li>
+      <li>Tap <b>Export backup</b>. If you added your own photos, videos or sound, tap <b>Full backup</b> instead.</li>
+    </ol>
+    <p>To get your data back, tap <b>Import backup</b> and choose the file.</p>`,
 ];
 
 const SHARE_SECTION = [
   "sharing",
-  "Sharing and copying",
-  "Let a coach or friend look.",
-  `<p>Needs sync to be on. Go to <b>Plan</b>, then <b>People</b>. Set your name, then tap <b>Invite someone</b> and choose <b>Coach</b> or <b>Friend</b>. Send them the code or link. It works once and lasts 7 days. When they enter it, you tap <b>Allow</b>. Nothing is shared before that.</p>
-    <p>They can only look. A coach sees your workouts and plan. A friend sees your workouts, and your plan only if you tick it. Your body weight is hidden from a coach unless you switch on <b>Show my body weight to my coach</b>. Friends never see it.</p>
-    <p>Tick <b>Let them copy my workouts and plan</b> (on the invite, or later on the People screen) if you want them to be able to copy.</p>
-    <p>Tap <b>Remove</b> to stop sharing with someone at once. They keep what they already saw. That cannot be taken back.</p>
-    <p><b>If someone shared with you and allowed copying:</b> open them in People. You can copy one day, or the whole plan, or tap <b>Make a day from this workout</b> on a finished workout. The copy is yours and does not change when theirs does.</p>`,
+  "Coach and friends",
+  "Let someone look at your workouts.",
+  `<p>Turn on sync first. Then go to <b>Plan</b>, then <b>People</b>.</p>
+    <ol>
+      <li>Type your name, tap <b>Invite someone</b> and choose <b>Coach</b> or <b>Friend</b>.</li>
+      <li>Tap <b>Send the invite</b> and pick Messages or WhatsApp. The code works once, for 7 days.</li>
+      <li>When they enter it, open <b>People</b> again and tap <b>Allow</b>. Nothing is shared before that.</li>
+    </ol>
+    <p><b>What they see:</b> they can only look, never change anything. A coach sees your workouts and plan. A friend sees your workouts, and your plan only if you tick it. Body weight is hidden unless you switch on <b>Show my body weight to my coach</b>. Friends never see it.</p>
+    <p><b>Copying:</b> tick <b>Let them copy my workouts and plan</b> if they may copy days into their own plan.</p>
+    <p><b>Stop sharing:</b> tap <b>Remove</b>. They see nothing new from then on. What they already saw stays with them.</p>
+    <p><b>Got a code?</b> In <b>People</b>, tap <b>Enter a code</b>. Once they allow you, tap their name to see their workouts. If they let you copy, you can add a day or all days to your plan, or tap <b>Make a day from this workout</b>. The copy is yours and does not change when theirs does.</p>`,
 ];
 
 export function render(root, ctx) {
   const want = ctx.params.id; // "#/help/install" opens that section
   const open = (k) => (want ? k === want : k === "install" && !isInstalled());
   root.innerHTML = `<h1 class="title">How to use</h1>
-    <p class="muted" style="margin:0 0 12px">About two minutes to read. Tap a heading to open it.</p>
-    ${[...SECTIONS, SYNC_SECTION, SHARE_SECTION].map(
+    <p class="muted" style="margin:0 0 12px">Tap a heading to open it.</p>
+    ${[...SECTIONS, SYNC_SECTION, BACKUP_SECTION, SHARE_SECTION].map(
       ([
         k,
         title,

@@ -72,6 +72,7 @@ export function render(root, ctx) {
     (state.settings.backupNudgeDismissedAt == null ||
       now - state.settings.backupNudgeDismissedAt > 7 * DAY_MS) &&
     state.sessions.length > 0 &&
+    !ctx.sync?.active() &&
     (state.settings.lastExportAt == null ||
       now - state.settings.lastExportAt > 30 * DAY_MS);
 
@@ -86,13 +87,13 @@ export function render(root, ctx) {
     }
     ${
       newHere
-        ? `<div class="card row remind"><a class="grow" href="#/help"><b>New here? See how it works</b><br><span class="muted small">A short guide, about two minutes.</span></a>
+        ? `<div class="card row remind"><a class="grow" href="#/help"><b>New here? See how it works</b><br><span class="muted small">A short guide.</span></a>
           <button class="icon-btn" data-act="hide" data-k="newCard" aria-label="Dismiss new here card">✕</button></div>`
         : ""
     }
     ${
       remind
-        ? `<div class="card row remind"><a class="grow" href="#/plan">Back up your data: export a backup file from Plan.</a>
+        ? `<div class="card row remind"><a class="grow" href="${ctx.sync ? "#/sync" : "#/plan"}">${ctx.sync ? "Keep your workouts safe: turn on sync or save a backup file." : "Back up your data: export a backup file from Plan."}</a>
           <button class="icon-btn" data-act="dismiss" aria-label="Dismiss reminder">✕</button></div>`
         : ""
     }

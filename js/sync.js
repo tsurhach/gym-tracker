@@ -1,4 +1,5 @@
 import { isValidState } from "./store.js";
+import { ago } from "./friendly.js";
 import { SERVER } from "./push.js";
 import * as sc from "./synccrypto.js";
 import { allMediaKeys, readMedia, restoreMedia, deleteMedia, pendingDeletes, clearDeleted } from "./media.js";
@@ -613,7 +614,7 @@ export function createSync(h) {
       status ||
       (session
         ? session.lastSyncAt
-          ? `Last synced ${Math.max(0, Math.round((now() - session.lastSyncAt) / 60000))} min ago`
+          ? `Synced ${ago(session.lastSyncAt, now())}`
           : "Not synced yet"
         : "Sync off"),
     mediaNote: () => mnote,

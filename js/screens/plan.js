@@ -150,6 +150,8 @@ export function render(root, ctx) {
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
     <a class="card weight-card" href="#/help"><span>How to use this app</span><span class="muted small">Short guide</span></a>
+    ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}
+    ${ctx.share ? `<a class="card weight-card" href="#/people"><span>People: coach and friends</span><span class="muted small">View only</span></a>` : ""}
     ${section("g:goal", "Goal", goalHtml)}
     ${section(
       "g:change",
@@ -209,8 +211,7 @@ export function render(root, ctx) {
       </label>
       ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
       <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
-      ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}
-      ${ctx.share ? `<a class="card weight-card" href="#/people"><span>People: coach and friends</span><span class="muted small">View only</span></a>` : ""}`,
+`,
     )}
     ${section(
       "g:plates",
@@ -297,6 +298,8 @@ export function render(root, ctx) {
           !(await confirmSheet(
             `Delete workout "${w.name}"? Your history is kept.`,
             "Delete",
+            "Cancel",
+            { danger: true },
           ))
         )
           return;
@@ -562,7 +565,7 @@ function soundHtml() {
       ${canRecord() ? `<button type="button" class="btn" data-snd="rec">${snd.rec ? `Stop ${snd.secs}s` : "Record"}</button>` : ""}
     </div>
     ${snd.custom ? `<button type="button" class="btn" data-snd="default">Use default chime</button>` : ""}
-    <p class="muted small">Your sound plays while the app is open. Notifications use the iPhone's own sound. It is only in the full backup.</p>`;
+    <p class="muted small">Your sound plays while the app is open. Notifications use the iPhone's own sound. It is saved in the full backup, and synced if sync is on.</p>`;
 }
 
 function paintSound() {

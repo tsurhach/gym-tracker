@@ -1,7 +1,8 @@
 // #/people and #/join/<code>: invite a coach or friend, enter a code, allow or remove people.
 // Only reachable when SYNC_ENABLED (js/sync.js). Redraws only itself and never calls ctx.save with a render,
 // so nothing typed is lost (iOS taps do not blur inputs, so the name is copied at every tap).
-import { esc, confirmSheet, fmtDate } from "../ui.js";
+import { esc, confirmSheet, fmtDate, showBanner } from "../ui.js";
+import { friendlyError } from "../friendly.js";
 import { showCode } from "../share.js";
 
 let view = "home"; // home | invite | code | enter | accept
@@ -23,11 +24,15 @@ export function renderJoin(root, ctx) {
   if (!ctx.sync?.active()) {
     const code = String(ctx.params.id ?? "");
     root.innerHTML = `<h1 class="title">Join with a code</h1>
-      <section class="card"><p>Open <b>Gym Tracker</b> from your home screen, go to <b>Plan</b>, then <b>People</b>, then <b>Enter a code</b>, and type:</p>
-        <p style="font:600 22px/1.5 ui-monospace,monospace">${esc(code)}</p>
+      <section class="card"><p>Someone invited you to see their workouts in <b>Gym Tracker</b>.</p>
+        <ol><li>Do not have the app yet? <a href="#/help/install">Add it to your home screen</a> first.</li><li>Open it from your home screen, go to <b>Plan</b>, then <b>Sync and sign-in</b>, and turn on sync.</li><li>Go to <b>Plan</b>, then <b>People</b>, tap <b>Enter a code</b>, and type:</li></ol>
+        <p style="font:600 22px/1.5 ui-monospace,monospace">${esc(showCode(code))}</p>
         <button class="btn" data-copy>Copy code</button></section>`;
     root.querySelector("[data-copy]").onclick = () =>
-      navigator.clipboard?.writeText(code).catch(() => {});
+      navigator.clipboard
+        ?.writeText(code)
+        .then(() => showBanner("Copied.", { kind: "ok" }))
+        .catch(() => {});
     return;
   }
   view = "enter";
@@ -63,7 +68,7 @@ export function render(root, ctx) {
           draw();
       })
       .catch((e) => {
-        error = e.message;
+        error = friendlyError(e);
         draw();
       });
   draw();
@@ -79,35 +84,37 @@ const nameCard = (ctx) =>
       <input data-name type="text" autocomplete="off" maxlength="40" value="${esc(ctx.state.settings.shareName ?? "")}" /></label>
     <p class="muted small">Only the people you allow see it.</p></section>`;
 
+const weightCard = (ctx) => `<section class="card"><label class="setting">Show my body weight to my coach <input type="checkbox" data-weight${ctx.state.settings.shareWeight === true ? " checked" : ""} /></label>
+      <p class="muted small">Off by default. Friends never see it.</p></section>`;
+
 function html(ctx, sh) {
-  const err = error ? `<p role="alert">${esc(error)}</p>` : "";
+  const err = error ? `<p class="err" role="alert">${esc(error)}</p>` : "";
   const dis = busy ? " disabled" : "";
   const back = `<a class="btn" href="#/plan">Back to Plan</a>`;
   if (view === "invite")
     return `<h1 class="title">Invite someone</h1>${sh.nameOf() ? "" : nameCard(ctx)}
       <section class="card">
-        <label class="setting">They are my <select data-role><option value="coach"${pickRole === "coach" ? " selected" : ""}>Coach</option><option value="friend"${pickRole === "friend" ? " selected" : ""}>Friend</option></select></label>
+        <div class="seg" role="group" aria-label="They are my"><button class="chip" data-act="role" data-role="coach" aria-pressed="${pickRole === "coach"}">Coach</button><button class="chip" data-act="role" data-role="friend" aria-pressed="${pickRole === "friend"}">Friend</button></div>
         ${pickRole === "friend" ? `<label class="setting">Also show my plan <input type="checkbox" data-plan${pickPlan ? " checked" : ""} /></label>` : ""}
         <label class="setting">Let them copy my workouts and plan <input type="checkbox" data-copyinv${pickCopy ? " checked" : ""} /></label>
-        <p class="muted small">They only see your workouts, never change anything. You choose who sees what, and can remove them at any time.</p>
-      </section>${err}
+        <p class="muted small">${pickRole === "coach" ? "A coach sees your workouts and plan. They can only look, never change anything." : "A friend sees your workouts. They can only look, never change anything."} You can remove them at any time.</p>
+      </section>${pickRole === "coach" ? weightCard(ctx) : ""}${err}
       <button class="btn btn-primary" data-act="make"${dis}>Make a code</button><button class="btn" data-act="home">Cancel</button>`;
   if (view === "code" && made)
     return `<h1 class="title">Your invite</h1>
-      <section class="card"><p>Send this code. It works once and is valid for 7 days. You still choose whether to allow them.</p>
-        <p style="font:600 24px/1.5 ui-monospace,monospace;letter-spacing:1px">${esc(showCode(made.code))}</p>
-        <p class="muted small" style="word-break:break-all">${esc(made.link)}</p></section>
+      <section class="card"><p>Send this code or link. It works once, for 7 days. When they enter it, come back here and tap <b>Allow</b> under "Waiting for you".</p>
+        <p style="font:600 24px/1.5 ui-monospace,monospace;letter-spacing:1px">${esc(showCode(made.code))}</p></section>
       ${typeof navigator !== "undefined" && navigator.share ? `<button class="btn btn-primary" data-act="share">Send the invite</button>` : ""}
       <button class="btn" data-act="copy">Copy the link</button><button class="btn" data-act="home">Done</button>`;
   if (view === "enter")
     return `<h1 class="title">Enter a code</h1>${sh.nameOf() ? "" : nameCard(ctx)}
-      <section class="card"><input data-code type="text" autocapitalize="characters" autocomplete="off" aria-label="Invite code" value="${esc(text)}" /></section>${err}
+      <section class="card"><p>Type the code you were sent.</p><input data-code type="text" autocapitalize="characters" autocomplete="off" aria-label="Invite code" placeholder="ABCD-2345-XY" value="${esc(text)}" /></section>${err}
       <button class="btn btn-primary" data-act="next"${dis}>Next</button><button class="btn" data-act="home">Cancel</button>`;
   if (view === "accept" && peeked) {
     const f = peeked.from;
     return `<h1 class="title">${esc(f.name)} invites you</h1>${sh.nameOf() ? "" : nameCard(ctx)}
       <section class="card"><p>${esc(f.name)} invites you to see their workouts as their ${role(f.role)}.</p>
-        <label class="setting">Also let ${esc(f.name)} see my workouts <input type="checkbox" data-back /></label>
+        ${f.role === "coach" ? "" : `<label class="setting">Also let ${esc(f.name)} see my workouts (not my plan) <input type="checkbox" data-back /></label>`}
         <p class="muted small">${esc(f.name)} must allow you before you see anything.</p></section>${err}
       <button class="btn btn-primary" data-act="accept"${dis}>Accept</button><button class="btn" data-act="home">Cancel</button>`;
   }
@@ -135,7 +142,7 @@ function html(ctx, sh) {
       const last = sh
         .cached(c.id)
         ?.view?.sessions?.reduce((m, s) => Math.max(m, s.startedAt), 0);
-      return `<a class="card block" href="#/person/${encodeURIComponent(c.id)}"><div class="row"><b class="grow">${esc(c.name)}</b><span class="muted small">${last ? `trained ${esc(fmtDate(last))}` : ""}</span></div></a>`;
+      return `<a class="card block" href="#/person/${encodeURIComponent(c.id)}"><div class="row"><b class="grow">${esc(c.name)}</b><span class="muted small">${last ? `trained ${esc(fmtDate(last))}` : sh.cached(c.id) ? "" : "Waiting for them to allow you"}</span><span aria-hidden="true">›</span></div></a>`;
     })
     .join("");
   const open = (d?.invites ?? [])
@@ -146,18 +153,17 @@ function html(ctx, sh) {
         <button class="btn" data-act="cancel" data-id="${esc(i.lookup)}"${dis}>Cancel invite</button></section>`,
     )
     .join("");
-  const w = ctx.state.settings.shareWeight === true;
   return `<h1 class="title">People</h1>
     <p class="muted">Let a coach or friend look at your workouts. View only, and your data stays locked: only people you allow can open it.</p>
+    <button class="btn btn-primary" data-act="invite">Invite someone</button>
+    <button class="btn" data-act="enter">Enter a code</button>
     ${nameCard(ctx)}
-    <section class="card"><label class="setting">Show my body weight to my coach <input type="checkbox" data-weight${w ? " checked" : ""} /></label>
-      <p class="muted small">Off by default. Friends never see it.</p></section>${err}
+    ${(d?.viewers ?? []).some((v) => v.role === "coach") ? weightCard(ctx) : ""}${err}
     ${waiting ? `<h3>Waiting for you</h3>${waiting}` : ""}
     ${can ? `<h3>Can see your workouts</h3>${can}` : ""}
     ${see ? `<h3>You can see</h3>${see}` : ""}
     ${open ? `<h3>Open invites</h3>${open}` : ""}
-    <button class="btn btn-primary" data-act="invite">Invite someone</button>
-    <button class="btn" data-act="enter">Enter a code</button>${back}`;
+    ${back}`;
 }
 
 async function lookUp(sh, ctx, draw, getText) {
@@ -166,7 +172,7 @@ async function lookUp(sh, ctx, draw, getText) {
     error = "";
     view = "accept";
   } catch (e) {
-    error = e.message;
+    error = friendlyError(e);
   }
   draw();
 }
@@ -190,7 +196,7 @@ function wire(root, ctx, sh, draw) {
       await fn();
       data = await sh.list();
     } catch (e) {
-      error = e.message ?? "Something went wrong.";
+      error = friendlyError(e);
     }
     busy = false;
     draw();
@@ -217,21 +223,29 @@ function wire(root, ctx, sh, draw) {
       navigator
         .share({
           title: "Gym Tracker",
-          text: `${sh.nameOf()} invites you to see their workouts. Code: ${showCode(made.code)}`,
+          text: `${sh.nameOf()} invites you to see their workouts. Open the link on your iPhone. Code: ${showCode(made.code)}`,
           url: made.link,
         })
         .catch(() => {}),
-    copy: () => navigator.clipboard?.writeText(made.link).catch(() => {}),
+    role: (_, t) => ((pickRole = t.dataset.role), draw()),
+    copy: () =>
+      navigator.clipboard
+        ?.writeText(made.link)
+        .then(() => showBanner("Copied.", { kind: "ok" }))
+        .catch(() => {}),
     next: () => {
       text = root.querySelector("[data-code]").value;
       return lookUp(sh, ctx, draw, () => text);
     },
-    accept: () =>
-      run(async () => {
-        await sh.accept(peeked, root.querySelector("[data-back]").checked);
+    accept: () => {
+      const who = peeked.from.name;
+      return run(async () => {
+        await sh.accept(peeked, !!root.querySelector("[data-back]")?.checked);
         home();
         ctx.go("#/people");
-      }),
+        showBanner(`Sent. You will see ${who}'s workouts once they tap Allow.`, { kind: "ok" });
+      });
+    },
     allow: (id) => run(() => sh.allow(find("pending", id))),
     decline: (id) => run(() => sh.decline(find("pending", id))),
     cancel: (id) => run(() => sh.cancelInvite(find("invites", id))),
@@ -241,6 +255,8 @@ function wire(root, ctx, sh, draw) {
         !(await confirmSheet(
           `Remove ${p.name}? They stop seeing anything new. What they already saw stays with them.`,
           "Remove",
+          "Cancel",
+          { danger: true },
         ))
       )
         return;
@@ -250,7 +266,7 @@ function wire(root, ctx, sh, draw) {
   root.onclick = (e) => {
     syncName();
     const t = e.target.closest("[data-act]");
-    if (t && !t.disabled) acts[t.dataset.act](t.dataset.id);
+    if (t && !t.disabled) acts[t.dataset.act](t.dataset.id, t);
   };
   root.onchange = (e) => {
     const t = e.target;
@@ -259,9 +275,6 @@ function wire(root, ctx, sh, draw) {
       ctx.state.settings.shareWeight = t.checked;
       ctx.save({ render: false });
       sh.publish().catch(() => {}); // switching it off must take effect now, not at the next sync
-    } else if (t.matches("[data-role]")) {
-      pickRole = t.value;
-      draw();
     } else if (t.matches("[data-plan]")) pickPlan = t.checked;
     else if (t.matches("[data-copyinv]")) pickCopy = t.checked;
     else if (t.matches("[data-ticks],[data-copyok]")) {
