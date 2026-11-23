@@ -1,8 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
-import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { precacheList, computeVersion } from "../tools/stamp-sw.mjs";
+import { readFileSync, existsSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
+import { join } from "node:path";
+import { precacheList, computeVersion, computeImageVersion } from "../tools/stamp-sw.mjs";
 
 const root = new URL("../", import.meta.url);
 const sw = readFileSync(new URL("sw.js", root), "utf8");
@@ -117,6 +120,7 @@ function boot({ failOn } = {}) {
   return { skipped, stores, net, fire, listeners, shown, clients, setOffline: (v) => (offline = v) };
 }
 const VERSION = sw.match(/const VERSION = "([^"]*)";/)[1];
+const IMG_VERSION = sw.match(/const IMG_VERSION = "([^"]*)";/)[1];
 const req = (path, mode = "no-cors", method = "GET") => ({ url: "http://x.test/app/" + path, method, mode });
 
 test("install caches every PRECACHE url into the versioned shell cache", async () => {
@@ -132,10 +136,10 @@ test("install fails if any precached file fails", async () => {
 
 test("activate deletes only old gym-tracker shell and image caches", async () => {
   const w = boot();
-  for (const n of ["gym-tracker-shell-old", "gym-tracker-img-v1", "gym-tracker-img-v2", "other-app-v1", `gym-tracker-shell-${VERSION}`])
+  for (const n of ["gym-tracker-shell-old", "gym-tracker-img-v1", "gym-tracker-img-v2", `gym-tracker-img-${IMG_VERSION}`, "other-app-v1", `gym-tracker-shell-${VERSION}`])
     w.stores.set(n, new Map());
   await w.fire("activate");
-  assert.deepEqual([...w.stores.keys()].sort(), ["gym-tracker-img-v2", `gym-tracker-shell-${VERSION}`, "other-app-v1"].sort());
+  assert.deepEqual([...w.stores.keys()].sort(), [`gym-tracker-img-${IMG_VERSION}`, `gym-tracker-shell-${VERSION}`, "other-app-v1"].sort());
 });
 
 test("shell requests come from the cache without touching the network", async () => {
@@ -161,7 +165,7 @@ test("offline navigation falls back to index.html; cross-origin and POST pass th
 test("images are cached on first fetch in the unversioned image cache", async () => {
   const w = boot();
   await w.fire("fetch", { request: req("img/ex/a/0.svg") });
-  assert.ok(w.stores.get("gym-tracker-img-v2").size === 1);
+  assert.ok(w.stores.get(`gym-tracker-img-${IMG_VERSION}`).size === 1);
   await w.fire("fetch", { request: req("img/ex/a/0.svg") });
   assert.equal(w.net.length, 1);
 });
@@ -181,7 +185,7 @@ test("icons come from the versioned shell cache, not the image cache", async () 
   const res = await w.fire("fetch", { request: req("icons/icon-192.png") });
   assert.match(await res.text(), /icons\/icon-192\.png/);
   assert.deepEqual(w.net, []);
-  assert.equal(w.stores.has("gym-tracker-img-v2"), false);
+  assert.equal(w.stores.has(`gym-tracker-img-${IMG_VERSION}`), false);
 });
 
 test("a push shows one 'Rest over' notification, replacing the last", async () => {

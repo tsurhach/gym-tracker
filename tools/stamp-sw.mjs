@@ -1,6 +1,6 @@
 // Stamps sw.js with a content hash of the precached files: `npm run stamp`.
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
@@ -25,7 +25,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const path = new URL("sw.js", ROOT);
   const sw = readFileSync(path, "utf8");
   const version = computeVersion(sw);
-  const out = sw.replace(/const VERSION = "[^"]*";/, `const VERSION = "${version}";`);
+  const out = sw
+    .replace(/const VERSION = "[^"]*";/, `const VERSION = "${version}";`)
+    .replace(/const IMG_VERSION = "[^"]*";/, `const IMG_VERSION = "${computeImageVersion()}";`);
   if (out !== sw) writeFileSync(path, out);
   console.log(`sw.js VERSION = ${version}`);
 }
