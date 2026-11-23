@@ -1,7 +1,7 @@
 import { isValidState } from "./store.js";
 import { SERVER } from "./push.js";
 import * as sc from "./synccrypto.js";
-import { allMediaKeys, readMedia, restoreMedia, deleteBlob } from "./media.js";
+import { allMediaKeys, readMedia, restoreMedia, deleteMedia, pendingDeletes, clearDeleted } from "./media.js";
 import { encodeMedia, decodeMedia } from "./backup.js";
 
 // Hidden by default: while false nothing below runs, no route, no link, no network.
@@ -175,7 +175,7 @@ export function createSync(h) {
   let pending = null; // sign-in waiting for the recovery code
   let status = "";
   let mnote = ""; // plain message about photos and sound, shown on the sync screen
-  const files = h.media ?? { keys: allMediaKeys, read: readMedia, write: (k, v) => restoreMedia([{ key: k, value: v }]), remove: deleteBlob };
+  const files = h.media ?? { keys: allMediaKeys, read: readMedia, write: (k, v) => restoreMedia([{ key: k, value: v }]), remove: (k) => deleteMedia(k, false), deleted: pendingDeletes, clearDeleted };
 
   try {
     session = JSON.parse(h.storage.getItem(SESSION_KEY));
@@ -261,6 +261,7 @@ export function createSync(h) {
         }
       }
       const have = new Set(await files.keys());
+      const deletedHere = new Set(files.deleted()); // explicit user deletes only; a missing file is never one
       const saveRefs = () => {
         const st = h.getState();
         st.mediaRefs = { ...(st.mediaRefs ?? {}), ...mine };
@@ -328,15 +329,12 @@ export function createSync(h) {
             delete seen[key];
           } else if (local && live && !sn) await get(key, live); // never in sync here: the cloud copy wins, nothing is overwritten
           else if (local) await put(key, local, lh);
-          else if (live && sn && have.size === 0 && Object.keys(seen).length >= 3) {
-            // ponytail: every photo gone at once looks like a cleared browser, not a delete; touch nothing
-            note ||= NOTE_LATER;
-          } else if (live && sn) {
+          else if (live && deletedHere.has(key)) {
             // deleted here: tell the other devices; the server copy goes after the state is up
             trash.push(live.id);
             refs[key] = mine[key] = { id: null, updatedAt: Math.max(t, live.updatedAt + 1) };
             delete seen[key];
-          } else if (live) await get(key, live);
+          } else if (live) await get(key, live); // missing but not deleted by the user: fetch it again if the server has it
           else delete seen[key];
         } catch {
           note ||= NOTE_LATER;
@@ -346,6 +344,7 @@ export function createSync(h) {
         out.changed = true;
         saveRefs();
       }
+      files.clearDeleted([...deletedHere]);
       mnote = note;
     } catch {
       mnote = NOTE_LATER;

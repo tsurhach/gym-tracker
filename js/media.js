@@ -156,6 +156,7 @@ export async function putMedia(id, file) {
           ]),
         };
   await tx("readwrite", (s) => s.put(rec, id));
+  if (rec.kind === "video") setPending([...new Set([...pendingDeletes(), id])]); // videos never sync: the old photo is gone
 }
 
 // null when there is none or IndexedDB is unavailable.
@@ -167,9 +168,27 @@ export async function getMedia(id) {
   }
 }
 
-export async function deleteMedia(id) {
+// Sync must only treat a file as deleted when the user deleted (or replaced by a video) it here, never
+// because it is missing from the store. Those explicit actions are remembered until sync has told the cloud.
+const DEL_KEY = "gymtracker.mediadel";
+export function pendingDeletes() {
+  try {
+    return JSON.parse(localStorage.getItem(DEL_KEY)) ?? [];
+  } catch {
+    return [];
+  }
+}
+function setPending(keys) {
+  try {
+    localStorage.setItem(DEL_KEY, JSON.stringify(keys));
+  } catch {}
+}
+export const clearDeleted = (keys) => setPending(pendingDeletes().filter((k) => !keys.includes(k)));
+
+export async function deleteMedia(id, remember = true) {
   try {
     await tx("readwrite", (s) => s.delete(id));
+    if (remember) setPending([...new Set([...pendingDeletes(), id])]);
   } catch {}
 }
 

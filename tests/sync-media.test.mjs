@@ -40,6 +40,11 @@ function device(server, auth, { state = emptyState(), media = {}, now } = {}) {
     applied: 0,
     key: null,
     media: new Map(Object.entries(media)),
+    pending: new Set(), // keys the user deleted here
+    userDelete(k) {
+      this.media.delete(k);
+      this.pending.add(k);
+    },
     log: [],
   };
   const files = {
@@ -47,6 +52,8 @@ function device(server, auth, { state = emptyState(), media = {}, now } = {}) {
     read: async (k) => dev.media.get(k) ?? null,
     write: async (k, v) => void dev.media.set(k, v),
     remove: async (k) => void dev.media.delete(k),
+    deleted: () => [...dev.pending],
+    clearDeleted: (ks) => ks.forEach((k) => dev.pending.delete(k)),
   };
   dev.sync = createSync({
     getState: () => dev.state,
@@ -143,7 +150,7 @@ test("deleting a photo deletes it on the other device and later on the server", 
   assert.ok(b.media.has("ex-1"));
   const oldId = a.state.mediaRefs["ex-1"].id;
   assert.ok(idx(server)[oldId]);
-  a.media.delete("ex-1");
+  a.userDelete("ex-1");
   a.sync.changed();
   await a.sync.syncNow();
   assert.equal(a.state.mediaRefs["ex-1"].id, null);
@@ -336,16 +343,17 @@ test("a ref is saved as soon as its file is up, so an interrupted pass leaves no
   assert.deepEqual(seenAtSecond.length, 1, "first ref already saved when the second upload started");
 });
 
-test("photos missing all at once are not read as deleted (S3)", async () => {
-  const { a, b } = await pair({ a: { media: { p1: photo("1"), p2: photo("2"), p3: photo("3") } } });
+test("a file missing from the store is not a delete: no marker, others keep it, this device fetches it again (S3)", async () => {
+  const { a, b } = await pair({ a: { media: { p1: photo("1"), p2: photo("2") } } });
   a.sync.changed();
   await a.sync.syncNow();
-  a.media.clear(); // e.g. the browser cleared its media store
+  a.media.clear(); // lost without the user deleting anything (cleared browser data)
   a.sync.changed();
   await a.sync.syncNow();
   assert.ok(Object.values(a.state.mediaRefs).every((r) => r.id), "no delete markers");
+  assert.equal(await text(a.media.get("p1")), "1", "downloaded again");
   await b.sync.syncNow();
-  assert.equal(b.media.size, 3);
+  assert.equal(b.media.size, 2);
 });
 
 
