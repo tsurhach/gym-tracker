@@ -1,5 +1,5 @@
-import { MUSCLES } from "../constants.js";
-import { muscleTally, nextWorkoutId } from "../logic.js";
+import { MUSCLES, WEEKDAYS } from "../constants.js";
+import { muscleTally, nextWorkoutId, scheduleToday } from "../logic.js";
 import { discardSession, startSession } from "../session.js";
 import { confirmSheet, esc, fmtKg } from "../ui.js";
 import { dayNum, localDate } from "../weight.js";
@@ -41,16 +41,24 @@ export function render(root, ctx) {
       <a class="btn btn-primary start" href="#/workout">Resume workout</a>
       <button class="btn btn-warn" data-act="discard">Discard workout</button>`;
   } else {
-    const nextId = nextWorkoutId(state.workouts, state.sessions);
-    const next = state.workouts.find((w) => w.id === nextId);
+    const sch = scheduleToday(state);
+    const nextId =
+      sch.kind === "train" ? sch.workoutId : sch.kind === "rest" ? sch.next.workoutId : nextWorkoutId(state.workouts, state.sessions);
+    const next = state.workouts.find((w) => w.id === nextId) ?? state.workouts[0];
     const others = state.workouts.filter((w) => w !== next);
+    const heading = { none: "Up next", train: sch.done ? "Done for today ✓" : "Today", rest: "Rest day" }[sch.kind];
+    const count = `${next.items.length} ${next.items.length === 1 ? "exercise" : "exercises"}`;
     main = `<section class="card">
-        <h3 style="margin-top:0">Up next</h3>
-        <h2>${esc(next.name)}</h2>
+        <h3 style="margin-top:0">${heading}</h3>
+        ${
+          sch.kind === "rest"
+            ? `<h2>Next: ${esc(next.name)} on ${WEEKDAYS[sch.next.weekday]}</h2>`
+            : `<h2${sch.done ? ` class="muted"` : ""}>${esc(next.name)}</h2>
         <div class="tags">${tags(next)}</div>
-        <p class="muted small">${next.items.length} ${next.items.length === 1 ? "exercise" : "exercises"}</p>
+        <p class="muted small">${count}</p>`
+        }
       </section>
-      ${startBtn(next, true)}
+      ${sch.kind === "train" && sch.done ? "" : sch.kind === "rest" ? `<button class="btn" data-act="start" data-w="${esc(next.id)}">Train anyway: Start ${esc(next.name)}</button>` : startBtn(next, true)}
       ${
         others.length
           ? `<h3>Or start another</h3>${others

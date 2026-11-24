@@ -11,6 +11,7 @@ import {
   beats,
   isStuck,
   isPersonalBest,
+  scheduleToday,
   nextWorkoutId,
   muscleTally,
   platesPerSide,
@@ -372,4 +373,24 @@ test("exerciseHistory returns the entry note (empty for old entries)", () => {
   const ses = (t, note) => ({ startedAt: t, entries: [{ exerciseId: "b", sets: [{ weight: 1, reps: 1, done: true }], ...(note ? { note } : {}) }] });
   const h = exerciseHistory([ses(1, "wide grip"), ses(2)], "b");
   assert.deepEqual(h.map((x) => x.note), ["wide grip", ""]);
+});
+
+test("scheduleToday: none, fixed, next, deleted id, rest wrap, done, junk", () => {
+  const ws = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  const mon = new Date(2026, 10, 23, 12); // Monday
+  const sat = new Date(2026, 10, 28, 12);
+  const st = (days, sessions = []) => ({ workouts: ws, sessions, settings: days === undefined ? {} : { schedule: { days } } });
+  assert.deepEqual(scheduleToday(st(undefined), mon), { kind: "none" });
+  assert.deepEqual(scheduleToday(st({}), mon), { kind: "none" });
+  assert.deepEqual(scheduleToday(st({ 1: "b" }), mon), { kind: "train", workoutId: "b", done: false });
+  assert.deepEqual(scheduleToday(st({ 1: "next" }), mon), { kind: "train", workoutId: "a", done: false });
+  assert.deepEqual(scheduleToday(st({ 1: "gone" }, [{ startedAt: 1, workoutId: "a" }]), mon), { kind: "train", workoutId: "b", done: false });
+  assert.deepEqual(scheduleToday(st({ 1: "next", 3: "c" }), sat), { kind: "rest", next: { workoutId: "a", weekday: 1 } }); // wraps over Sunday
+  assert.deepEqual(scheduleToday(st({ 0: "c" }), sat), { kind: "rest", next: { workoutId: "c", weekday: 0 } });
+  const did = [{ startedAt: new Date(2026, 10, 23, 8).getTime(), workoutId: "b" }];
+  assert.deepEqual(scheduleToday(st({ 1: "b" }, did), mon), { kind: "train", workoutId: "b", done: true });
+  assert.deepEqual(scheduleToday(st({ 1: "next" }, did), mon), { kind: "train", workoutId: "b", done: true });
+  for (const junk of ["x", [1, 2], 5, null, { 9: "a", z: "b" }])
+    assert.deepEqual(scheduleToday({ workouts: ws, sessions: [], settings: { schedule: { days: junk } } }, mon), { kind: "none" });
+  assert.deepEqual(scheduleToday({ workouts: ws, sessions: [], settings: { schedule: "oops" } }, mon), { kind: "none" });
 });

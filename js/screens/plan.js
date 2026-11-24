@@ -1,4 +1,4 @@
-import { GOALS, MUSCLES } from "../constants.js";
+import { GOALS, MUSCLES, WEEKDAYS } from "../constants.js";
 import { PLATE_SIZES, gymPlates, parseNum, plateRule } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
 import { applyGoal, deleteCustomExercise } from "../session.js";
@@ -248,6 +248,25 @@ function workoutHtml(w, ctx, i, n) {
   );
 }
 
+// Weekly schedule (settings.schedule.days): chips pick the days, a select per day picks the workout.
+function scheduleHtml(state) {
+  const raw = state.settings.schedule?.days;
+  const days = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const on = WEEKDAYS.map((_, d) => d).filter((d) => Object.hasOwn(days, d));
+  return `<p class="muted small" style="margin-top:0">Pick your training days. Today will show that day's workout.</p>
+    <div class="seg" role="group" aria-label="Training days">${WEEKDAYS.map((n, d) => `<button class="chip" data-sch="day" data-d="${d}" aria-pressed="${on.includes(d)}">${n}</button>`).join("")}</div>
+    ${on
+      .map(
+        (d) => `<label class="setting">${WEEKDAYS[d]}
+        <select data-sch="sel" data-d="${d}" aria-label="Workout on ${WEEKDAYS[d]}">
+          <option value="next">Next in rotation</option>
+          ${state.workouts.map((w) => `<option value="${esc(w.id)}"${days[d] === w.id ? " selected" : ""}>${esc(w.name)}</option>`).join("")}
+        </select></label>`,
+      )
+      .join("")}
+    ${on.length ? `<button class="btn" data-sch="clear" style="margin-top:8px">Clear schedule</button>` : ""}`;
+}
+
 let versionText = ""; // last known, so a redraw does not blank the line
 
 export function render(root, ctx) {
@@ -272,6 +291,7 @@ export function render(root, ctx) {
     ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}
     ${ctx.share ? `<a class="card weight-card" href="#/people"><span>People: coach and friends</span><span class="muted small">View only</span></a>` : ""}
     ${section("g:goal", "Default sets and reps", goalHtml)}
+    ${section("g:schedule", "Weekly schedule", `<div data-schedule>${scheduleHtml(state)}</div>`)}
     ${section(
       "g:change",
       "Change the whole plan",
@@ -589,6 +609,23 @@ export function render(root, ctx) {
     itemEl(dayEl(root, w.id), id)?.querySelector("[data-handle]")?.focus();
     ctx.save({ render: false });
   });
+
+  // Schedule: repaints only its own box, so no full redraw.
+  const schedule = (e) => {
+    const t = e.target.closest?.("[data-sch]");
+    if (!t || (e.type === "click") === (t.dataset.sch === "sel")) return;
+    const days = { ...settings.schedule?.days };
+    if (t.dataset.sch === "day") {
+      if (Object.hasOwn(days, t.dataset.d)) delete days[t.dataset.d];
+      else days[t.dataset.d] = "next";
+    } else if (t.dataset.sch === "sel") days[t.dataset.d] = t.value;
+    if (t.dataset.sch === "clear" || !Object.keys(days).length) delete settings.schedule;
+    else settings.schedule = { days };
+    if (t.dataset.sch !== "sel") root.querySelector("[data-schedule]").innerHTML = scheduleHtml(state);
+    ctx.save({ render: false });
+  };
+  root.addEventListener("click", schedule);
+  root.addEventListener("change", schedule);
 
   root.addEventListener("click", (e) => {
     const b = e.target.closest("[data-snd]");

@@ -1,4 +1,5 @@
 import { MUSCLES } from "./constants.js";
+import { localDate } from "./weight.js";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -170,6 +171,33 @@ export function nextWorkoutId(workouts, sessions) {
   const last = sessions.reduce((m, x) => (x.startedAt > m.startedAt ? x : m));
   const i = workouts.findIndex((w) => w.id === last.workoutId);
   return i === -1 ? workouts[0].id : workouts[(i + 1) % workouts.length].id;
+}
+
+// Weekly schedule: settings.schedule = { days: { 1: "<workoutId>", 3: "next" } } (key = JS weekday 0 Sun..6 Sat).
+// "next", an unknown id or junk = the next day in rotation. No usable days = { kind: "none" } (rotation UI as before).
+// -> none | { kind: "train", workoutId, done } | { kind: "rest", next: { workoutId, weekday } }
+export function scheduleToday(state, date = new Date()) {
+  const raw = state?.settings?.schedule?.days;
+  const days = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const set = new Set(Object.keys(days).filter((k) => /^[0-6]$/.test(k)).map(Number));
+  const ws = Array.isArray(state?.workouts) ? state.workouts : [];
+  const sessions = Array.isArray(state?.sessions) ? state.sessions : [];
+  if (!set.size || !ws.length) return { kind: "none" };
+  const rotation = () => nextWorkoutId(ws, sessions);
+  const resolve = (wd) => (ws.some((w) => w.id === days[wd]) ? days[wd] : rotation());
+  const wd = date.getDay();
+  if (set.has(wd)) {
+    const today = localDate(date);
+    const did = sessions.filter((s) => localDate(new Date(s.startedAt)) === today);
+    const fixed = ws.some((w) => w.id === days[wd]);
+    const hit = fixed ? did.find((s) => s.workoutId === days[wd]) : did.at(-1);
+    return { kind: "train", workoutId: hit ? hit.workoutId : resolve(wd), done: !!hit };
+  }
+  for (let n = 1; n <= 7; n++) {
+    const d = (wd + n) % 7;
+    if (set.has(d)) return { kind: "rest", next: { workoutId: resolve(d), weekday: d } };
+  }
+  return { kind: "none" };
 }
 
 export function muscleTally(sessions, now) {

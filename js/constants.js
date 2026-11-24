@@ -21,4 +21,6 @@ export const GOALS = {
   endurance: { label: "Endurance", repMin: 12, repMax: 20, sets: 3 },
 };
 
+export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export const DEFAULT_STEP = 2.5;

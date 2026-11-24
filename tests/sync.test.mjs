@@ -206,3 +206,11 @@ test("restore with sync on adds and never tombstones", () => {
   assert.deepEqual(Object.keys(r.deleted), ["gone"]);
   assert.ok(r.sessions.find((x) => x.id === "gone").updatedAt > 7);
 });
+
+test("settings.schedule survives merge (newer settings record wins whole)", () => {
+  const sched = { days: { 1: "w1", 3: "next" } };
+  const a = st({ settings: { goal: "muscle", updatedAt: 5 } });
+  const b = st({ settings: { goal: "muscle", schedule: sched, updatedAt: 9 } });
+  assert.deepEqual(merge(a, b).state.settings.schedule, sched);
+  assert.deepEqual(merge(b, a).state.settings.schedule, sched);
+});

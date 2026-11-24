@@ -60,7 +60,8 @@ const SECTIONS = [
       <li><b>Ready-made programs</b>: pick one and use it.</li>
       <li><b>Build a plan with AI</b>: the app gives you words to copy into an AI app. Paste its answer back.</li>
     </ul>
-    <p>You can also change any workout in Plan by hand.</p>`,
+    <p>You can also change any workout in Plan by hand.</p>
+    <p><b>Weekly schedule (optional):</b> in Plan, open <b>Weekly schedule</b> and tap your training days. Today then shows that day's workout, and says <b>Rest day</b> on the others. Without a schedule, the app just suggests the next workout in order.</p>`,
   ],
   [
     "workout",

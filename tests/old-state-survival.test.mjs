@@ -67,3 +67,16 @@ test("old saved state survives turning sync on and reaches a second phone (sync 
     assert.deepEqual(strip(b.state[k]), strip(OLD[k]), k);
   assert.equal(b.state.settings.goal, "strength");
 });
+
+test("state with a schedule, notes and supersets is valid and re-saves unchanged", () => {
+  const NEW = structuredClone(OLD);
+  NEW.settings.schedule = { days: { 1: "w1", 3: "next" } };
+  NEW.sessions[0].entries[0].note = "seat 4";
+  NEW.workouts[0].supersets = [{ id: "ss-1", ids: ["barbell-bench-press", "custom-1"], rest: "round" }];
+  assert.equal(isValidState(structuredClone(NEW)), true);
+  const storage = mem(JSON.stringify(NEW));
+  const r = createStore(storage).load();
+  assert.deepEqual(r.state, NEW);
+  assert.equal(createStore(storage).save(r.state), true);
+  assert.deepEqual(JSON.parse(storage.getItem(KEY)), NEW);
+});
