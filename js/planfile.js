@@ -393,8 +393,7 @@ const EXTRA_ALIASES = {
     "hyperextension bench side bend",
     "weighted roman chair side bend",
   ],
-  "bosu-ball-crunch": ["bosu crunch", "bosu crunches", "crunch on bosu", "crunches on bosu ball", "bosu ball crunches"],
-  "bosu-ball-sit-up": ["bosu sit up", "bosu sit ups", "bosu situp", "sit up on bosu", "sit ups on bosu ball", "bosu ball sit ups"],
+  "bosu-ball-crunch": ["bosu crunch", "bosu crunches", "crunch on bosu", "crunches on bosu ball", "bosu ball crunches", "bosu sit up", "bosu sit ups", "bosu situp", "sit up on bosu", "sit ups on bosu ball", "bosu ball sit ups", "bosu ball sit up"],
   "high-to-low-cable-crossover": [
     "high to low cable fly",
     "cable fly high to low",

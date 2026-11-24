@@ -817,15 +817,6 @@
     "howto": "Lie back on the dome of the Bosu with your lower back on top, knees bent and feet flat on the floor. Put your hands by your head and curl your shoulders up by squeezing your belly, then lower slowly. Do not pull on your neck."
   },
   {
-    "id": "bosu-ball-sit-up",
-    "name": "Bosu Ball Sit-Up",
-    "primary": "Abs",
-    "secondary": [],
-    "equipment": "other",
-    "images": 2,
-    "howto": "Sit on the Bosu dome, then lie back with your hands by your head and your feet flat on the floor. Sit all the way up using your belly, then lower back slowly. Keep your feet planted so the Bosu stays steady."
-  },
-  {
     "id": "pallof-press",
     "name": "Pallof Press",
     "primary": "Abs",
