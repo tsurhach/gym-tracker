@@ -88,7 +88,6 @@ export default {
   "share.errServer": "Could not reach the server. Try again later.",
   "share.needName": "Set your name for others first.",
   "share.errTypo": "Typo in the code. Check it and try again.",
-  "cal.fallback": "Workout",
   "sync.backPlan": "Back to Plan",
   "sync.codeTitle": "Your recovery code",
   "sync.codeKeep": "Keep this code safe. You need it if Face ID alone cannot open your data, for example on an Android phone or if your passkey was deleted. Nobody can reset it, not even us.",

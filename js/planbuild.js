@@ -1,5 +1,5 @@
 import { newItem } from "./session.js";
-import { ltrText, t } from "./i18n/index.js";
+import { hasHebrew, heMatch, ltrText, t } from "./i18n/index.js";
 import { ALIAS_LIST } from "./planfile.js";
 
 // Pure helpers for building a plan: gym-word search, adding many exercises at once, duplicating a day,
@@ -55,6 +55,10 @@ export function matchRank(name, query) {
 
 // Name match, or the best match over the plan-file aliases of that exercise ("bosu sit up" finds Bosu Ball Crunch). Aliases rank after names.
 function rankWithAliases(e, query) {
+  if (hasHebrew(query)) {
+    const h = heMatch(e.id, query);
+    return h === null ? null : h === 0 ? 0 : 3; // Hebrew name ranks like a name, Hebrew alias like an alias
+  }
   const r = matchRank(e.name, query);
   if (r !== null) return r;
   const hit = (ALIAS_LIST[e.id] ?? []).some((a) => matchRank(a, query) !== null);
@@ -63,7 +67,7 @@ function rankWithAliases(e, query) {
 
 // The exercises that match, best first (ties keep the library order). An empty query returns the list as is.
 export function searchExercises(list, query) {
-  if (!squash(query)) return list;
+  if (!squash(query) && !hasHebrew(query)) return list;
   return list
     .map((e, i) => ({ e, i, r: rankWithAliases(e, query) }))
     .filter((x) => x.r !== null)

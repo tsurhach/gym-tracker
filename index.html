@@ -27,10 +27,11 @@
         } catch (e) {}
       };
       // Page language and direction before first paint. Hebrew only when enabled (js/i18n/index.js HE_READY, or ?he=1).
+      var HE_READY = false; // keep equal to HE_READY in js/i18n/index.js (a test checks)
       window.gymLang = function (setting) {
         try {
           var he = false;
-          if (/[?&]he=1(&|$)/.test(location.search))
+          if (HE_READY || /[?&]he=1(&|$)/.test(location.search))
             he = setting === "he" || (setting !== "en" && String(navigator.language).toLowerCase().indexOf("he") === 0);
           document.documentElement.lang = he ? "he" : "en";
           document.documentElement.dir = he ? "rtl" : "ltr";

@@ -86,3 +86,34 @@ function rememberLang() {
     globalThis.caches?.open("gym-prefs").then((c) => c.put("./__lang", new Response(current))).catch(() => {});
   } catch {}
 }
+
+// ---- Hebrew exercise names (data/exercises.he.json: { id: { he, aliases, howto } }), loaded by app.js when Hebrew is enabled ----
+let EXHE = {};
+export const setExHe = (m) => void (EXHE = m && typeof m === "object" ? m : {});
+export const exHe = (id) => EXHE[id];
+const escH = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+// Plain text name: Hebrew name in Hebrew, else the stored English name.
+export const exName = (id, name) => (current === "he" && EXHE[id]?.he) || name;
+// Row form: Hebrew name with the English name small underneath (English only in English). Returns escaped html.
+export const exTwo = (id, name) =>
+  current === "he" && EXHE[id]?.he ? `${escH(EXHE[id].he)}<small class="en-sub" dir="ltr" lang="en">${escH(name)}</small>` : escH(name);
+export const exHowto = (id, howto) => (current === "he" && EXHE[id]?.howto) || howto;
+// Search folding: lowercase, no niqqud/cantillation, no geresh/gershayim/quotes, final letters folded, spaces collapsed.
+export const normHe = (s) =>
+  String(s).toLowerCase().replace(/[\u0591-\u05C7]/g, "").replace(/[׳״'"`’]/g, "")
+    .replace(/ך/g, "כ").replace(/ם/g, "מ").replace(/ן/g, "נ").replace(/ף/g, "פ").replace(/ץ/g, "צ")
+    .replace(/[-־]/g, " ").replace(/\s+/g, " ").trim();
+const HEB = /[\u0590-\u05FF]/;
+export const hasHebrew = (s) => HEB.test(s);
+// Hebrew query vs the Hebrew name and aliases of exercise `id`: 0 name, 1 alias, null none. Every typed word must start a word of the text.
+export function heMatch(id, query) {
+  const x = EXHE[id];
+  if (!x) return null;
+  const q = normHe(query).split(" ").filter(Boolean);
+  const ok = (text) => {
+    const w = normHe(text).split(" ");
+    return q.every((p) => w.some((y) => y.startsWith(p)));
+  };
+  if (ok(x.he)) return 0;
+  return (x.aliases ?? []).some(ok) ? 1 : null;
+}

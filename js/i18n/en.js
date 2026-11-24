@@ -13,4 +13,5 @@ export default { ...common, ...train, ...plan, ...social, ...extra,
   "settings.gender.neutral": "Neutral",
   "settings.gender.male": "Male",
   "settings.gender.female": "Female",
+  "settings.lang.auto": "Auto (phone)",
 };

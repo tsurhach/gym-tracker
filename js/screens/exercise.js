@@ -10,7 +10,7 @@ import {
   plateText,
   validSet,
 } from "../logic.js";
-import { fmtDate, t } from "../i18n/index.js";
+import { fmtDate, t, exTwo, exName } from "../i18n/index.js";
 import {
   confirmSheet,
   esc,
@@ -194,7 +194,7 @@ export function render(root, ctx) {
   root.innerHTML = `<div class="row topbar">
       <a class="back" href="#/workout"><span class="flip">‹</span> ${esc(a.workoutName)}</a>
     </div>
-    <h1 class="title">${esc(entry.name)}</h1>
+    <h1 class="title">${exTwo(entry.exerciseId, entry.name)}</h1>
     <p class="muted" data-ss-line hidden></p>
     <div class="tags">${tags.map((m) => `<span class="tag">${esc(muscleName(m))}</span>`).join(" ")}</div>
     <div class="view-opts">
@@ -225,7 +225,7 @@ export function render(root, ctx) {
     const link = root.querySelector("[data-primary]");
     const id = entry.sets.length && entry.sets.every((s) => s.done) ? nextEntryId(a, entry.exerciseId) : null;
     const nx = id && a.entries.find((e) => e.exerciseId === id);
-    link.innerHTML = nx ? `${t("exercise.next", { name: esc(nx.name) })} <span class="flip">›</span>` : t("exercise.done");
+    link.innerHTML = nx ? `${t("exercise.next", { name: esc(exName(nx.exerciseId, nx.name)) })} <span class="flip">›</span>` : t("exercise.done");
     link.setAttribute("href", nx ? `#/exercise/${encodeURIComponent(id)}` : "#/workout");
   }
   paintNext();
@@ -238,7 +238,7 @@ export function render(root, ctx) {
     if (!g) return;
     const others = g.ids
       .filter((id) => id !== entry.exerciseId)
-      .map((id) => `<b>${esc(a.entries.find((e) => e.exerciseId === id).name)}</b>`);
+      .map((id) => `<b>${esc(exName(id, a.entries.find((e) => e.exerciseId === id).name))}</b>`);
     const round = Math.min(entry.sets.filter((s) => s.done).length + 1, entry.sets.length);
     el.innerHTML = t("exercise.superset", { others: others.join(" + "), round, total: entry.sets.length });
   }

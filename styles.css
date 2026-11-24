@@ -1492,3 +1492,7 @@ details.help .sec-body li {
 .ltr {
   unicode-bidi: isolate;
 }
+
+/* Hebrew exercise rows: the English name sits small under the Hebrew one. */
+.en-sub { display: block; font-size: 0.78em; font-weight: 400; color: var(--muted); text-align: start; unicode-bidi: isolate; }
+[dir="rtl"] .en-sub { text-align: right; direction: ltr; }

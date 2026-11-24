@@ -1,7 +1,7 @@
 import { exerciseHistory, isPersonalBest, isStuck, kgHtml, kgText, minHtml, muscleName, validSet } from "../logic.js";
 import { deleteSession, removeSet } from "../session.js";
 import { confirmSheet, esc, fmtKg } from "../ui.js";
-import { fmtDate, ltr, ltrText, t } from "../i18n/index.js";
+import { fmtDate, ltr, ltrText, t, exTwo, exName } from "../i18n/index.js";
 import { applyInputs, pbHtml } from "./exercise.js";
 
 // Whole minutes, at least 1.
@@ -23,7 +23,7 @@ export function summary(ses, sessions) {
     const top = en.sets
       .filter((s) => isPersonalBest(past, s))
       .sort((a, b) => b.weight - a.weight || b.reps - a.reps)[0];
-    if (top) bests.push({ name: en.name, weight: top.weight, reps: top.reps });
+    if (top) bests.push({ name: exName(en.exerciseId, en.name), weight: top.weight, reps: top.reps });
   }
   return { minutes: durationMin(ses), sets, volume, bests };
 }
@@ -137,7 +137,7 @@ function listHtml(state) {
         (
           r,
         ) => `<a class="li" href="#/progress/${encodeURIComponent(r.exerciseId)}">
-        <span class="grow ex-name">${esc(r.name)}</span>
+        <span class="grow ex-name">${exTwo(r.exerciseId, r.name)}</span>
         <span class="${r.stuck ? "stuck" : "up"}">${esc(progressText(r))}</span>
       </a>`,
       )
@@ -239,7 +239,7 @@ function sessionScreen(root, ctx) {
     ${ses.entries
       .map(
         (en, e) => `<section class="card">
-      <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${esc(en.name)}</a>${en.primary ? `<span class="tag">${esc(muscleName(en.primary))}</span>` : ""}</div>
+      <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${exTwo(en.exerciseId, en.name)}</a>${en.primary ? `<span class="tag">${esc(muscleName(en.primary))}</span>` : ""}</div>
       ${en.note ? `<p class="muted small">${esc(en.note)}</p>` : ""}
       <div class="set hist set-head muted small"><span></span><span>${t("exercise.kg")}</span><span>${t("exercise.repsHead")}</span><span></span></div>
       ${en.sets.map((s, i) => setRow(s, e, i, earlier(ctx.state.sessions, ses, en.exerciseId))).join("")}
@@ -283,7 +283,8 @@ function sessionScreen(root, ctx) {
       const row = btn.closest(".set");
       const e = Number(row.dataset.e);
       const i = Number(row.dataset.i);
-      const name = findSession(current)?.entries[e]?.name ?? t("history.thisExercise");
+      const en = findSession(current)?.entries[e];
+      const name = en ? exName(en.exerciseId, en.name) : t("history.thisExercise");
       if (!(await confirmSheet(t("history.deleteSetAsk", { n: i + 1, name }), t("history.delete")))) {
         ctx.save({ render: false });
         return;
@@ -333,7 +334,7 @@ export function renderProgress(root, ctx) {
     return;
   }
   const rows = exerciseRows(ctx.state.sessions);
-  const name = rows.find((r) => r.exerciseId === id).name;
+  const name = exName(id, rows.find((r) => r.exerciseId === id).name);
   const stuck = isStuck(hist.map((h) => h.sets));
   const byStart = new Map(ctx.state.sessions.map((s) => [s.startedAt, s.id]));
   const note = stuck

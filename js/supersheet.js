@@ -1,5 +1,5 @@
 import { esc } from "./ui.js";
-import { t } from "./i18n/index.js";
+import { t, exName } from "./i18n/index.js";
 import { groupItems, supersetsOf } from "./planbuild.js";
 
 // "Make a superset" sheet on the Plan screen: tick 2 or more exercises of a day (tick order = alternation order),
@@ -23,7 +23,7 @@ export function openSuperset(ctx, w, group, onDone) {
     : null;
   let order = own ? [...own.ids] : [];
   let rest = own?.rest ?? "round";
-  const nameOf = (id) => ctx.lookup(id)?.name ?? t("super.unknown");
+  const nameOf = (id) => exName(id, ctx.lookup(id)?.name) ?? t("super.unknown");
   const scrim = document.createElement("div");
   scrim.className = "scrim";
   const sheet = document.createElement("div");

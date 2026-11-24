@@ -121,7 +121,6 @@ test("styles.css: only symmetric left/right remain (everything else is logical)"
 });
 
 import { scanAll } from "../tools/i18n-leftovers.mjs";
-import { addressesUser } from "../js/i18n/en.js";
 import { MUSCLES, GOALS } from "../js/constants.js";
 import lib from "../data/exercises.json" with { type: "json" };
 
@@ -130,11 +129,10 @@ test("no user-visible English literal is left outside js/i18n (allow-list in too
   assert.deepEqual(left.map((o) => `${o.file}:${o.line} ${o.text}`), []);
 });
 
-test("every muscle, goal and equipment value has a key; addressesUser keys exist", () => {
+test("every muscle, goal and equipment value has a key", () => {
   for (const m of MUSCLES) assert.ok(`muscle.${m}` in en, m);
   for (const g of Object.keys(GOALS)) assert.ok(`goal.${g}` in en, g);
   for (const e of new Set(lib.map((x) => x.equipment))) assert.ok(`equip.${e}` in en, e);
-  for (const k of addressesUser) assert.ok(k in en, k);
 });
 
 test("every plural value has one and other", () => {

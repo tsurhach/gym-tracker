@@ -29,7 +29,7 @@ import {
 } from "../rest.js";
 import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
-import { applyLang, heEnabled, lang, ltr, ltrText, t as tr, tk, weekday } from "../i18n/index.js";
+import { applyLang, heEnabled, lang, ltr, ltrText, t as tr, tk, weekday, exTwo } from "../i18n/index.js";
 import { runningVersion } from "../update.js";
 
 const isoDay = (d = new Date()) =>
@@ -60,7 +60,7 @@ function itemHtml(it, ctx, i, n, wid) {
     <div class="xline">
       <button class="handle" data-handle aria-label="${tr("plan.handle.aria", { name: esc(name) })}">≡</button>
       <button class="xmain" data-act="x-toggle" aria-expanded="${open}">
-        <span class="ex-name" dir="auto">${esc(name)}</span>
+        <span class="ex-name" dir="auto">${ex ? exTwo(it.exerciseId, name) : esc(name)}</span>
         <span class="xsum muted">${ltr(esc(summaryText(it)))}</span><span class="xchev" aria-hidden="true">›</span>
       </button>
       ${L ? `<button class="tag ss-tag" data-act="ss-edit" aria-label="${tr("plan.ss.edit.aria", { letter: L })}">${L}</button>` : ""}
@@ -805,7 +805,7 @@ function languageHtml(settings) {
     `<div class="seg">${opts.map(([m, l]) => `<button class="chip" data-act="${act}" data-mode="${m}" aria-pressed="${cur === m}">${l}</button>`).join("")}</div>`;
   const langRow = `<div class="setting-group" role="group" aria-label="Language / שפה">
     <div>Language / שפה</div>
-    ${seg("lang", settings.lang ?? "auto", [["auto", "Auto (phone)"], ["en", "English"], ["he", "עברית"]])}
+    ${seg("lang", settings.lang ?? "auto", [["auto", tr("settings.lang.auto")], ["en", "English"], ["he", "עברית"]])}
   </div>`;
   if (lang() !== "he") return langRow;
   return `${langRow}<div class="setting-group" role="group" aria-label="${esc(tr("settings.wording"))}">

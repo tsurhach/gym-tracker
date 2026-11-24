@@ -30,8 +30,19 @@ const strip = (src) =>
     .replace(/\$\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/g, "\u0001");
 const WORD = /[A-Za-z]{2,}/;
 
+const noExpr = (src) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " ")).replace(lineComment, "$1");
+const EXPR = /\$\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/g;
+
 export function leftovers(file, raw) {
   const out = [];
+  // Literals inside ${...} (ternaries and the like): "Capitalised words" that are not t("...") arguments.
+  const clean = noExpr(raw);
+  for (const e of clean.matchAll(EXPR))
+    for (const m of e[0].matchAll(/(["'`])([A-Z][a-z]+(?: [a-z]+)*)\1/g)) {
+      if (/\b(?:t|tr|tk)\(\s*$/.test(e[0].slice(0, m.index))) continue;
+      out.push({ file, line: clean.slice(0, e.index).split("\n").length, text: m[2] });
+    }
   strip(raw)
     .split("\n")
     .forEach((line, i) => {

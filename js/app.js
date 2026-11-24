@@ -21,7 +21,7 @@ import * as person from "./screens/person.js";
 import { createShare } from "./share.js";
 import { createCalSync } from "./calendar.js";
 import * as passkey from "./passkey.js";
-import { applyLang, t } from "./i18n/index.js";
+import { applyLang, exHowto, heEnabled, setExHe, t } from "./i18n/index.js";
 
 const screens = {
   today,
@@ -136,6 +136,11 @@ async function main() {
     return;
   }
   const byId = new Map(library.map((e) => [e.id, e]));
+  if (heEnabled()) {
+    try {
+      setExHe(await (await fetch("./data/exercises.he.json")).json()); // Hebrew names, aliases, how-to (search works in both languages)
+    } catch {}
+  }
 
   const store = createStore(browserStorage());
   const loaded = store.load();
@@ -170,7 +175,7 @@ async function main() {
           images: e.images ?? 0,
           ext: e.ext,
           hint: e.hint,
-          howto: e.howto,
+          howto: exHowto(e.id, e.howto),
           equipment: e.equipment,
         }
       );

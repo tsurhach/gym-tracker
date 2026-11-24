@@ -151,7 +151,7 @@
  },
  {
   "file": "js/screens/plan.js",
-  "text": "Auto (phone)",
-  "why": "always-bilingual language row"
+  "text": "English",
+  "why": "always-bilingual language row (language names stay literal)"
  }
 ]

@@ -1,5 +1,5 @@
 import { advice, exerciseHistory, minHtml } from "../logic.js";
-import { ltr, ltrText, t } from "../i18n/index.js";
+import { ltr, ltrText, t, exTwo } from "../i18n/index.js";
 import { addEntry, finishSession, newItem } from "../session.js";
 import { groupItems, supersetsOf } from "../planbuild.js";
 import { openPicker } from "../picker.js";
@@ -57,7 +57,7 @@ function rowHtml(e, ctx) {
     else sub = "";
   }
   return `<a class="li" href="#/exercise/${encodeURIComponent(e.exerciseId)}">
-    <div class="grow"><div class="ex-name">${esc(e.name)}</div>${sub}</div>${status}
+    <div class="grow"><div class="ex-name">${exTwo(e.exerciseId, e.name)}</div>${sub}</div>${status}
   </a>`;
 }
 

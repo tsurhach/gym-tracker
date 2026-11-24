@@ -1,6 +1,6 @@
 import { MUSCLES } from "./constants.js";
 import { muscleName } from "./logic.js";
-import { t } from "./i18n/index.js";
+import { exTwo, t } from "./i18n/index.js";
 import { esc, exImageUrls, showBanner } from "./ui.js";
 import { checkFile, getMedia, saveMedia } from "./media.js";
 import { recentIds, searchExercises } from "./planbuild.js";
@@ -104,7 +104,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
       : `<span class="pick-thumb"${custom.has(e.id) ? ` data-mid="${esc(e.id)}"` : ""}></span>`;
     return `<button class="pick-row" data-id="${esc(e.id)}" data-tag="${esc(tagText)}"${added ? " disabled" : ""}${multi && !added ? ` aria-pressed="${on}"` : ""}>
           ${thumb}
-          <span class="pick-name">${esc(e.name)}</span>
+          <span class="pick-name">${exTwo(e.id, e.name)}</span>
           <span class="tag">${added ? t("picker.added") : on ? "✓" : tagText || (custom.has(e.id) ? t("picker.custom") : "")}</span>
         </button>`;
   }
