@@ -9,6 +9,7 @@ import { openPicker } from "../picker.js";
 import { openSwap } from "../swapsheet.js";
 import { addMany, duplicateWorkout, moveItem, orderItems, renameInSupersets, summaryText, supersetsOf } from "../planbuild.js";
 import { openSuperset, ssLetter } from "../supersheet.js";
+import { calHtml, bindCal } from "./calui.js";
 import {
   allMediaKeys,
   checkSound,
@@ -269,7 +270,8 @@ function scheduleHtml(state) {
         </select></label>`,
       )
       .join("")}
-    ${on.length ? `<button class="btn" data-sch="clear" style="margin-top:8px">Clear schedule</button>` : ""}`;
+    ${on.length ? `<button class="btn" data-sch="clear" style="margin-top:8px">Clear schedule</button>` : ""}
+    <div data-calbox>${calHtml(state)}</div>`;
 }
 
 let versionText = ""; // last known, so a redraw does not blank the line
@@ -644,6 +646,7 @@ export function render(root, ctx) {
   };
   root.addEventListener("click", schedule);
   root.addEventListener("change", schedule);
+  bindCal(root, ctx);
 
   root.addEventListener("click", (e) => {
     const b = e.target.closest("[data-snd]");

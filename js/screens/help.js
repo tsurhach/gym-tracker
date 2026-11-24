@@ -61,7 +61,8 @@ const SECTIONS = [
       <li><b>Build a plan with AI</b>: the app gives you words to copy into an AI app. Paste its answer back.</li>
     </ul>
     <p>You can also change any workout in Plan by hand.</p>
-    <p><b>Weekly schedule (optional):</b> in Plan, open <b>Weekly schedule</b> and tap your training days. Today then shows that day's workout, and says <b>Rest day</b> on the others. Without a schedule, the app just suggests the next workout in order.</p>`,
+    <p><b>Weekly schedule (optional):</b> in Plan, open <b>Weekly schedule</b> and tap your training days. Today then shows that day's workout, and says <b>Rest day</b> on the others. Without a schedule, the app just suggests the next workout in order.</p>
+    <p><b>Calendar (optional):</b> in Plan &gt; Weekly schedule, switch on <b>Calendar</b> and tap <b>Add to Apple Calendar</b> or <b>Add to Google Calendar</b> (or copy the link). Your planned training days show in your calendar, all day or at the time you pick. Only workout names and days leave the phone. Calendar apps check for changes on their own schedule (Google can take a day). Reminders are off: turn on alerts for the Gym Tracker calendar in your calendar app's settings. Make a new link or turn it off there at any time.</p>`,
   ],
   [
     "workout",

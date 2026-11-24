@@ -106,6 +106,21 @@ export function isValidState(o) {
   // Sharing (all optional): the name others see, and the one switch for body weight to a coach.
   if (o.settings.shareName !== undefined && !str(o.settings.shareName)) return false;
   if (o.settings.shareWeight !== undefined && typeof o.settings.shareWeight !== "boolean") return false;
+  // Calendar subscription (optional): feed id + write token, and the person's time choice. Extra keys are tolerated.
+  const cal = o.settings.calendar;
+  if (
+    cal !== undefined &&
+    !(
+      isObj(cal) &&
+      /^[A-Za-z0-9_-]{22}$/.test(cal.id) &&
+      /^[A-Za-z0-9_-]{43}$/.test(cal.token) &&
+      (cal.time === null || (str(cal.time) && /^([01]\d|2[0-3]):[0-5]\d$/.test(cal.time))) &&
+      Number.isInteger(cal.mins) && cal.mins >= 15 && cal.mins <= 240 &&
+      typeof cal.autoMins === "boolean" &&
+      typeof cal.alarm === "boolean"
+    )
+  )
+    return false;
   if (o.swapCounts !== undefined && !isObj(o.swapCounts)) return false;
   if (
     o.workoutOrder !== undefined &&

@@ -1452,3 +1452,8 @@ details.help .sec-body li {
 .muscles-line .chips {
   margin-top: 0;
 }
+
+.cal-sep {
+  border-top: 1px solid var(--line);
+  margin: 16px 0 4px;
+}

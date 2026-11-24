@@ -19,6 +19,7 @@ import * as sync from "./screens/sync.js";
 import * as people from "./screens/people.js";
 import * as person from "./screens/person.js";
 import { createShare } from "./share.js";
+import { createCalSync } from "./calendar.js";
 import * as passkey from "./passkey.js";
 
 const screens = {
@@ -186,6 +187,7 @@ async function main() {
         );
       }
       if (saved) ctx.sync?.changed(); // schedules a push; never awaited, never redraws
+      if (saved) ctx.cal?.changed(); // calendar feed: sends only if its content changed
       if (redraw) render();
       return saved;
     },
@@ -250,7 +252,9 @@ async function main() {
     });
   }
 
-  if (SYNC_ENABLED) startSync(ctx, store, () => render());
+  ctx.cal = createCalSync({ getState: () => ctx.state, storage: browserStorage() });
+  if (SYNC_ENABLED) startSync(ctx, store, () => (ctx.cal.changed(), render())); // sync may bring new calendar keys or days
+  ctx.cal.changed(); // app start: send if the feed is out of date or old
   window.addEventListener("hashchange", render);
   render();
   // Ask the browser not to evict our data; the answer does not matter.

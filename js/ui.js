@@ -82,6 +82,33 @@ export function showBanner(text, { sticky = false, kind = "error" } = {}) {
   if (!sticky) bannerTimer = setTimeout(() => (el.hidden = true), 7000);
 }
 
+// A short notice with one OK button. `lines` are paragraphs. Resolves when closed.
+export function infoSheet(lines) {
+  return new Promise((resolve) => {
+    const scrim = document.createElement("div");
+    scrim.className = "scrim";
+    const sheet = document.createElement("div");
+    sheet.className = "sheet";
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "true");
+    for (const l of lines) {
+      const p = document.createElement("p");
+      p.textContent = l;
+      sheet.append(p);
+    }
+    const ok = document.createElement("button");
+    ok.className = "btn btn-primary";
+    ok.textContent = "OK";
+    const done = () => (scrim.remove(), resolve());
+    ok.onclick = done;
+    scrim.onclick = (e) => e.target === scrim && done();
+    sheet.append(ok);
+    scrim.append(sheet);
+    document.body.append(scrim);
+    ok.focus();
+  });
+}
+
 // In-page replacement for window.confirm. Resolves true on confirm, false otherwise.
 export function confirmSheet(
   message,

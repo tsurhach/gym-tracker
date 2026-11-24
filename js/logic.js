@@ -277,3 +277,54 @@ export function plateText(target, empty, plates) {
   if (r.exact) return side[0].toUpperCase() + side.slice(1);
   return `Closest: ${round2(r.total)} kg — ${side}`;
 }
+
+// ---------- calendar subscription (settings.calendar) ----------
+
+const median = (a) => {
+  const s = [...a].sort((x, y) => x - y);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+
+// Typical workout length in minutes: median of your last 8 finished workouts, skipping ones under 10 min or over 5 h,
+// rounded to 5 and kept within 20-180. Fewer than 3 usable workouts -> null (the chosen minutes stay).
+export function avgMins(sessions) {
+  const last = (Array.isArray(sessions) ? sessions : [])
+    .filter((s) => typeof s?.finishedAt === "number" && typeof s.startedAt === "number")
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, 8)
+    .map((s) => (s.finishedAt - s.startedAt) / 60000)
+    .filter((m) => m >= 10 && m <= 300);
+  if (last.length < 3) return null;
+  return Math.min(180, Math.max(20, Math.round(median(last) / 5) * 5));
+}
+
+// The minutes the calendar uses: the workout-length average when asked for (and enough data), else the chosen value.
+export const calMins = (state) => {
+  const c = state.settings.calendar;
+  return (c.autoMins && avgMins(state.sessions)) || c.mins;
+};
+
+// What the phone sends: names + training days + the time choice. Nothing else leaves the phone.
+// `today` = local date "YYYY-MM-DD". A day that is "next in rotation" (or a deleted workout) is just "Workout".
+export function calendarBody(state, today, tz = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  const c = state.settings.calendar;
+  const raw = state.settings.schedule?.days;
+  const days = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const name = (id) => {
+    const w = (state.workouts ?? []).find((x) => x.id === id);
+    return Array.from(String(w?.name ?? "").trim()).slice(0, 60).join("") || "Workout";
+  };
+  return {
+    from: today,
+    tz: tz || null,
+    time: c.time ?? null,
+    mins: calMins(state),
+    alarm: c.alarm === true,
+    days: Object.keys(days)
+      .filter((k) => /^[0-6]$/.test(k))
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((d) => ({ d, t: name(days[d]) })),
+  };
+}
