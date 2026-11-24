@@ -7,7 +7,8 @@ import { addBackup } from "../sync.js";
 import { buildFullBackup, fmtSize, readBackup } from "../backup.js";
 import { openPicker } from "../picker.js";
 import { openSwap } from "../swapsheet.js";
-import { addMany, duplicateWorkout, moveItem, orderItems, summaryText } from "../planbuild.js";
+import { addMany, duplicateWorkout, moveItem, orderItems, renameInSupersets, summaryText, supersetsOf } from "../planbuild.js";
+import { openSuperset, ssLetter } from "../supersheet.js";
 import {
   allMediaKeys,
   checkSound,
@@ -51,13 +52,16 @@ function itemHtml(it, ctx, i, n, wid) {
   const name = ex ? ex.name : "Unknown exercise";
   const open = openX === `${wid}|${it.exerciseId}`;
   const rule = plateRule(it, ex);
-  return `<li class="item" data-x="${esc(it.exerciseId)}">
+  const w = ctx.state.workouts.find((x) => x.id === wid);
+  const L = w ? ssLetter(w, it.exerciseId) : "";
+  return `<li class="item${L ? " ss" : ""}" data-x="${esc(it.exerciseId)}">
     <div class="xline">
       <button class="handle" data-handle aria-label="Move ${esc(name)}: drag, or use the up and down arrow keys">≡</button>
       <button class="xmain" data-act="x-toggle" aria-expanded="${open}">
         <span class="ex-name">${esc(name)}</span>
         <span class="xsum muted">${esc(summaryText(it))}</span><span class="xchev" aria-hidden="true">›</span>
       </button>
+      ${L ? `<button class="tag ss-tag" data-act="ss-edit" aria-label="Edit Superset ${L}">Superset ${L}</button>` : ""}
     </div>
     ${
       open
@@ -240,7 +244,8 @@ function workoutHtml(w, ctx, i, n) {
     </details>
     <ul class="items xlist">${itemsHtml(w, ctx)}</ul>
     ${k > 1 ? `<p class="muted small" style="margin-bottom:var(--gap)">Drag ≡ to change the order. Tap a line to edit its sets and reps.</p>` : ""}
-    <button class="btn" data-act="add-ex">+ Add exercises</button>`,
+    <button class="btn" data-act="add-ex">+ Add exercises</button>
+    ${k > 1 ? `<button class="btn" data-act="ss-new">Superset…</button>` : ""}`,
     {
       count: countText(k).slice(2),
       attrs: ` data-w="${esc(w.id)}"`,
@@ -499,6 +504,18 @@ export function render(root, ctx) {
         paintDay(root, ctx, w);
         ctx.save({ render: false });
         return;
+      case "ss-new":
+      case "ss-edit": {
+        const edit = t.dataset.act === "ss-edit";
+        const id = w?.items[xi]?.exerciseId;
+        const group = edit && supersetsOf(w.supersets, w.items.map((it) => it.exerciseId)).find((g) => g.ids.includes(id));
+        if (!w || (edit && !group)) return;
+        openSuperset(ctx, w, group || null, () => {
+          paintDay(root, ctx, w);
+          ctx.save({ render: false });
+        });
+        return;
+      }
       case "x-swap": {
         const it = w?.items[xi];
         if (!it) return;
@@ -511,6 +528,7 @@ export function render(root, ctx) {
             onSwap: (id) => {
               if (w.items.some((x) => x.exerciseId === id)) return;
               if (openX === `${w.id}|${it.exerciseId}`) openX = `${w.id}|${id}`;
+              if (w.supersets) w.supersets = renameInSupersets(w.supersets, it.exerciseId, id);
               it.exerciseId = id;
               paintDay(root, ctx, w);
               itemEl(dayEl(root, w.id), id)?.scrollIntoView({ block: "nearest" });

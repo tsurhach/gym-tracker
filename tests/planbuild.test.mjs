@@ -76,3 +76,52 @@ test("recentIds: newest first, distinct, muscle-limited", () => {
   assert.deepEqual(recentIds(ses, []), ["b", "a", "x"]);
   assert.deepEqual(recentIds(ses, [], 2), ["b", "a"]);
 });
+
+import { supersetsOf, groupItems, renameInSupersets } from "../js/planbuild.js";
+
+test("supersetsOf drops junk, missing ids and small groups; a duplicate id stays in its first group", () => {
+  const present = ["a", "b", "c", "d"];
+  assert.deepEqual(supersetsOf("x", present), []);
+  assert.deepEqual(supersetsOf(undefined, present), []);
+  const got = supersetsOf(
+    [
+      null,
+      5,
+      { ids: "ab" },
+      { id: "g1", ids: ["a", "ghost", "b", "a"], rest: "each" },
+      { id: "g2", ids: ["b", "c"] },
+      { id: "g3", ids: ["c", "d", 7], rest: "weird" },
+      { ids: ["d", "x"] },
+    ],
+    present,
+  );
+  assert.deepEqual(got, [
+    { id: "g1", ids: ["a", "b"], rest: "each" },
+    { id: "g3", ids: ["c", "d"], rest: "round" },
+  ]);
+});
+
+test("groupItems puts members together at the first member, keeping the others' order", () => {
+  const it = (id) => ({ exerciseId: id });
+  const items = ["a", "x", "b", "y", "c"].map(it);
+  assert.deepEqual(
+    groupItems(items, ["c", "a"]).map((i) => i.exerciseId),
+    ["c", "a", "x", "b", "y"],
+  );
+  assert.deepEqual(
+    groupItems(items, ["b", "c"]).map((i) => i.exerciseId),
+    ["a", "x", "b", "c", "y"],
+  );
+  assert.deepEqual(
+    groupItems(items, ["a"]).map((i) => i.exerciseId),
+    ["a", "x", "b", "y", "c"],
+  );
+});
+
+test("renameInSupersets replaces the id in every group and tolerates junk", () => {
+  assert.deepEqual(
+    renameInSupersets([{ id: "g", ids: ["a", "b"], rest: "each" }], "a", "z"),
+    [{ id: "g", ids: ["z", "b"], rest: "each" }],
+  );
+  assert.equal(renameInSupersets(undefined, "a", "z"), undefined);
+});

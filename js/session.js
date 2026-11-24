@@ -1,5 +1,6 @@
 import { GOALS, DEFAULT_STEP } from "./constants.js";
 import { prefill, exerciseHistory, pairKey } from "./logic.js";
+import { supersetsOf, renameInSupersets } from "./planbuild.js";
 
 export function newItem(exerciseId, goalKey) {
   const { sets, repMin, repMax } = GOALS[goalKey];
@@ -44,17 +45,36 @@ function makeEntry(state, item, lookup) {
 export function startSession(state, workoutId, lookup, now) {
   const workout = state.workouts.find((w) => w.id === workoutId);
   if (state.active || !workout) return state;
+  const entries = workout.items.map((it) => makeEntry(state, it, lookup)).filter(Boolean);
+  const supersets = supersetsOf(workout.supersets, entries.map((e) => e.exerciseId)).map(({ ids, rest }) => ({ ids, rest }));
   state.active = {
     id: crypto.randomUUID(),
     workoutId,
     workoutName: workout.name,
     startedAt: now,
     finishedAt: null,
-    entries: workout.items
-      .map((it) => makeEntry(state, it, lookup))
-      .filter(Boolean),
+    entries,
+    ...(supersets.length ? { supersets } : {}),
   };
   return state;
+}
+
+// The superset (present entries only, 2+) this exercise is in, or null. Old active workouts without the field: null.
+export function supersetOf(active, exerciseId) {
+  const ids = (active?.entries ?? []).map((e) => e.exerciseId);
+  return supersetsOf(active?.supersets, ids).find((g) => g.ids.includes(exerciseId)) ?? null;
+}
+
+// After a set is ticked: { rest: start the rest timer?, goTo: next exercise id or null }.
+// Not in a superset: today's behaviour. Mid-round: go to the next member (rest only with "each").
+// Round over: rest, then the first member with open sets (maybe this one), or null when the superset is finished.
+export function afterSupersetSet(active, exerciseId) {
+  const g = supersetOf(active, exerciseId);
+  if (!g) return { rest: true, goTo: null };
+  const pending = (id) => active.entries.find((e) => e.exerciseId === id)?.sets.some((s) => !s.done);
+  const after = g.ids.slice(g.ids.indexOf(exerciseId) + 1).find(pending);
+  if (after) return { rest: g.rest === "each", goTo: after };
+  return { rest: true, goTo: g.ids.find(pending) ?? null };
 }
 
 export function addEntry(state, exerciseId, lookup) {
@@ -89,7 +109,11 @@ export function swapEntry(state, oldId, newId, lookup, { inPlan = false } = {}) 
   else a.entries[i] = entry;
   const k = pairKey(oldId, newId);
   state.swapCounts = { ...state.swapCounts, [k]: (state.swapCounts?.[k] ?? 0) + 1 };
-  if (inPlan && pi && !w.items.some((it) => it.exerciseId === newId)) pi.exerciseId = newId;
+  if (a.supersets) a.supersets = renameInSupersets(a.supersets, oldId, newId);
+  if (inPlan && pi && !w.items.some((it) => it.exerciseId === newId)) {
+    pi.exerciseId = newId;
+    if (w.supersets) w.supersets = renameInSupersets(w.supersets, oldId, newId);
+  }
   return state;
 }
 

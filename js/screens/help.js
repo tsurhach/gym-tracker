@@ -80,6 +80,17 @@ const SECTIONS = [
     </ol>`,
   ],
   [
+    "supersets",
+    "Supersets (optional)",
+    "Switch between two exercises.",
+    `<p>A superset means you do one set of one exercise, then one set of the next, and so on. Nothing changes unless you make one.</p>
+    <ol>
+      <li>In <b>Plan</b>, open a workout and tap <b>Superset…</b>.</li>
+      <li>Tap the exercises in the order you want. Choose when to rest. Tap <b>Make superset</b>.</li>
+    </ol>
+    <p>When you tick a set, the app opens the next exercise of the superset for you. To change or remove it, tap its <b>Superset</b> tag in Plan.</p>`,
+  ],
+  [
     "heavier",
     "“Go heavier” advice",
     "Only a suggestion.",

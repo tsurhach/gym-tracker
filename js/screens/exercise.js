@@ -21,7 +21,7 @@ import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
 import { cancelRest, startRest } from "../rest.js";
 import { openSwap } from "../swapsheet.js";
-import { carryWeight, nextEntryId } from "../session.js";
+import { afterSupersetSet, carryWeight, nextEntryId, supersetOf } from "../session.js";
 
 // Pure: a set plus the two input texts gives the updated set. A confirmed set whose
 // values are no longer valid becomes unconfirmed; weight may stay null while unconfirmed.
@@ -141,7 +141,7 @@ const val = (n) => (n == null ? "" : fmtKg(n));
 export const pbHtml = `<div class="pb" role="note"><span aria-hidden="true">🏆</span> New best</div>`;
 
 function setHtml(s, i, past, next) {
-  return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}" data-i="${i}">
+  return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}" data-i="${i}" data-w0="${esc(val(s.weight))}">
     <span class="set-n">${i + 1}</span>
     <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="kg" aria-label="Set ${i + 1} weight in kg" value="${esc(val(s.weight))}" />
     <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="reps" aria-label="Set ${i + 1} reps" value="${esc(s.reps ?? "")}" />
@@ -192,6 +192,7 @@ export function render(root, ctx) {
       <a class="back" href="#/workout">‹ ${esc(a.workoutName)}</a>
     </div>
     <h1 class="title">${esc(entry.name)}</h1>
+    <p class="muted" data-ss-line hidden></p>
     <div class="tags">${tags.map((m) => `<span class="tag">${esc(m)}</span>`).join(" ")}</div>
     <div class="view-opts">
       ${hasPhotos || isCustom ? `<label class="check" data-photo-opt${hasPhotos ? "" : " hidden"}><input type="checkbox" data-act="photos"${state.settings.showPhotos ? " checked" : ""} /> Show picture</label>` : ""}
@@ -224,6 +225,20 @@ export function render(root, ctx) {
     link.setAttribute("href", nx ? `#/exercise/${encodeURIComponent(id)}` : "#/workout");
   }
   paintNext();
+
+  // "Superset with Barbell Row · round 2 of 3"
+  function paintSs() {
+    const el = root.querySelector("[data-ss-line]");
+    const g = supersetOf(a, entry.exerciseId);
+    el.hidden = !g;
+    if (!g) return;
+    const others = g.ids
+      .filter((id) => id !== entry.exerciseId)
+      .map((id) => `<b>${esc(a.entries.find((e) => e.exerciseId === id).name)}</b>`);
+    const round = Math.min(entry.sets.filter((s) => s.done).length + 1, entry.sets.length);
+    el.innerHTML = `Superset with ${others.join(" + ")} · round ${round} of ${entry.sets.length}`;
+  }
+  paintSs();
 
   // Tapping a number box selects it, so typing replaces the value.
   root.addEventListener("focusin", (e) => e.target.matches?.(".set input") && e.target.select());
@@ -267,7 +282,7 @@ export function render(root, ctx) {
   root.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-act], a");
     if (!t) return;
-    const before = entry.sets.map((x) => x.weight);
+    let goTo = null; // superset: the member to open after this tick
     syncAll();
     const act = t.dataset.act;
     if (!act) {
@@ -320,9 +335,13 @@ export function render(root, ctx) {
         cancelRest(ctx);
       } else if (validSet(s.weight, s.reps)) {
         s.done = true;
-        if (before[i] !== s.weight) carryWeight(entry.sets, i, before[i]);
+        // data-w0 = the weight this row showed when drawn: a change event may already have copied the typed one
+        const old = parseNum(row.dataset.w0);
+        if (old !== s.weight) carryWeight(entry.sets, i, old);
         justConfirmed = { s, at: Date.now() };
-        startRest(ctx, item);
+        const after = afterSupersetSet(a, entry.exerciseId);
+        if (after.rest) startRest(ctx, item);
+        if (after.goTo && after.goTo !== entry.exerciseId) goTo = after.goTo;
       } else {
         row.classList.add("bad");
         row.classList.remove("shake");
@@ -344,7 +363,12 @@ export function render(root, ctx) {
     root.querySelector("[data-sets]").innerHTML = setsInner(entry, past);
     paintPlates();
     paintNext();
+    paintSs();
     if (act === "confirm") root.querySelector(".set.next")?.scrollIntoView({ block: "nearest" });
     ctx.save({ render: false });
+    if (goTo) {
+      const here = location.hash; // a moment later, so the tick is seen first; skipped if the user already left
+      setTimeout(() => location.hash === here && ctx.go(`#/exercise/${encodeURIComponent(goTo)}`), 350);
+    }
   });
 }

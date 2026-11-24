@@ -214,3 +214,22 @@ test("settings.schedule survives merge (newer settings record wins whole)", () =
   assert.deepEqual(merge(a, b).state.settings.schedule, sched);
   assert.deepEqual(merge(b, a).state.settings.schedule, sched);
 });
+
+test("workout supersets survive merge (newer workout record wins whole)", () => {
+  const w = (updatedAt, supersets) => ({
+    id: "w1",
+    name: "A",
+    muscles: [],
+    items: [],
+    updatedAt,
+    ...(supersets ? { supersets } : {}),
+  });
+  const ss = [{ id: "ss-1", ids: ["a", "b"], rest: "each" }];
+  const r = merge(st({ workouts: [w(5)] }), st({ workouts: [w(9, ss)] })).state;
+  assert.deepEqual(r.workouts[0].supersets, ss);
+  assert.deepEqual(
+    merge(st({ workouts: [w(9, ss)] }), st({ workouts: [w(5)] })).state
+      .workouts[0].supersets,
+    ss,
+  );
+});

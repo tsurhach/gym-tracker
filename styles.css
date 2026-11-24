@@ -1335,6 +1335,40 @@ details.help .sec-body li {
   border-bottom: 1px solid var(--line);
   position: relative;
 }
+.item.ss {
+  border-left: 3px solid var(--accent);
+}
+.ss-tag {
+  flex: none;
+  min-height: 44px;
+  margin-right: 8px;
+  border: 0;
+}
+.ss-pick {
+  width: 100%;
+  text-align: left;
+}
+.ss-num {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.ss-num.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.ss-group {
+  border-left: 3px solid var(--accent);
+}
+.ss-head {
+  padding: 8px 0 0;
+}
 .xline {
   display: flex;
   align-items: center;

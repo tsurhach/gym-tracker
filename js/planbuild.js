@@ -109,6 +109,44 @@ export function orderItems(items, ids) {
   return items.map((it, i) => ({ it, i })).sort((a, b) => rank(a.it) - rank(b.it) || a.i - b.i).map((x) => x.it);
 }
 
+// Supersets: w.supersets = [{ id, ids: [exerciseId, ...] (alternation order), rest: "round" | "each" }]. Every reader
+// goes through this, so junk, missing ids and deleted exercises never need clean-up: it keeps only ids present,
+// each id in its first group only, groups of 2+, rest "round" unless "each".
+export function supersetsOf(list, presentIds) {
+  if (!Array.isArray(list)) return [];
+  const present = new Set(presentIds);
+  const used = new Set();
+  const out = [];
+  for (const g of list) {
+    if (!g || !Array.isArray(g.ids)) continue;
+    const ids = [];
+    for (const id of g.ids) if (typeof id === "string" && present.has(id) && !used.has(id) && !ids.includes(id)) ids.push(id);
+    if (ids.length < 2) continue;
+    ids.forEach((id) => used.add(id));
+    out.push({ id: typeof g.id === "string" ? g.id : "", ids, rest: g.rest === "each" ? "each" : "round" });
+  }
+  return out;
+}
+
+// Members (items whose exerciseId is in ids) sit together, in ids order, where the first member was. Others keep their order.
+export function groupItems(items, ids) {
+  const mem = ids.map((id) => items.find((it) => it.exerciseId === id)).filter(Boolean);
+  if (mem.length < 2) return items.slice();
+  const first = items.findIndex((it) => mem.includes(it));
+  const out = [];
+  items.forEach((it, i) => {
+    if (!mem.includes(it)) out.push(it);
+    else if (i === first) out.push(...mem);
+  });
+  return out;
+}
+
+// A new list with oldId replaced by newId inside every group (a swap).
+export function renameInSupersets(list, oldId, newId) {
+  if (!Array.isArray(list)) return list;
+  return list.map((g) => (g && Array.isArray(g.ids) ? { ...g, ids: g.ids.map((id) => (id === oldId ? newId : id)) } : g));
+}
+
 // Exercises done in recent workouts, newest first, limited to the given muscles (all if none).
 export function recentIds(sessions, muscles, limit = 6) {
   const out = [];

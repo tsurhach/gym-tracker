@@ -14,6 +14,8 @@ import {
   deleteCustomExercise,
   carryWeight,
   nextEntryId,
+  afterSupersetSet,
+  swapEntry,
 } from "../js/session.js";
 
 const LIB = {
@@ -304,4 +306,74 @@ test("startSession copies the last note; an empty latest note is not replaced by
   s.sessions.push(ses(NOW + 5, ""));
   startSession(s, "w1", lookup, NOW + 9);
   assert.equal(s.active.entries[0].note, undefined);
+});
+
+test("supersets: startSession copies groups limited to present entries; old active works", () => {
+  const s = withPlan();
+  s.workouts[0].items = [item("bench"), item("row"), item("ghost")];
+  s.workouts[0].supersets = [
+    { id: "ss-1", ids: ["bench", "row", "ghost"], rest: "each" },
+    { ids: ["bench"] },
+  ];
+  startSession(s, "w1", lookup, NOW);
+  assert.deepEqual(s.active.supersets, [
+    { ids: ["bench", "row"], rest: "each" },
+  ]);
+  const old = withPlan();
+  startSession(old, "w1", lookup, NOW);
+  assert.equal(old.active.supersets, undefined);
+  assert.deepEqual(afterSupersetSet(old.active, "bench"), {
+    rest: true,
+    goTo: null,
+  });
+});
+
+test("afterSupersetSet: round, each, unequal sets, finished, non-member", () => {
+  const e = (id, ...d) => ({
+    exerciseId: id,
+    sets: d.map((x) => ({ done: x })),
+  });
+  const act = (rest, ...es) => ({
+    entries: es,
+    supersets: [{ ids: es.slice(0, 2).map((x) => x.exerciseId), rest }],
+  });
+  let a = act(
+    "round",
+    e("a", true, false),
+    e("b", false, false),
+    e("c", false),
+  );
+  assert.deepEqual(afterSupersetSet(a, "a"), { rest: false, goTo: "b" }); // mid-round
+  a.entries[1].sets[0].done = true;
+  assert.deepEqual(afterSupersetSet(a, "b"), { rest: true, goTo: "a" }); // round over
+  a = act("each", e("a", true, false), e("b", false, false));
+  assert.deepEqual(afterSupersetSet(a, "a"), { rest: true, goTo: "b" }); // rest after each
+  a = act("round", e("a", true, false, false), e("b", true));
+  assert.deepEqual(afterSupersetSet(a, "a"), { rest: true, goTo: "a" }); // b is finished
+  a = act("round", e("a", true), e("b", true));
+  assert.deepEqual(afterSupersetSet(a, "b"), { rest: true, goTo: null }); // all done
+  assert.deepEqual(
+    afterSupersetSet(
+      act("round", e("a", true), e("b", true), e("c", false)),
+      "c",
+    ),
+    { rest: true, goTo: null },
+  );
+});
+
+test("swapEntry renames in the active superset and, with inPlan, in the plan", () => {
+  const LIB2 = {
+    ...LIB,
+    alt: { id: "alt", name: "Alt", primary: "Chest", secondary: [] },
+  };
+  const lk = (id) => LIB2[id];
+  const s = withPlan();
+  s.workouts[0].items = [item("bench"), item("row")];
+  s.workouts[0].supersets = [
+    { id: "ss-1", ids: ["bench", "row"], rest: "round" },
+  ];
+  startSession(s, "w1", lk, NOW);
+  swapEntry(s, "bench", "alt", lk, { inPlan: true });
+  assert.deepEqual(s.active.supersets[0].ids, ["alt", "row"]);
+  assert.deepEqual(s.workouts[0].supersets[0].ids, ["alt", "row"]);
 });

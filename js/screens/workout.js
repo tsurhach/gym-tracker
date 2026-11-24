@@ -1,5 +1,6 @@
 import { advice, exerciseHistory } from "../logic.js";
 import { addEntry, finishSession, newItem } from "../session.js";
+import { groupItems, supersetsOf } from "../planbuild.js";
 import { openPicker } from "../picker.js";
 import { confirmSheet, esc, fmtKg } from "../ui.js";
 
@@ -59,6 +60,22 @@ function rowHtml(e, ctx) {
   </a>`;
 }
 
+// Entries as list blocks: members of a superset together (alternation order, where the first member was),
+// every other run of entries as one plain block.
+function blocks(a) {
+  const groups = supersetsOf(a.supersets, a.entries.map((e) => e.exerciseId));
+  let list = a.entries;
+  for (const g of groups) list = groupItems(list, g.ids);
+  const out = [];
+  for (const e of list) {
+    const g = groups.find((x) => x.ids.includes(e.exerciseId));
+    const last = out.at(-1);
+    if (last && last.g === g) last.rows.push(e);
+    else out.push({ g, rows: [e] });
+  }
+  return out;
+}
+
 export function render(root, ctx) {
   const { state } = ctx;
   const a = state.active;
@@ -66,13 +83,20 @@ export function render(root, ctx) {
     location.replace("#/today");
     return;
   }
+  const listHtml = blocks(a)
+    .map(({ g, rows }) =>
+      g
+        ? `<div class="card list ss-group"><div class="muted small ss-head">Superset · rest ${g.rest === "each" ? "after each exercise" : "after the round"}</div>${rows.map((e) => rowHtml(e, ctx)).join("")}</div>`
+        : `<div class="card list">${rows.map((e) => rowHtml(e, ctx)).join("")}</div>`,
+    )
+    .join("");
   const mins = Math.max(0, Math.floor((Date.now() - a.startedAt) / 60000));
   root.innerHTML = `<div class="row">
       <h1 class="title grow">${esc(a.workoutName)}</h1>
       <span class="muted">${mins} min</span>
     </div>
     <p class="subtitle">Tap any exercise. Do them in any order.</p>
-    <div class="card list">${a.entries.map((e) => rowHtml(e, ctx)).join("") || `<div class="empty"><b>No exercises yet.</b><p class="muted">Tap "Add another exercise" below to build this workout.</p></div>`}</div>
+    ${listHtml || `<div class="card list"><div class="empty"><b>No exercises yet.</b><p class="muted">Tap "Add another exercise" below to build this workout.</p></div></div>`}
     <button class="btn" data-act="add">+ Add another exercise</button>
     <button class="btn btn-primary" data-act="finish">Finish workout</button>`;
 
