@@ -46,3 +46,17 @@ test("chartPoints: one point, equal values, increasing values", async () => {
   assert.deepEqual(up.map((p) => p.x), [28, 160, 292]);
   assert.deepEqual(up.map((p) => p.y), [92, 60, 28]); // heavier is higher (smaller y)
 });
+
+test("summary: totals, volume, one best per exercise, no bests on the first-ever session, old session minutes", async () => {
+  const { summary } = await import("../js/screens/history.js");
+  const s1 = ses("s1", 1000, [en("bench", "Bench", [set(50, 10), set(50, 8)]), en("bw", "Dips", [set(0, 12)])]);
+  const first = summary(s1, [s1]);
+  assert.deepEqual(first.bests, []);
+  assert.equal(first.sets, 3);
+  assert.equal(first.volume, 900);
+  assert.equal(first.minutes, 45);
+  const s2 = ses("s2", 2000, [en("bench", "Bench", [set(52.5, 6), set(55, 5), set(50, 11)]), en("bw", "Dips", [set(0, 12)])], null);
+  const m = summary(s2, [s1, s2]);
+  assert.deepEqual(m.bests, [{ name: "Bench", weight: 55, reps: 5 }]); // dips 12 equals the old 12: not a best
+  assert.equal(m.minutes, 1);
+});

@@ -138,7 +138,7 @@ let justConfirmed = null;
 
 const val = (n) => (n == null ? "" : fmtKg(n));
 
-export const pbHtml = `<div class="pb" role="note"><span aria-hidden="true">★</span> New best</div>`;
+export const pbHtml = `<div class="pb" role="note"><span aria-hidden="true">🏆</span> New best</div>`;
 
 function setHtml(s, i, past, next) {
   return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}" data-i="${i}">

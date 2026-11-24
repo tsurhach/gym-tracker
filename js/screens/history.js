@@ -10,6 +10,32 @@ export const durationMin = (ses) =>
     Math.floor(((ses.finishedAt ?? ses.startedAt) - ses.startedAt) / 60000),
   );
 
+// Totals for the summary card, all computed from saved sets. One best per exercise: heaviest, then most reps.
+export function summary(ses, sessions) {
+  let sets = 0;
+  let volume = 0;
+  const bests = [];
+  for (const en of ses.entries) {
+    sets += en.sets.length;
+    volume += en.sets.reduce((n, s) => n + s.weight * s.reps, 0);
+    const past = earlier(sessions, ses, en.exerciseId);
+    const top = en.sets
+      .filter((s) => isPersonalBest(past, s))
+      .sort((a, b) => b.weight - a.weight || b.reps - a.reps)[0];
+    if (top) bests.push({ name: en.name, weight: top.weight, reps: top.reps });
+  }
+  return { minutes: durationMin(ses), sets, volume, bests };
+}
+
+function summaryHtml(ses, sessions) {
+  const m = summary(ses, sessions);
+  const lifted = m.volume > 0 ? ` · ${Math.round(m.volume).toLocaleString("en-US")} kg lifted` : "";
+  return `<section class="card" aria-label="Workout summary">
+      <p class="stat" style="margin:0"><b>${m.minutes} min</b> · ${plural(m.sets, "set", "sets")}${lifted}</p>
+      ${m.bests.length ? `<p style="margin:8px 0 0">🏆 ${plural(m.bests.length, "new best", "new bests")}: ${m.bests.map((b) => `${esc(b.name)} ${fmtKg(b.weight)} × ${b.reps}`).join(" · ")}</p>` : ""}
+    </section>`;
+}
+
 const heaviest = (sets) => Math.max(...sets.map((s) => s.weight));
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -207,6 +233,7 @@ function sessionScreen(root, ctx) {
   root.innerHTML = `<div class="row topbar"><a class="back" href="#/history">‹ History</a></div>
     <h1 class="title">${esc(ses.workoutName)}</h1>
     <p class="subtitle">${esc(fmtDate(ses.startedAt))} · ${durationMin(ses)} min</p>
+    ${summaryHtml(ses, ctx.state.sessions)}
     ${ses.entries
       .map(
         (en, e) => `<section class="card">

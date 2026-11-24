@@ -103,8 +103,9 @@ export function render(root, ctx) {
     else if (open > 0)
       msg = `${open} ${open === 1 ? "set is" : "sets are"} not confirmed and will be dropped. Finish anyway?`;
     if (msg && !(await confirmSheet(msg, "Finish workout"))) return;
+    const id = a.id;
     finishSession(state, Date.now());
-    ctx.go("#/today");
+    ctx.go(state.sessions.some((s) => s.id === id) ? `#/history/${id}` : "#/today");
     ctx.save();
   });
 }
