@@ -73,14 +73,14 @@ export function addMany(workout, ids, goalKey) {
   return n;
 }
 
-// A copy of a day, inserted right after it, with a new id and a free name ("Push copy", "Push copy 2").
+// A copy of a day, added at the END of the plan (so the Today rotation is not disturbed), with a new id and a free name ("Push copy", "Push copy 2").
 export function duplicateWorkout(state, w, newId = crypto.randomUUID()) {
   const names = new Set(state.workouts.map((x) => x.name));
   const base = `${w.name.slice(0, 33)} copy`;
   let name = base;
   for (let k = 2; names.has(name); k++) name = `${base} ${k}`;
   const copy = { ...structuredClone(w), id: newId, name };
-  state.workouts.splice(state.workouts.indexOf(w) + 1, 0, copy);
+  state.workouts.push(copy);
   return copy;
 }
 

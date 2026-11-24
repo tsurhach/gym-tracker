@@ -416,7 +416,7 @@ export function render(root, ctx) {
         const copy = duplicateWorkout(state, w);
         rememberOpen(`w:${copy.id}`, true);
         await ctx.save();
-        dayEl(root, copy.id)?.scrollIntoView({ block: "start" });
+        document.querySelector(`[data-w="${CSS.escape(copy.id)}"]`)?.scrollIntoView({ block: "start" }); // the new screen, not the old root
         return;
       }
       case "w-del":
@@ -574,6 +574,8 @@ export function render(root, ctx) {
   });
 
   root.addEventListener("pointerdown", (e) => startDrag(e, root, ctx));
+  // Tapping a number box selects its content, so typing replaces it.
+  root.addEventListener("focusin", (e) => e.target.matches?.(".fields input, .rest-in input") && e.target.select());
   // Keyboard and screen reader fallback for the drag handle.
   root.addEventListener("keydown", (e) => {
     const h = e.target.closest?.("[data-handle]");
@@ -638,7 +640,11 @@ export function render(root, ctx) {
         t.value = shownValue(ctx, t); // put the old value back; no redraw, so the keyboard stays up
       }
       // No redraw while typing: moving to the next box must keep the keyboard open. Typed rest fields stay as typed.
-      if (field === "wname") dayEl(root, findIn(state, t).w?.id ?? "")?.querySelector(".sec-title")?.replaceChildren(t.value.trim() || "");
+      if (field === "wname") {
+        const w = findIn(state, t).w;
+        if (w) t.value = w.name; // blank keeps the old name
+        dayEl(root, w?.id ?? "")?.querySelector(".sec-title")?.replaceChildren(w?.name ?? "");
+      }
       paintSums();
       return ctx.save({ render: false });
     }

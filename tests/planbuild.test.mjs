@@ -42,10 +42,10 @@ test("addMany adds in tick order, no duplicates, goal defaults", () => {
   assert.equal(summaryText({ sets: 5, repMin: 5, repMax: 5 }), "5 × 5");
 });
 
-test("duplicateWorkout: new id, free name, independent items, placed after", () => {
+test("duplicateWorkout: new id, free name, independent items, added at the end", () => {
   const s = { workouts: [{ id: "1", name: "Push", muscles: ["Chest"], items: [{ exerciseId: "a", sets: 3 }] }, { id: "2", name: "Pull", muscles: [], items: [] }] };
   const c = duplicateWorkout(s, s.workouts[0], "9");
-  assert.deepEqual(s.workouts.map((w) => w.id), ["1", "9", "2"]);
+  assert.deepEqual(s.workouts.map((w) => w.id), ["1", "2", "9"]);
   assert.equal(c.name, "Push copy");
   assert.equal(duplicateWorkout(s, s.workouts[0], "10").name, "Push copy 2");
   c.items[0].sets = 9;

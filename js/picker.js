@@ -99,7 +99,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     const thumb = e.images
       ? `<img class="pick-thumb" src="${exImageUrls(e)[0]}" alt="" width="56" height="56" loading="lazy" decoding="async" />`
       : `<span class="pick-thumb"${custom.has(e.id) ? ` data-mid="${esc(e.id)}"` : ""}></span>`;
-    return `<button class="pick-row" data-id="${esc(e.id)}"${added ? " disabled" : ""}${multi && !added ? ` aria-pressed="${on}"` : ""}>
+    return `<button class="pick-row" data-id="${esc(e.id)}" data-tag="${esc(tag || "")}"${added ? " disabled" : ""}${multi && !added ? ` aria-pressed="${on}"` : ""}>
           ${thumb}
           <span class="pick-name">${esc(e.name)}</span>
           <span class="tag">${added ? "Added" : on ? "✓" : tag || (custom.has(e.id) ? "Custom" : "")}</span>
@@ -115,9 +115,10 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     const dayIds = new Set(inDay.map((e) => e.id));
     const found = searchExercises(q ? every : inDay, q);
     const groups = []; // [{ key, title, html }]
-    const recent = q || !multi ? [] : recentIds(ctx.state.sessions, muscles).map((id) => inDay.find((e) => e.id === id)).filter(Boolean);
+    const recent = q || !multi ? [] : recentIds(ctx.state.sessions, muscles, 12).map((id) => inDay.find((e) => e.id === id)).filter((e) => e && !exclude.has(e.id)).slice(0, 6);
     if (recent.length) groups.push({ title: "Recent", html: recent.map((e) => rowHtml(e, custom)).join("") });
-    for (const m of MUSCLES) {
+    const order = muscles.length && !showAll ? [...muscles, ...MUSCLES.filter((x) => !muscles.includes(x))] : MUSCLES;
+    for (const m of [...order.filter((x) => x !== "Abs"), ...order.filter((x) => x === "Abs")]) { // Abs last
       const rows = found.filter((e) => e.primary === m && dayIds.has(e.id));
       if (rows.length) groups.push({ title: m, html: rows.map((e) => rowHtml(e, custom)).join("") });
     }
@@ -137,7 +138,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     for (const r of list.querySelectorAll(".pick-row[aria-pressed]")) {
       const on = picked.includes(r.dataset.id);
       r.setAttribute("aria-pressed", String(on));
-      r.querySelector(".tag").textContent = on ? "✓" : "";
+      r.querySelector(".tag").textContent = on ? "✓" : r.dataset.tag;
     }
     doneBtn.disabled = !picked.length;
     doneBtn.textContent = picked.length ? `Add ${picked.length}` : "Add exercises";

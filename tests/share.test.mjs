@@ -500,7 +500,7 @@ test("copied day gets new ids and is independent of the view", () => {
 test("copy has no body weight, no link back, only allowed fields", () => {
   const { workout } = copyDay(sharedView(), "d1", emptyState(), hasId);
   assert.deepEqual(Object.keys(workout).sort(), ["id", "items", "muscles", "name"]);
-  assert.ok(!JSON.stringify(workout).includes("80"));
+  assert.ok(!JSON.stringify({ ...workout, id: "" }).includes("80"));
 });
 
 test("copy coerces hostile values and caps names", () => {
