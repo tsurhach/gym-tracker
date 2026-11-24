@@ -6,10 +6,11 @@ import { lastSets, lastText } from "./screens/workout.js";
 
 // "Swap <name> for…" sheet on the exercise screen: up to 5 same-muscle alternatives,
 // "Show all" (picker), and a tick to change the plan too. Swapping goes to the new exercise.
-export function openSwap(ctx, entry) {
+// plan = { taken: Set of ids in the day, onSwap(id) }: the same sheet from the Plan screen, no workout involved.
+export function openSwap(ctx, entry, plan) {
   const { state } = ctx;
   const cur = ctx.lookup(entry.exerciseId) ?? { id: entry.exerciseId, primary: entry.primary, secondary: [] };
-  const taken = new Set(state.active.entries.map((e) => e.exerciseId));
+  const taken = plan?.taken ?? new Set(state.active.entries.map((e) => e.exerciseId));
   const alts = alternatives(cur, [...ctx.library, ...state.customExercises], state.sessions, taken, 5, state.swapCounts);
   const scrim = document.createElement("div");
   scrim.className = "scrim";
@@ -28,7 +29,7 @@ export function openSwap(ctx, entry) {
   sheet.innerHTML = `<h2 style="margin-top:0">Swap ${esc(entry.name)} for…</h2>
     ${rows.join("") || `<p class="muted">No other exercises for this muscle.</p>`}
     <button class="btn" data-act="all">Show all</button>
-    <label class="check"><input type="checkbox" data-plan /> Also change it in my plan</label>
+    ${plan ? "" : `<label class="check"><input type="checkbox" data-plan /> Also change it in my plan</label>`}
     <button class="btn" data-act="cancel">Cancel</button>`;
   scrim.append(sheet);
   const close = () => {
@@ -37,12 +38,13 @@ export function openSwap(ctx, entry) {
   };
   const onKey = (e) => e.key === "Escape" && close();
   const go = (id, inPlan) => {
+    if (plan) return plan.onSwap(id);
     swapEntry(state, entry.exerciseId, id, ctx.lookup, { inPlan });
     ctx.save({ render: false });
     location.hash = `#/exercise/${id}`;
   };
   scrim.addEventListener("click", (e) => {
-    const inPlan = sheet.querySelector("[data-plan]").checked;
+    const inPlan = !!sheet.querySelector("[data-plan]")?.checked;
     const row = e.target.closest(".pick-row");
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (row) {

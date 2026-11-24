@@ -1,11 +1,13 @@
 import { GOALS, MUSCLES } from "../constants.js";
 import { PLATE_SIZES, gymPlates, parseNum, plateRule } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
-import { applyGoal, deleteCustomExercise, newItem } from "../session.js";
+import { applyGoal, deleteCustomExercise } from "../session.js";
 import { exportCsv, exportJson } from "../store.js";
 import { addBackup } from "../sync.js";
 import { buildFullBackup, fmtSize, readBackup } from "../backup.js";
 import { openPicker } from "../picker.js";
+import { openSwap } from "../swapsheet.js";
+import { addMany, duplicateWorkout, moveItem, orderItems, summaryText } from "../planbuild.js";
 import {
   allMediaKeys,
   checkSound,
@@ -27,12 +29,6 @@ import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
 import { runningVersion } from "../update.js";
 
-function move(arr, i, d) {
-  const j = i + d;
-  if (j < 0 || j >= arr.length) return;
-  [arr[i], arr[j]] = [arr[j], arr[i]];
-}
-
 const isoDay = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -47,17 +43,29 @@ function download(filename, blob) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
-function itemHtml(it, ctx, i, n) {
+// The one exercise line that is expanded (`dayId|exerciseId`). In memory only; opening one closes the other.
+let openX = null;
+
+function itemHtml(it, ctx, i, n, wid) {
   const ex = ctx.lookup(it.exerciseId);
+  const name = ex ? ex.name : "Unknown exercise";
+  const open = openX === `${wid}|${it.exerciseId}`;
   const rule = plateRule(it, ex);
   return `<li class="item" data-x="${esc(it.exerciseId)}">
-    <div class="row">
-      <div class="grow">
-        <div class="ex-name">${esc(ex ? ex.name : "Unknown exercise")}</div>
-        ${ex ? `<span class="tag">${esc(ex.primary)}</span>` : ""}
-      </div>
+    <div class="xline">
+      <button class="handle" data-handle aria-label="Move ${esc(name)}: drag, or use the up and down arrow keys">≡</button>
+      <button class="xmain" data-act="x-toggle" aria-expanded="${open}">
+        <span class="ex-name">${esc(name)}</span>
+        <span class="xsum muted">${esc(summaryText(it))}</span><span class="xchev" aria-hidden="true">›</span>
+      </button>
+    </div>
+    ${
+      open
+        ? `<div class="xbody">
+    <div class="xbtns">
       <button class="icon-btn" data-act="x-up" aria-label="Move exercise up"${i === 0 ? " disabled" : ""}>↑</button>
       <button class="icon-btn" data-act="x-down" aria-label="Move exercise down"${i === n - 1 ? " disabled" : ""}>↓</button>
+      <button class="btn" data-act="x-swap">Swap</button>
       <button class="icon-btn warn" data-act="x-del" aria-label="Remove exercise">✕</button>
     </div>
     <div class="fields">
@@ -78,7 +86,113 @@ function itemHtml(it, ctx, i, n) {
     ${rule.on ? `<div class="setting">Empty weight (bar or sled, before plates)
       <span class="rest-in"><input data-field="emptyKg" inputmode="decimal" aria-label="Empty weight in kg" value="${esc(fmtKg(rule.empty))}" /> kg</span>
     </div>` : ""}
+  </div>`
+        : ""
+    }
   </li>`;
+}
+
+const itemsHtml = (w, ctx) =>
+  w.items.map((it, j) => itemHtml(it, ctx, j, w.items.length, w.id)).join("") ||
+  `<li class="empty muted">No exercises yet. Add some below.</li>`;
+
+const countText = (k) => `· ${k ? `${k} ${k === 1 ? "exercise" : "exercises"}` : "no exercises"}`;
+const musclesText = (w) => `Muscles: ${w.muscles.join(", ") || "any (tap to choose)"}`;
+const dayEl = (root, wid) => root.querySelector(`[data-w="${CSS.escape(wid)}"]`);
+const itemEl = (day, id) => day?.querySelector(`[data-x="${CSS.escape(id)}"]`);
+
+// Redraw one day's list and count in place (no full redraw, so nothing else loses focus or scroll).
+function paintDay(root, ctx, w) {
+  const d = dayEl(root, w.id);
+  if (!d) return;
+  d.querySelector(".xlist").innerHTML = itemsHtml(w, ctx);
+  d.querySelector(".sec-count").textContent = countText(w.items.length);
+}
+
+// Redraw one exercise line in place (open or close it).
+function paintItem(root, ctx, w, id) {
+  const li = itemEl(dayEl(root, w.id), id);
+  const i = w.items.findIndex((x) => x.exerciseId === id);
+  if (li && i >= 0) li.outerHTML = itemHtml(w.items[i], ctx, i, w.items.length, w.id);
+}
+
+// Drag a line by its handle (Pointer Events: touch, pen and mouse). The line follows the finger and the
+// others make room live; the new order is saved on release. Only the handle has touch-action:none, so the page still scrolls.
+function startDrag(e, root, ctx) {
+  const h = e.target.closest?.("[data-handle]");
+  if (!h || (e.pointerType === "mouse" && e.button !== 0)) return;
+  const li = h.closest(".item");
+  const ul = li.parentElement;
+  const { w } = findIn(ctx.state, li);
+  if (!w || !ul) return;
+  e.preventDefault();
+  try {
+    h.setPointerCapture(e.pointerId);
+  } catch {} // no active pointer (never on a real touch or mouse)
+  const grab = e.clientY - li.getBoundingClientRect().top;
+  let y = e.clientY;
+  let raf = 0;
+  let done = false;
+  li.classList.add("dragging");
+  const mid = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.top + r.height / 2;
+  };
+  const place = () => {
+    li.style.transform = "";
+    const top = y - grab;
+    const center = top + li.getBoundingClientRect().height / 2;
+    for (;;) {
+      const p = li.previousElementSibling;
+      const n = li.nextElementSibling;
+      // Move the neighbour, never the dragged line, so it keeps its pointer capture.
+      if (p && center < mid(p)) ul.insertBefore(p, li.nextSibling);
+      else if (n && center > mid(n)) ul.insertBefore(n, li);
+      else break;
+    }
+    li.style.transform = `translateY(${top - li.getBoundingClientRect().top}px)`;
+  };
+  const loop = () => {
+    const edge = 90;
+    const low = innerHeight - 150; // above the tab bar
+    const dy = y < edge ? -Math.ceil((edge - y) / 6) : y > low ? Math.ceil((y - low) / 6) : 0;
+    if (dy) {
+      scrollBy(0, dy);
+      place();
+    }
+    raf = requestAnimationFrame(loop);
+  };
+  const end = (commit) => {
+    if (done) return;
+    done = true;
+    cancelAnimationFrame(raf);
+    h.removeEventListener("pointermove", move);
+    h.removeEventListener("pointerup", up);
+    h.removeEventListener("pointercancel", cancel);
+    li.classList.remove("dragging");
+    li.style.transform = "";
+    const id = li.dataset.x;
+    if (commit) {
+      const next = orderItems(w.items, [...ul.children].map((c) => c.dataset.x));
+      if (next.some((it, i) => it !== w.items[i])) {
+        w.items.splice(0, w.items.length, ...next);
+        ctx.save({ render: false });
+      }
+    }
+    paintDay(root, ctx, w); // from the plan, so it also undoes a cancelled drag
+    itemEl(dayEl(root, w.id), id)?.scrollIntoView({ block: "nearest" });
+  };
+  const move = (ev) => {
+    y = ev.clientY;
+    place();
+  };
+  const up = () => end(true);
+  const cancel = () => end(false);
+  h.addEventListener("pointermove", move);
+  h.addEventListener("pointerup", up);
+  h.addEventListener("pointercancel", cancel);
+  raf = requestAnimationFrame(loop);
+  place();
 }
 
 // Which sections are open is a per-viewer preference kept in localStorage (never in the plan data), so a redraw
@@ -110,20 +224,25 @@ function workoutHtml(w, ctx, i, n) {
   return section(
     `w:${w.id}`,
     w.name,
-    `<div class="row">
-      <input class="name-input grow" data-field="wname" value="${esc(w.name)}" aria-label="Workout name" maxlength="40" />
+    `<input class="name-input" data-field="wname" value="${esc(w.name)}" aria-label="Workout name" maxlength="40" />
+    <div class="row" style="margin-top:8px">
       <button class="icon-btn" data-act="w-up" aria-label="Move workout up"${i === 0 ? " disabled" : ""}>↑</button>
       <button class="icon-btn" data-act="w-down" aria-label="Move workout down"${i === n - 1 ? " disabled" : ""}>↓</button>
+      <button class="btn grow" style="min-height:44px;margin:0" data-act="w-copy">Duplicate day</button>
       <button class="icon-btn warn" data-act="w-del" aria-label="Delete workout">✕</button>
     </div>
-    <div class="chips">${MUSCLES.map(
-      (m) =>
-        `<button class="chip" data-act="w-muscle" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(m)}</button>`,
-    ).join("")}</div>
-    <ul class="items">${w.items.map((it, j) => itemHtml(it, ctx, j, k)).join("") || `<li class="empty muted">No exercises yet. Add one below.</li>`}</ul>
-    <button class="btn" data-act="add-ex">+ Add exercise</button>`,
+    <details class="muscles-line">
+      <summary data-muscles>${esc(musclesText(w))}</summary>
+      <div class="chips">${MUSCLES.map(
+        (m) =>
+          `<button class="chip" data-act="w-muscle" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(m)}</button>`,
+      ).join("")}</div>
+    </details>
+    <ul class="items xlist">${itemsHtml(w, ctx)}</ul>
+    ${k > 1 ? `<p class="muted small" style="margin-bottom:var(--gap)">Drag ≡ to change the order. Tap a line to edit its sets and reps.</p>` : ""}
+    <button class="btn" data-act="add-ex">+ Add exercises</button>`,
     {
-      count: k ? `${k} ${k === 1 ? "exercise" : "exercises"}` : "no exercises",
+      count: countText(k).slice(2),
       attrs: ` data-w="${esc(w.id)}"`,
     },
   );
@@ -145,14 +264,14 @@ export function render(root, ctx) {
         `<button class="chip" data-act="goal" data-goal="${key}" aria-pressed="${settings.goal === key}">${esc(g.label)}</button>`,
     )
     .join("")}</div>
-      <p class="muted small" style="margin-top:8px">New exercises use ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps.</p>`;
+      <p class="muted small" style="margin-top:8px">New exercises start at ${GOALS[settings.goal].sets} sets of ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps. To change one exercise, tap it in a workout.</p>`;
   root.innerHTML = `<h1 class="title">Plan</h1>
     ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
     <button class="btn" data-act="add-workout">+ Add workout</button>
     <a class="card weight-card" href="#/help"><span>How to use this app</span><span class="muted small">Short guide</span></a>
     ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}
     ${ctx.share ? `<a class="card weight-card" href="#/people"><span>People: coach and friends</span><span class="muted small">View only</span></a>` : ""}
-    ${section("g:goal", "Goal", goalHtml)}
+    ${section("g:goal", "Default sets and reps", goalHtml)}
     ${section(
       "g:change",
       "Change the whole plan",
@@ -287,12 +406,19 @@ export function render(root, ctx) {
       }
       case "w-up":
       case "w-down":
-        move(
+        moveItem(
           state.workouts,
           state.workouts.indexOf(w),
           t.dataset.act === "w-up" ? -1 : 1,
         );
         break;
+      case "w-copy": {
+        const copy = duplicateWorkout(state, w);
+        rememberOpen(`w:${copy.id}`, true);
+        await ctx.save();
+        dayEl(root, copy.id)?.scrollIntoView({ block: "start" });
+        return;
+      }
       case "w-del":
         if (
           !(await confirmSheet(
@@ -309,28 +435,71 @@ export function render(root, ctx) {
         w.muscles = MUSCLES.filter((m) =>
           m === t.dataset.m ? !w.muscles.includes(m) : w.muscles.includes(m),
         );
-        break;
+        t.setAttribute("aria-pressed", String(w.muscles.includes(t.dataset.m)));
+        dayEl(root, w.id).querySelector("[data-muscles]").textContent = musclesText(w);
+        ctx.save({ render: false });
+        return;
       case "add-ex":
         openPicker(
           ctx,
-          (id) => {
-            if (w.items.some((it) => it.exerciseId === id)) return;
-            w.items.push(newItem(id, settings.goal));
-            ctx.save();
+          (ids) => {
+            if (addMany(w, ids, settings.goal)) ctx.save();
           },
           {
             exclude: new Set(w.items.map((it) => it.exerciseId)),
             muscles: w.muscles,
+            multi: true,
+            title: `Add to ${w.name}`,
           },
         );
         return;
+      case "x-toggle": {
+        const it = w?.items[xi];
+        if (!it) return;
+        const key = `${w.id}|${it.exerciseId}`;
+        const prev = openX?.split("|");
+        openX = openX === key ? null : key;
+        if (prev) paintItem(root, ctx, state.workouts.find((x) => x.id === prev[0]) ?? w, prev[1]);
+        paintItem(root, ctx, w, it.exerciseId);
+        if (openX) itemEl(dayEl(root, w.id), it.exerciseId)?.scrollIntoView({ block: "nearest" });
+        return;
+      }
       case "x-up":
-      case "x-down":
-        move(w.items, xi, t.dataset.act === "x-up" ? -1 : 1);
-        break;
+      case "x-down": {
+        const id = w?.items[xi]?.exerciseId;
+        moveItem(w.items, xi, t.dataset.act === "x-up" ? -1 : 1);
+        paintDay(root, ctx, w);
+        itemEl(dayEl(root, w.id), id)?.scrollIntoView({ block: "nearest" });
+        ctx.save({ render: false });
+        return;
+      }
       case "x-del":
+        if (openX === `${w.id}|${w.items[xi]?.exerciseId}`) openX = null;
         w.items.splice(xi, 1);
-        break;
+        paintDay(root, ctx, w);
+        ctx.save({ render: false });
+        return;
+      case "x-swap": {
+        const it = w?.items[xi];
+        if (!it) return;
+        const ex = ctx.lookup(it.exerciseId);
+        openSwap(
+          ctx,
+          { exerciseId: it.exerciseId, name: ex?.name ?? "this exercise", primary: ex?.primary },
+          {
+            taken: new Set(w.items.map((x) => x.exerciseId)),
+            onSwap: (id) => {
+              if (w.items.some((x) => x.exerciseId === id)) return;
+              if (openX === `${w.id}|${it.exerciseId}`) openX = `${w.id}|${id}`;
+              it.exerciseId = id;
+              paintDay(root, ctx, w);
+              itemEl(dayEl(root, w.id), id)?.scrollIntoView({ block: "nearest" });
+              ctx.save({ render: false });
+            },
+          },
+        );
+        return;
+      }
       case "cx-del": {
         const id = t.dataset.id;
         const c = state.customExercises.find((x) => x.id === id);
@@ -404,6 +573,21 @@ export function render(root, ctx) {
       showBanner("Backup file created.", { kind: "ok" });
   });
 
+  root.addEventListener("pointerdown", (e) => startDrag(e, root, ctx));
+  // Keyboard and screen reader fallback for the drag handle.
+  root.addEventListener("keydown", (e) => {
+    const h = e.target.closest?.("[data-handle]");
+    if (!h || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    const { w, xi } = find(h);
+    const id = w?.items[xi]?.exerciseId;
+    if (!id) return;
+    moveItem(w.items, xi, e.key === "ArrowUp" ? -1 : 1);
+    paintDay(root, ctx, w);
+    itemEl(dayEl(root, w.id), id)?.querySelector("[data-handle]")?.focus();
+    ctx.save({ render: false });
+  });
+
   root.addEventListener("click", (e) => {
     const b = e.target.closest("[data-snd]");
     if (!b || b.tagName !== "BUTTON") return;
@@ -427,7 +611,11 @@ export function render(root, ctx) {
       );
     else if (field === "uses") {
       const { w, xi } = findIn(ctx.state, t);
-      if (w?.items[xi]) w.items[xi].plates = t.checked;
+      if (w?.items[xi]) {
+        w.items[xi].plates = t.checked;
+        paintItem(root, ctx, w, w.items[xi].exerciseId); // shows or hides "Empty weight"
+        return ctx.save({ render: false });
+      }
     }
     else if (field === "notifyRest") {
       // enable() must start inside this tap, so nothing is awaited before it.
@@ -445,16 +633,43 @@ export function render(root, ctx) {
     else if (field === "import") return importFile(t, ctx);
     else {
       const msg = applyField(ctx, t);
-      if (msg) showBanner(msg);
-      // Typed rest fields stay as typed: blank must remain blank, so no redraw.
-      if (field === "xRestMin" || field === "xRestSec") return ctx.save({ render: false });
+      if (msg) {
+        showBanner(msg);
+        t.value = shownValue(ctx, t); // put the old value back; no redraw, so the keyboard stays up
+      }
+      // No redraw while typing: moving to the next box must keep the keyboard open. Typed rest fields stay as typed.
+      if (field === "wname") dayEl(root, findIn(state, t).w?.id ?? "")?.querySelector(".sec-title")?.replaceChildren(t.value.trim() || "");
+      paintSums();
+      return ctx.save({ render: false });
     }
-    ctx.save(); // re-renders, which also puts the old value back after a rejected edit
+    ctx.save(); // re-renders
   });
 }
 
 // The screen currently showing; the page-hide listeners below read it.
 let current = null;
+
+// What a field should show, from the saved plan.
+function shownValue(ctx, t) {
+  const { w, xi } = findIn(ctx.state, t);
+  const it = w?.items[xi];
+  const f = t.dataset.field;
+  if (f === "wname") return w?.name ?? "";
+  if (!it) return t.value;
+  if (f === "step") return fmtKg(it.step);
+  if (f === "emptyKg") return fmtKg(plateRule(it, ctx.lookup(it.exerciseId)).empty);
+  return String(it[f] ?? "");
+}
+
+// Update every exercise line's "3 × 8–12" from the plan.
+function paintSums() {
+  if (!current?.root.isConnected) return;
+  for (const li of current.root.querySelectorAll(".xlist [data-x]")) {
+    const { w, xi } = findIn(current.ctx.state, li);
+    const sum = li.querySelector(".xsum");
+    if (sum && w?.items[xi]) sum.textContent = summaryText(w.items[xi]);
+  }
+}
 
 const findIn = (state, el) => {
   const w = state.workouts.find(
@@ -524,6 +739,7 @@ function syncAll() {
   syncRest(current.ctx);
   for (const el of current.root.querySelectorAll("input[data-field]"))
     if (EDITABLE.has(el.dataset.field)) applyField(current.ctx, el);
+  paintSums();
 }
 
 function flush() {

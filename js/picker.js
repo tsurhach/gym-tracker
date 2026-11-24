@@ -1,10 +1,12 @@
 import { MUSCLES } from "./constants.js";
 import { esc, exImageUrls, showBanner } from "./ui.js";
 import { checkFile, getMedia, saveMedia } from "./media.js";
+import { recentIds, searchExercises } from "./planbuild.js";
 
 // Full-screen exercise picker: library + custom exercises, searchable, grouped by
 // primary muscle, with a form to create a custom exercise. Not tied to any screen.
 // onPick(exerciseId) is called once, then the picker closes.
+// opts.multi: the list stays open, rows are ticked, and onPick(ids[]) is called once with the ids in tick order.
 // opts.exclude: Set of exercise ids shown as already added and not selectable.
 // opts.title: heading, default "Add exercise".
 // opts.muscles: the workout's muscle groups; by default only exercises whose primary is one of them are listed.
@@ -12,8 +14,9 @@ export function pickerExercises(all, muscles, showAll) {
   return showAll || !muscles?.length ? all : all.filter((e) => muscles.includes(e.primary));
 }
 
-export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], title = "Add exercise" } = {}) {
+export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], title = "Add exercise", multi = false } = {}) {
   let showAll = false;
+  const picked = []; // multi: ticked ids, in tick order
   const el = document.createElement("div");
   el.className = "overlay";
   el.setAttribute("role", "dialog");
@@ -21,11 +24,14 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
   el.setAttribute("aria-label", title);
   el.innerHTML = `
     <div class="overlay-inner">
-      <div class="overlay-head">
-        <button class="icon-btn" data-act="close" aria-label="Close">✕</button>
-        <h2>${esc(title)}</h2>
+      <div class="pick-bar" data-bar>
+        <div class="overlay-head">
+          <button class="icon-btn" data-act="close" aria-label="Close">✕</button>
+          <h2>${esc(title)}</h2>
+        </div>
+        <input type="search" data-search placeholder="Search exercises" aria-label="Search exercises" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
+        <nav class="pick-jump" data-jump aria-label="Jump to a muscle group"></nav>
       </div>
-      <input type="search" data-search placeholder="Search exercises" aria-label="Search exercises" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
       <details class="card" style="margin-top:12px">
         <summary>Create a custom exercise</summary>
         <form data-form novalidate>
@@ -49,10 +55,14 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
       </details>
       ${muscles.length ? `<button type="button" class="btn" data-act="toggle-all" aria-pressed="false" style="margin-top:12px">Show all muscle groups</button>` : ""}
       <div data-list></div>
-    </div>`;
+    </div>
+    ${multi ? `<div class="pick-foot"><button class="btn btn-primary" data-act="done" disabled>Add exercises</button></div>` : ""}`;
 
   const list = el.querySelector("[data-list]");
   const search = el.querySelector("[data-search]");
+  const jump = el.querySelector("[data-jump]");
+  const bar = el.querySelector("[data-bar]");
+  const doneBtn = el.querySelector("[data-act=done]");
   let chosen = null; // media file for the exercise being created
   let closed = false;
   const thumbs = new Map(); // custom id -> object URL ("" while loading or none)
@@ -83,33 +93,54 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     paintThumbs();
   }
 
-  function draw() {
-    const q = search.value.trim().toLowerCase();
-    const custom = new Set(ctx.state.customExercises.map((c) => c.id));
-    const all = pickerExercises([...ctx.library, ...ctx.state.customExercises], muscles, showAll).filter((e) =>
-      e.name.toLowerCase().includes(q),
-    );
-    let html = "";
-    for (const m of MUSCLES) {
-      const rows = all.filter((e) => e.primary === m);
-      if (!rows.length) continue;
-      html += `<h3>${esc(m)}</h3>`;
-      for (const e of rows) {
-        const added = exclude.has(e.id);
-        const thumb = e.images
-          ? `<img class="pick-thumb" src="${exImageUrls(e)[0]}" alt="" width="56" height="56" loading="lazy" decoding="async" />`
-          : `<span class="pick-thumb"${custom.has(e.id) ? ` data-mid="${esc(e.id)}"` : ""}></span>`;
-        html += `<button class="pick-row" data-id="${esc(e.id)}"${added ? " disabled" : ""}>
+  function rowHtml(e, custom, tag) {
+    const added = exclude.has(e.id);
+    const on = picked.includes(e.id);
+    const thumb = e.images
+      ? `<img class="pick-thumb" src="${exImageUrls(e)[0]}" alt="" width="56" height="56" loading="lazy" decoding="async" />`
+      : `<span class="pick-thumb"${custom.has(e.id) ? ` data-mid="${esc(e.id)}"` : ""}></span>`;
+    return `<button class="pick-row" data-id="${esc(e.id)}"${added ? " disabled" : ""}${multi && !added ? ` aria-pressed="${on}"` : ""}>
           ${thumb}
           <span class="pick-name">${esc(e.name)}</span>
-          <span class="tag">${added ? "Added" : custom.has(e.id) ? "Custom" : ""}</span>
+          <span class="tag">${added ? "Added" : on ? "✓" : tag || (custom.has(e.id) ? "Custom" : "")}</span>
         </button>`;
-      }
+  }
+
+  function draw() {
+    const q = search.value.trim();
+    const custom = new Set(ctx.state.customExercises.map((c) => c.id));
+    const every = [...ctx.library, ...ctx.state.customExercises];
+    // A typed search looks at every exercise; the ones in this workout's muscles come first.
+    const inDay = pickerExercises(every, muscles, showAll);
+    const dayIds = new Set(inDay.map((e) => e.id));
+    const found = searchExercises(q ? every : inDay, q);
+    const groups = []; // [{ key, title, html }]
+    const recent = q || !multi ? [] : recentIds(ctx.state.sessions, muscles).map((id) => inDay.find((e) => e.id === id)).filter(Boolean);
+    if (recent.length) groups.push({ title: "Recent", html: recent.map((e) => rowHtml(e, custom)).join("") });
+    for (const m of MUSCLES) {
+      const rows = found.filter((e) => e.primary === m && dayIds.has(e.id));
+      if (rows.length) groups.push({ title: m, html: rows.map((e) => rowHtml(e, custom)).join("") });
     }
-    list.innerHTML =
-      html ||
-      `<p class="muted">${q ? "No exercises match." : "No exercises for these muscle groups."}${showAll ? "" : ` Tap "Show all muscle groups" above.`}</p>`;
+    const others = found.filter((e) => !dayIds.has(e.id));
+    if (others.length) groups.push({ title: "Other muscle groups", html: others.map((e) => rowHtml(e, custom, e.primary)).join("") });
+    list.innerHTML = groups.length
+      ? groups.map((g, i) => `<section data-g="${i}"><h3 class="pick-h">${esc(g.title)}</h3>${g.html}</section>`).join("")
+      : `<p class="muted">${q ? "No exercises match." : "No exercises for these muscle groups."}${showAll ? "" : ` Tap "Show all muscle groups" above.`}</p>`;
+    jump.innerHTML = groups.length > 1 ? groups.map((g, i) => `<button type="button" class="chip" data-jump="${i}">${esc(g.title === "Other muscle groups" ? "Other" : g.title)}</button>`).join("") : "";
+    jump.hidden = !groups.length || groups.length < 2;
+    // Sticky offsets are measured inside the overlay's padding, so the headings stick right under the bar.
+    el.style.setProperty("--bar-h", `${bar.offsetHeight - parseFloat(getComputedStyle(el).paddingTop)}px`);
     loadThumbs();
+  }
+
+  function paintPicked() {
+    for (const r of list.querySelectorAll(".pick-row[aria-pressed]")) {
+      const on = picked.includes(r.dataset.id);
+      r.setAttribute("aria-pressed", String(on));
+      r.querySelector(".tag").textContent = on ? "✓" : "";
+    }
+    doneBtn.disabled = !picked.length;
+    doneBtn.textContent = picked.length ? `Add ${picked.length}` : "Add exercises";
   }
 
   function close() {
@@ -121,6 +152,12 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
   }
   function pick(id) {
     if (exclude.has(id)) return;
+    if (multi) {
+      const k = picked.indexOf(id);
+      if (k < 0) picked.push(id);
+      else picked.splice(k, 1);
+      return paintPicked();
+    }
     close();
     onPick(id);
   }
@@ -129,6 +166,17 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
   search.addEventListener("input", draw);
   el.addEventListener("click", (e) => {
     if (e.target.closest("[data-act=close]")) return close();
+    if (e.target.closest("[data-act=done]")) {
+      const ids = [...picked];
+      close();
+      return onPick(ids);
+    }
+    const j = e.target.closest("[data-jump]");
+    if (j && j.tagName === "BUTTON") {
+      const g = list.querySelector(`[data-g="${j.dataset.jump}"]`);
+      if (g) el.scrollTop += g.getBoundingClientRect().top - el.getBoundingClientRect().top - bar.offsetHeight;
+      return;
+    }
     const tog = e.target.closest("[data-act=toggle-all]");
     if (tog) {
       showAll = !showAll;
@@ -178,6 +226,12 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     ctx.state.customExercises.push(ex);
     ctx.save();
     if (chosen) await saveMedia(ex.id, chosen); // a failure shows a banner; the exercise is kept
+    if (multi) {
+      picked.push(ex.id);
+      const ids = [...picked];
+      close();
+      return onPick(ids);
+    }
     pick(ex.id);
   });
 
