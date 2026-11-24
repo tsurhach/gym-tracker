@@ -1,4 +1,6 @@
 import { MUSCLES } from "./constants.js";
+import { muscleName } from "./logic.js";
+import { t } from "./i18n/index.js";
 import { esc, exImageUrls, showBanner } from "./ui.js";
 import { checkFile, getMedia, saveMedia } from "./media.js";
 import { recentIds, searchExercises } from "./planbuild.js";
@@ -14,7 +16,7 @@ export function pickerExercises(all, muscles, showAll) {
   return showAll || !muscles?.length ? all : all.filter((e) => muscles.includes(e.primary));
 }
 
-export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], title = "Add exercise", multi = false } = {}) {
+export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], title = t("picker.addExercise"), multi = false } = {}) {
   let showAll = false;
   const picked = []; // multi: ticked ids, in tick order
   const el = document.createElement("div");
@@ -26,37 +28,37 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     <div class="overlay-inner">
       <div class="pick-bar" data-bar>
         <div class="overlay-head">
-          <button class="icon-btn" data-act="close" aria-label="Close">✕</button>
+          <button class="icon-btn" data-act="close" aria-label="${t("picker.close")}">✕</button>
           <h2>${esc(title)}</h2>
         </div>
-        <input type="search" dir="auto" data-search placeholder="Search exercises" aria-label="Search exercises" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
-        <nav class="pick-jump" data-jump aria-label="Jump to a muscle group"></nav>
+        <input type="search" dir="auto" data-search placeholder="${t("picker.search")}" aria-label="${t("picker.search")}" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
+        <nav class="pick-jump" data-jump aria-label="${t("picker.jump")}"></nav>
       </div>
       <details class="card" style="margin-top:12px">
-        <summary>Create a custom exercise</summary>
+        <summary>${t("picker.create")}</summary>
         <form data-form novalidate>
-          <input data-name dir="auto" placeholder="Exercise name" aria-label="Exercise name" maxlength="60" autocomplete="off" />
-          <label class="muted small">Main muscle
-            <select data-primary>${MUSCLES.map((m) => `<option>${esc(m)}</option>`).join("")}</select>
+          <input data-name dir="auto" placeholder="${t("picker.name")}" aria-label="${t("picker.name")}" maxlength="60" autocomplete="off" />
+          <label class="muted small">${t("picker.mainMuscle")}
+            <select data-primary>${MUSCLES.map((m) => `<option value="${esc(m)}">${esc(muscleName(m))}</option>`).join("")}</select>
           </label>
           <div>
-            <div class="muted small">Other muscles (optional)</div>
+            <div class="muted small">${t("picker.otherMuscles")}</div>
             <div class="chips" data-secondary>
-              ${MUSCLES.map((m) => `<button type="button" class="chip" aria-pressed="false" data-m="${esc(m)}">${esc(m)}</button>`).join("")}
+              ${MUSCLES.map((m) => `<button type="button" class="chip" aria-pressed="false" data-m="${esc(m)}">${esc(muscleName(m))}</button>`).join("")}
             </div>
           </div>
-          <label class="btn file-btn">Add photo or video
+          <label class="btn file-btn">${t("exercise.mediaAdd")}
             <input type="file" data-media accept="image/*,video/*" />
           </label>
           <div class="muted small" data-media-name></div>
           <p class="err" data-err></p>
-          <button class="btn btn-primary" type="submit">Create and add</button>
+          <button class="btn btn-primary" type="submit">${t("picker.createAdd")}</button>
         </form>
       </details>
-      ${muscles.length ? `<button type="button" class="btn" data-act="toggle-all" aria-pressed="false" style="margin-top:12px">Show all muscle groups</button>` : ""}
+      ${muscles.length ? `<button type="button" class="btn" data-act="toggle-all" aria-pressed="false" style="margin-top:12px">${t("picker.showAll")}</button>` : ""}
       <div data-list></div>
     </div>
-    ${multi ? `<div class="pick-foot"><button class="btn btn-primary" data-act="done" disabled>Add exercises</button></div>` : ""}`;
+    ${multi ? `<div class="pick-foot"><button class="btn btn-primary" data-act="done" disabled>${t("picker.addExercises")}</button></div>` : ""}`;
 
   const list = el.querySelector("[data-list]");
   const search = el.querySelector("[data-search]");
@@ -96,13 +98,14 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
   function rowHtml(e, custom, tag) {
     const added = exclude.has(e.id);
     const on = picked.includes(e.id);
+    const tagText = tag ? muscleName(tag) : "";
     const thumb = e.images
       ? `<img class="pick-thumb" src="${exImageUrls(e)[0]}" alt="" width="56" height="56" loading="lazy" decoding="async" />`
       : `<span class="pick-thumb"${custom.has(e.id) ? ` data-mid="${esc(e.id)}"` : ""}></span>`;
-    return `<button class="pick-row" data-id="${esc(e.id)}" data-tag="${esc(tag || "")}"${added ? " disabled" : ""}${multi && !added ? ` aria-pressed="${on}"` : ""}>
+    return `<button class="pick-row" data-id="${esc(e.id)}" data-tag="${esc(tagText)}"${added ? " disabled" : ""}${multi && !added ? ` aria-pressed="${on}"` : ""}>
           ${thumb}
           <span class="pick-name">${esc(e.name)}</span>
-          <span class="tag">${added ? "Added" : on ? "✓" : tag || (custom.has(e.id) ? "Custom" : "")}</span>
+          <span class="tag">${added ? t("picker.added") : on ? "✓" : tagText || (custom.has(e.id) ? t("picker.custom") : "")}</span>
         </button>`;
   }
 
@@ -116,18 +119,18 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     const found = searchExercises(q ? every : inDay, q);
     const groups = []; // [{ key, title, html }]
     const recent = q || !multi ? [] : recentIds(ctx.state.sessions, muscles, 12).map((id) => inDay.find((e) => e.id === id)).filter((e) => e && !exclude.has(e.id)).slice(0, 6);
-    if (recent.length) groups.push({ title: "Recent", html: recent.map((e) => rowHtml(e, custom)).join("") });
+    if (recent.length) groups.push({ title: t("picker.recent"), html: recent.map((e) => rowHtml(e, custom)).join("") });
     const order = muscles.length && !showAll ? [...muscles, ...MUSCLES.filter((x) => !muscles.includes(x))] : MUSCLES;
     for (const m of [...order.filter((x) => x !== "Abs"), ...order.filter((x) => x === "Abs")]) { // Abs last
       const rows = found.filter((e) => e.primary === m && dayIds.has(e.id));
-      if (rows.length) groups.push({ title: m, html: rows.map((e) => rowHtml(e, custom)).join("") });
+      if (rows.length) groups.push({ title: muscleName(m), html: rows.map((e) => rowHtml(e, custom)).join("") });
     }
     const others = found.filter((e) => !dayIds.has(e.id));
-    if (others.length) groups.push({ title: "Other muscle groups", html: others.map((e) => rowHtml(e, custom, e.primary)).join("") });
+    if (others.length) groups.push({ title: t("picker.otherGroups"), short: t("picker.other"), html: others.map((e) => rowHtml(e, custom, e.primary)).join("") });
     list.innerHTML = groups.length
       ? groups.map((g, i) => `<section data-g="${i}"><h3 class="pick-h">${esc(g.title)}</h3>${g.html}</section>`).join("")
-      : `<p class="muted">${q ? "No exercises match." : "No exercises for these muscle groups."}${showAll ? "" : ` Tap "Show all muscle groups" above.`}</p>`;
-    jump.innerHTML = groups.length > 1 ? groups.map((g, i) => `<button type="button" class="chip" data-jump="${i}">${esc(g.title === "Other muscle groups" ? "Other" : g.title)}</button>`).join("") : "";
+      : `<p class="muted">${q ? (showAll ? t("picker.noMatch") : t("picker.noMatchTap")) : showAll ? t("picker.none") : t("picker.noneTap")}</p>`;
+    jump.innerHTML = groups.length > 1 ? groups.map((g, i) => `<button type="button" class="chip" data-jump="${i}">${esc(g.short ?? g.title)}</button>`).join("") : "";
     jump.hidden = !groups.length || groups.length < 2;
     // Sticky offsets are measured inside the overlay's padding, so the headings stick right under the bar.
     el.style.setProperty("--bar-h", `${bar.offsetHeight - parseFloat(getComputedStyle(el).paddingTop)}px`);
@@ -141,7 +144,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
       r.querySelector(".tag").textContent = on ? "✓" : r.dataset.tag;
     }
     doneBtn.disabled = !picked.length;
-    doneBtn.textContent = picked.length ? `Add ${picked.length}` : "Add exercises";
+    doneBtn.textContent = picked.length ? t("picker.addN", { n: picked.length }) : t("picker.addExercises");
   }
 
   function close() {
@@ -182,7 +185,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     if (tog) {
       showAll = !showAll;
       tog.setAttribute("aria-pressed", String(showAll));
-      tog.textContent = showAll ? "Show only this workout's muscles" : "Show all muscle groups";
+      tog.textContent = showAll ? t("picker.showOnly") : t("picker.showAll");
       return draw();
     }
     const row = e.target.closest(".pick-row");
@@ -201,13 +204,13 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
     const chk = checkFile(f);
     if (!chk.ok) return showBanner(chk.message);
     chosen = f;
-    el.querySelector("[data-media-name]").textContent = `Chosen: ${f.name}`;
+    el.querySelector("[data-media-name]").textContent = t("picker.chosen", { name: f.name });
   });
   el.querySelector("[data-form]").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = el.querySelector("[data-name]").value.trim();
     if (!name) {
-      el.querySelector("[data-err]").textContent = "Give the exercise a name.";
+      el.querySelector("[data-err]").textContent = t("picker.needName");
       return;
     }
     const primary = el.querySelector("[data-primary]").value;

@@ -1,6 +1,7 @@
-import { exerciseHistory, isPersonalBest, isStuck, validSet } from "../logic.js";
+import { exerciseHistory, isPersonalBest, isStuck, kgHtml, kgText, minHtml, muscleName, validSet } from "../logic.js";
 import { deleteSession, removeSet } from "../session.js";
-import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
+import { confirmSheet, esc, fmtKg } from "../ui.js";
+import { fmtDate, ltr, ltrText, t } from "../i18n/index.js";
 import { applyInputs, pbHtml } from "./exercise.js";
 
 // Whole minutes, at least 1.
@@ -29,15 +30,17 @@ export function summary(ses, sessions) {
 
 function summaryHtml(ses, sessions) {
   const m = summary(ses, sessions);
-  const lifted = m.volume > 0 ? ` · ${Math.round(m.volume).toLocaleString("en-US")} kg lifted` : "";
-  return `<section class="card" aria-label="Workout summary">
-      <p class="stat" style="margin:0"><b>${m.minutes} min</b> · ${plural(m.sets, "set", "sets")}${lifted}</p>
-      ${m.bests.length ? `<p style="margin:8px 0 0">🏆 ${plural(m.bests.length, "new best", "new bests")}: ${m.bests.map((b) => `${esc(b.name)} ${fmtKg(b.weight)} × ${b.reps}`).join(" · ")}</p>` : ""}
+  const min = `<b>${minHtml(m.minutes)}</b>`;
+  const line = m.volume > 0
+    ? t("history.summaryLifted", { n: m.sets, min, kg: kgHtml(Math.round(m.volume).toLocaleString("en-US")) })
+    : t("history.summary", { n: m.sets, min });
+  return `<section class="card" aria-label="${t("history.summaryAria")}">
+      <p class="stat" style="margin:0">${line}</p>
+      ${m.bests.length ? `<p style="margin:8px 0 0">🏆 ${t("history.bests", { n: m.bests.length, list: m.bests.map((b) => `${esc(b.name)} ${ltr(`${fmtKg(b.weight)} × ${b.reps}`)}`).join(" · ") })}</p>` : ""}
     </section>`;
 }
 
 const heaviest = (sets) => Math.max(...sets.map((s) => s.weight));
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // One row per exercise ever logged, most recently trained first. Names come from the
 // newest session's own snapshot, never from the plan or library.
@@ -68,13 +71,13 @@ export function exerciseRows(sessions) {
 
 // "50 → 60 kg", "30 kg", "30 kg · stuck"
 export function progressText(r) {
-  if (r.stuck) return `${fmtKg(r.latest)} kg · stuck`;
-  if (r.sessions === 1) return `${fmtKg(r.latest)} kg`;
-  return `${fmtKg(r.first)} → ${fmtKg(r.latest)} kg`;
+  if (r.stuck) return t("history.progStuck", { kg: kgText(fmtKg(r.latest)) });
+  if (r.sessions === 1) return kgText(fmtKg(r.latest));
+  return ltrText(t("history.progRange", { a: fmtKg(r.first), b: fmtKg(r.latest) }));
 }
 
 export const setsText = (sets) =>
-  sets.map((s) => `${fmtKg(s.weight)} × ${s.reps}`).join(", ");
+  ltrText(sets.map((s) => `${fmtKg(s.weight)} × ${s.reps}`).join(", "));
 
 const CW = 320;
 const CH = 120;
@@ -99,16 +102,16 @@ export function chartHtml(values) {
   const last = pts[n - 1];
   // Label sits on the side away from the line, so it never covers it.
   const label = (p, v, anchor, other) =>
-    `<text x="${p.x}" y="${other && other.y < p.y ? p.y + 18 : p.y - 9}" text-anchor="${anchor}" fill="var(--muted)" font-size="12">${esc(fmtKg(v))} kg</text>`;
+    `<text x="${p.x}" y="${other && other.y < p.y ? p.y + 18 : p.y - 9}" text-anchor="${anchor}" fill="var(--muted)" font-size="12">${t("logic.kg", { n: esc(fmtKg(v)) })}</text>`;
   const desc =
     n === 1
-      ? `Heaviest weight: ${fmtKg(values[0])} kg in 1 session.`
-      : `Heaviest weight per session: ${fmtKg(values[0])} kg first, ${fmtKg(values[n - 1])} kg latest, over ${n} sessions.`;
+      ? t("history.chartOne", { kg: kgText(fmtKg(values[0])) })
+      : t("history.chartMany", { first: kgText(fmtKg(values[0])), last: kgText(fmtKg(values[n - 1])), n });
   return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="${esc(desc)}">
     ${n > 1 ? `<polyline points="${pts.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />` : ""}
     ${n <= 30 ? pts.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--accent)" />`).join("") : ""}
     ${label(first, values[0], n === 1 ? "middle" : "start", pts[1])}${n > 1 ? label(last, values[n - 1], "end", pts[n - 2]) : ""}
-  </svg>${n === 1 ? `<p class="muted small">Needs two sessions to draw a line.</p>` : ""}`;
+  </svg>${n === 1 ? `<p class="muted small">${t("history.needTwo")}</p>` : ""}`;
 }
 
 function listHtml(state) {
@@ -116,7 +119,7 @@ function listHtml(state) {
     (a, b) => b.startedAt - a.startedAt,
   );
   if (!sessions.length) {
-    return `<section class="card"><p><b>No workouts yet.</b></p><p class="muted">Finish a workout and it shows up here.</p></section>`;
+    return `<section class="card"><p><b>${t("history.none")}</b></p><p class="muted">${t("history.noneHint")}</p></section>`;
   }
   const rows = exerciseRows(state.sessions);
   return `${sessions
@@ -124,11 +127,11 @@ function listHtml(state) {
       const sets = s.entries.reduce((n, e) => n + e.sets.length, 0);
       return `<a class="card block" href="#/history/${encodeURIComponent(s.id)}">
         <div class="row"><b class="grow ex-name">${esc(s.workoutName)}</b><span class="muted nowrap">${esc(fmtDate(s.startedAt))}</span></div>
-        <div class="muted small">${plural(s.entries.length, "exercise", "exercises")} · ${plural(sets, "set", "sets")} · ${durationMin(s)} min</div>
+        <div class="muted small">${t("history.rowLine", { ex: t("history.exercises", { n: s.entries.length }), sets: t("history.sets", { n: sets }), min: minHtml(durationMin(s)) })}</div>
       </a>`;
     })
     .join("")}
-    <h3>Tap an exercise to see its progress</h3>
+    <h3>${t("history.tapExercise")}</h3>
     <section class="card list">${rows
       .map(
         (
@@ -144,8 +147,7 @@ function listHtml(state) {
 // The session screen showing now; the page-hide listeners below read it.
 let current = null;
 
-const BAD_MSG =
-  "Weight needs a number and reps a whole number. That set was not changed.";
+const badMsg = () => t("history.badSet");
 
 // Rows showing a rejected edit when a set is deleted, so the redraw can put their
 // typed text and error state back at their new positions.
@@ -176,7 +178,7 @@ function syncAll() {
     bad ||= !ok;
   }
   current.root.querySelector("[data-err]").textContent = bad
-    ? BAD_MSG
+    ? badMsg()
     : "";
   paintBadges(ses);
   return true;
@@ -192,7 +194,7 @@ function paintBadges(ses) {
       ? row.nextElementSibling
       : null;
     const want = isPersonalBest(earlier(current.ctx.state.sessions, ses, en.exerciseId), s);
-    if (want && !badge) row.insertAdjacentHTML("afterend", pbHtml);
+    if (want && !badge) row.insertAdjacentHTML("afterend", pbHtml());
     else if (!want && badge) badge.remove();
   }
 }
@@ -213,10 +215,10 @@ if (typeof window !== "undefined") {
 function setRow(s, e, i, past) {
   return `<div class="set hist done" data-e="${e}" data-i="${i}">
     <span class="set-n">${i + 1}</span>
-    <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="kg" aria-label="Set ${i + 1} weight in kg" value="${esc(fmtKg(s.weight))}" />
-    <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="reps" aria-label="Set ${i + 1} reps" value="${esc(s.reps)}" />
-    <button class="icon-btn" data-act="del-set" aria-label="Delete set ${i + 1}">✕</button>
-  </div>${isPersonalBest(past, s) ? pbHtml : ""}`;
+    <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="${t("exercise.kg")}" aria-label="${t("exercise.setWeight", { n: i + 1 })}" value="${esc(fmtKg(s.weight))}" />
+    <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="${t("exercise.repsPh")}" aria-label="${t("exercise.setReps", { n: i + 1 })}" value="${esc(s.reps)}" />
+    <button class="icon-btn" data-act="del-set" aria-label="${t("history.deleteSet", { n: i + 1 })}">✕</button>
+  </div>${isPersonalBest(past, s) ? pbHtml() : ""}`;
 }
 
 // Every set of this exercise logged in workouts before ses.
@@ -230,22 +232,22 @@ function sessionScreen(root, ctx) {
     location.replace("#/history");
     return;
   }
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> History</a></div>
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> ${t("history.back")}</a></div>
     <h1 class="title">${esc(ses.workoutName)}</h1>
     <p class="subtitle">${esc(fmtDate(ses.startedAt))}</p>
     ${summaryHtml(ses, ctx.state.sessions)}
     ${ses.entries
       .map(
         (en, e) => `<section class="card">
-      <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${esc(en.name)}</a>${en.primary ? `<span class="tag">${esc(en.primary)}</span>` : ""}</div>
+      <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${esc(en.name)}</a>${en.primary ? `<span class="tag">${esc(muscleName(en.primary))}</span>` : ""}</div>
       ${en.note ? `<p class="muted small">${esc(en.note)}</p>` : ""}
-      <div class="set hist set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span></div>
+      <div class="set hist set-head muted small"><span></span><span>${t("exercise.kg")}</span><span>${t("exercise.repsHead")}</span><span></span></div>
       ${en.sets.map((s, i) => setRow(s, e, i, earlier(ctx.state.sessions, ses, en.exerciseId))).join("")}
     </section>`,
       )
       .join("")}
     <p class="err" role="alert" data-err></p>
-    <button class="btn btn-warn" data-act="del-ses">Delete workout</button>`;
+    <button class="btn btn-warn" data-act="del-ses">${t("history.deleteWorkout")}</button>`;
 
   current = { root, id, ctx };
 
@@ -258,7 +260,7 @@ function sessionScreen(root, ctx) {
       row.classList.add("bad");
     }
     if (restore.length)
-      root.querySelector("[data-err]").textContent = BAD_MSG;
+      root.querySelector("[data-err]").textContent = badMsg();
     restore = null;
   }
 
@@ -269,20 +271,20 @@ function sessionScreen(root, ctx) {
   });
 
   root.addEventListener("click", async (ev) => {
-    const t = ev.target.closest("[data-act], a");
-    if (!t) return;
+    const btn = ev.target.closest("[data-act], a");
+    if (!btn) return;
     syncAll();
-    const act = t.dataset.act;
+    const act = btn.dataset.act;
     if (!act) {
       ctx.save({ render: false }); // plain links navigate on their own
       return;
     }
     if (act === "del-set") {
-      const row = t.closest(".set");
+      const row = btn.closest(".set");
       const e = Number(row.dataset.e);
       const i = Number(row.dataset.i);
-      const name = findSession(current)?.entries[e]?.name ?? "this exercise";
-      if (!(await confirmSheet(`Delete set ${i + 1} of ${name}?`, "Delete"))) {
+      const name = findSession(current)?.entries[e]?.name ?? t("history.thisExercise");
+      if (!(await confirmSheet(t("history.deleteSetAsk", { n: i + 1, name }), t("history.delete")))) {
         ctx.save({ render: false });
         return;
       }
@@ -307,8 +309,8 @@ function sessionScreen(root, ctx) {
     } else if (act === "del-ses") {
       if (
         !(await confirmSheet(
-          "Delete this workout? It is removed from History, progress and Muscles.",
-          "Delete workout",
+          t("history.deleteWorkoutAsk"),
+          t("history.deleteWorkout"),
         ))
       ) {
         ctx.save({ render: false });
@@ -335,11 +337,11 @@ export function renderProgress(root, ctx) {
   const stuck = isStuck(hist.map((h) => h.sets));
   const byStart = new Map(ctx.state.sessions.map((s) => [s.startedAt, s.id]));
   const note = stuck
-    ? "Stuck: neither of your last two sessions beat the one before it, in weight or total reps."
+    ? t("history.noteStuck")
     : hist.length < 3
-      ? "Not stuck: it takes at least 3 sessions to tell."
-      : "Not stuck: one of your last two sessions beat the one before it.";
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> History</a></div>
+      ? t("history.noteFew")
+      : t("history.noteOk");
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> ${t("history.back")}</a></div>
     <h1 class="title">${esc(name)}</h1>
     <p class="${stuck ? "stuck" : "muted"}" style="margin-bottom:var(--gap)">${esc(note)}</p>
     <section class="card">${chartHtml(hist.map((h) => heaviest(h.sets)))}</section>
@@ -357,6 +359,6 @@ export function renderProgress(root, ctx) {
 
 export function render(root, ctx) {
   if (ctx.params.id) return sessionScreen(root, ctx);
-  root.innerHTML = `<h1 class="title">History</h1>
-    <p class="subtitle">Every workout, newest first</p>${listHtml(ctx.state)}`;
+  root.innerHTML = `<h1 class="title">${t("history.title")}</h1>
+    <p class="subtitle">${t("history.subtitle")}</p>${listHtml(ctx.state)}`;
 }

@@ -1,4 +1,5 @@
 import { newItem } from "./session.js";
+import { ltrText, t } from "./i18n/index.js";
 import { ALIAS_LIST } from "./planfile.js";
 
 // Pure helpers for building a plan: gym-word search, adding many exercises at once, duplicating a day,
@@ -85,7 +86,7 @@ export function addMany(workout, ids, goalKey) {
 // A copy of a day, added at the END of the plan (so the Today rotation is not disturbed), with a new id and a free name ("Push copy", "Push copy 2").
 export function duplicateWorkout(state, w, newId = crypto.randomUUID()) {
   const names = new Set(state.workouts.map((x) => x.name));
-  const base = `${w.name.slice(0, 33)} copy`;
+  const base = t("planbuild.copy", { name: w.name.slice(0, 33) });
   let name = base;
   for (let k = 2; names.has(name); k++) name = `${base} ${k}`;
   const copy = { ...structuredClone(w), id: newId, name };
@@ -157,4 +158,4 @@ export function recentIds(sessions, muscles, limit = 6) {
   return out;
 }
 
-export const summaryText = (it) => `${it.sets} × ${it.repMin === it.repMax ? it.repMin : `${it.repMin}–${it.repMax}`}`;
+export const summaryText = (it) => ltrText(`${it.sets} × ${it.repMin === it.repMax ? it.repMin : `${it.repMin}–${it.repMax}`}`);

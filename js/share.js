@@ -3,6 +3,7 @@
 import * as sc from "./synccrypto.js";
 import { DEFAULT_STEP, MUSCLES } from "./constants.js";
 import { LIMITS, norm } from "./planfile.js";
+import { t } from "./i18n/index.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -156,10 +157,10 @@ export function cleanView(v) {
 const clamp = (x, lo, hi, d) => (num(x) ? Math.min(hi, Math.max(lo, Math.round(x))) : d);
 const cap = (x, n) => String(x ?? "").trim().slice(0, n);
 const copyName = (base, taken, suffixFirst) => {
-  const t = new Set(taken.map((n) => n.toLowerCase()));
+  const seen = new Set(taken.map((n) => n.toLowerCase()));
   for (let i = suffixFirst ? 1 : 0; ; i++) {
-    const out = i === 0 ? base : `${base} (copy${i > 1 ? ` ${i}` : ""})`;
-    if (!t.has(out.toLowerCase())) return out;
+    const out = i === 0 ? base : i === 1 ? t("share.copy", { base }) : t("share.copyN", { base, n: i });
+    if (!seen.has(out.toLowerCase())) return out;
   }
 };
 // One per copy action: remembers the customs made, so several days share them.
@@ -196,7 +197,7 @@ const make = (view, state, name, rows, cx, has, suffixFirst) => {
     items.push({ exerciseId, ...r.rest });
   }
   if (!items.length) return { workout: null, skipped };
-  return { workout: { id: crypto.randomUUID(), name: copyName(cap(name, 40) || "Workout", state.workouts.map((w) => w.name), suffixFirst), muscles: [], items }, skipped };
+  return { workout: { id: crypto.randomUUID(), name: copyName(cap(name, 40) || t("share.workoutName"), state.workouts.map((w) => w.name), suffixFirst), muscles: [], items }, skipped };
 };
 // -> { workout | null, skipped }. Does not touch state; the caller pushes cx.fresh (new customs) and the workout, then saves.
 export function copyDay(view, dayId, state, has, cx = newCopy()) {
@@ -248,16 +249,9 @@ export const variantOf = (v, weightOn) =>
   (v.role === "coach" ? (weightOn ? "hpw" : "hp") : v.ticks?.plan ? "hp" : "h") + (v.ticks?.copy ? "c" : "");
 const pairKind = (sharer, viewer) => `share ${sharer}>${viewer}`;
 
-export const MSG = {
-  404: "That code is not valid, or it has expired.",
-  409: "That code was already used.",
-  413: "Too many people or open invites.",
-  429: "Too many tries. Wait a while and try again.",
-};
-const NEED_NAME = "Set your name for others first.";
 const fail = (r) => {
   throw new Error(
-    MSG[r.status] ?? "Could not reach the server. Try again later.",
+    r.status === 404 ? t("share.err404") : r.status === 409 ? t("share.err409") : r.status === 413 ? t("share.err413") : r.status === 429 ? t("share.err429") : t("share.errServer"),
   );
 };
 
@@ -356,7 +350,7 @@ export function createShare(h) {
   }
 
   async function invite(role, ticks = {}) {
-    if (!nameOf()) throw new Error(NEED_NAME);
+    if (!nameOf()) throw new Error(t("share.needName"));
     const k = await ensureKeys();
     const dk = await h.link.key();
     const code = makeInviteCode();
@@ -391,7 +385,7 @@ export function createShare(h) {
   // Look at an invite before accepting: who it is from and as what.
   async function peek(text) {
     const code = parseInviteCode(text);
-    if (!code) throw new Error("Typo in the code. Check it and try again.");
+    if (!code) throw new Error(t("share.errTypo"));
     const { lookup, secret } = await codeKeys(code);
     const r = await must("/invite/peek", { lookup });
     try {
@@ -403,7 +397,7 @@ export function createShare(h) {
   }
 
   async function accept(p, wantsBack) {
-    if (!nameOf()) throw new Error(NEED_NAME);
+    if (!nameOf()) throw new Error(t("share.needName"));
     const k = await ensureKeys();
     const dk = await h.link.key();
     const { id, name, pub, role } = p.from;

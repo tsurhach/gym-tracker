@@ -1,5 +1,23 @@
 import { MUSCLES } from "./constants.js";
 import { localDate } from "./weight.js";
+import { ltr, ltrText, t, tk } from "./i18n/index.js";
+
+// Number + unit chunks that keep their left-to-right order inside a sentence (no-ops in English).
+// n is already formatted. *Text for textContent / aria-label, *Html for html (n holds no markup).
+export const kgText = (n) => ltrText(t("logic.kg", { n }));
+export const kgHtml = (n) => ltr(t("logic.kg", { n }));
+export const minText = (n) => ltrText(t("logic.min", { n }));
+export const minHtml = (n) => ltr(t("logic.min", { n }));
+// Equipment name for display ("body only" etc.); anything else stays as stored.
+export const equipName = (v) => {
+  const s = tk("equip", v);
+  return s === "equip." + v ? v : s;
+};
+// Muscle name for display; a name that is not one of the 11 stays as typed.
+export const muscleName = (m) => {
+  const s = tk("muscle", m);
+  return s === "muscle." + m ? m : s;
+};
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -82,12 +100,12 @@ export function advice(prevSets, item, ex, settings) {
         : {
         kind: "first",
         weight: 0,
-        message: "First time. Body weight. Do as many good reps as you can.",
+        message: t("logic.firstBody"),
       };
     return {
       kind: "first",
       weight: null,
-      message: "First time. Pick a starting weight.",
+      message: t("logic.firstPick"),
     };
   }
   const { W, heavier } = analyse(prevSets, item);
@@ -97,22 +115,22 @@ export function advice(prevSets, item, ex, settings) {
       ? {
           kind: "heavier",
           weight: 0,
-          message: `You hit ${item.repMax} on every set. Add a rep or two, or add ${round2(item.step)} kg (belt or vest) if you have it.`,
+          message: t("logic.hitAddRep", { reps: item.repMax, kg: kgText(round2(item.step)) }),
         }
-      : { kind: "stay", weight: 0, message: "Beat your reps from last time." };
+      : { kind: "stay", weight: 0, message: t("logic.beatReps") };
   }
   if (heavier) {
     const weight = round2(W + item.step);
     return {
       kind: "heavier",
       weight,
-      message: `You hit ${item.repMax} on every set. Try ${weight} kg today.`,
+      message: t("logic.hitTry", { reps: item.repMax, kg: kgText(weight) }),
     };
   }
   return {
     kind: "stay",
     weight: W,
-    message: `Stay at ${round2(W)} kg and beat your reps.`,
+    message: t("logic.stay", { kg: kgText(round2(W)) }),
   };
 }
 
@@ -164,7 +182,7 @@ export function isStuck(history) {
 export function stuckNote(history, adv, settings) {
   if (settings?.stuckNote === false) return null;
   if (adv?.kind === "heavier" || !isStuck(history)) return null;
-  return "Same numbers for the last 3 sessions. That happens. Aim for one more rep today.";
+  return t("logic.stuck");
 }
 
 export function nextWorkoutId(workouts, sessions) {
@@ -268,14 +286,12 @@ export function platesPerSide(target, bar, plates) {
 export function plateText(target, empty, plates) {
   const r = platesPerSide(target, empty, plates);
   if (!r) return "";
-  if (r.below) return `Below the empty weight (${round2(empty)} kg)`;
-  const side = r.each.length
-    ? `each side: ${r.each.join(" + ")}`
-    : empty > 0
-      ? "just the bar"
-      : "no plates";
-  if (r.exact) return side[0].toUpperCase() + side.slice(1);
-  return `Closest: ${round2(r.total)} kg — ${side}`;
+  if (r.below) return t("logic.plateBelow", { kg: kgText(round2(empty)) });
+  const list = ltrText(r.each.join(" + "));
+  if (r.exact)
+    return r.each.length ? t("logic.plateEachCap", { plates: list }) : empty > 0 ? t("logic.plateBarCap") : t("logic.plateNoneCap");
+  const side = r.each.length ? t("logic.plateEach", { plates: list }) : empty > 0 ? t("logic.plateBar") : t("logic.plateNone");
+  return t("logic.plateClosest", { kg: kgText(round2(r.total)), side });
 }
 
 // ---------- calendar subscription (settings.calendar) ----------
@@ -313,7 +329,7 @@ export function calendarBody(state, today, tz = Intl.DateTimeFormat().resolvedOp
   const days = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const name = (id) => {
     const w = (state.workouts ?? []).find((x) => x.id === id);
-    return Array.from(String(w?.name ?? "").trim()).slice(0, 60).join("") || "Workout";
+    return Array.from(String(w?.name ?? "").trim()).slice(0, 60).join("") || t("cal.fallback");
   };
   return {
     from: today,

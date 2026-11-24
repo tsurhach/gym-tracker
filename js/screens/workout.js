@@ -1,4 +1,5 @@
-import { advice, exerciseHistory } from "../logic.js";
+import { advice, exerciseHistory, minHtml } from "../logic.js";
+import { ltr, ltrText, t } from "../i18n/index.js";
 import { addEntry, finishSession, newItem } from "../session.js";
 import { groupItems, supersetsOf } from "../planbuild.js";
 import { openPicker } from "../picker.js";
@@ -9,11 +10,11 @@ export function lastText(sets) {
   if (!sets || !sets.length) return "";
   const kg = (w) => fmtKg(w);
   if (sets.every((s) => s.weight === 0))
-    return `Body weight × ${sets.map((s) => s.reps).join(", ")}`;
+    return t("workout.lastBody", { reps: ltrText(sets.map((s) => s.reps).join(", ")) });
   if (sets.every((s) => s.weight === sets[0].weight)) {
-    return `${kg(sets[0].weight)} kg × ${sets.map((s) => s.reps).join(", ")}`;
+    return ltrText(t("workout.lastSame", { kg: kg(sets[0].weight), reps: sets.map((s) => s.reps).join(", ") }));
   }
-  return `${sets.map((s) => `${kg(s.weight)} × ${s.reps}`).join(", ")} kg`;
+  return ltrText(t("workout.lastMixed", { sets: sets.map((s) => `${kg(s.weight)} × ${s.reps}`).join(", ") }));
 }
 
 // The plan item (sets, rep range, step) behind an entry (a swapped-in entry carries the old one's). Added-on exercises use goal defaults.
@@ -38,21 +39,21 @@ function rowHtml(e, ctx) {
   const { state } = ctx;
   const done = e.sets.filter((s) => s.done).length;
   const total = e.sets.length;
-  let status = `<span class="st st-no" aria-label="Not started"></span>`;
+  let status = `<span class="st st-no" aria-label="${t("workout.notStarted")}"></span>`;
   let sub;
   if (total > 0 && done === total) {
-    status = `<span class="st st-ok" aria-label="Done">✓</span>`;
-    sub = `<div class="muted small">${done} ${done === 1 ? "set" : "sets"} done</div>`;
+    status = `<span class="st st-ok" aria-label="${t("workout.done")}">✓</span>`;
+    sub = `<div class="muted small">${t("workout.setsDone", { n: done })}</div>`;
   } else if (done > 0) {
-    status = `<span class="st st-part" aria-label="${done} of ${total} sets">${done}/${total}</span>`;
-    sub = `<div class="muted small">${done} of ${total} sets</div>`;
+    status = `<span class="st st-part" aria-label="${t("workout.partial", { done, total })}">${ltr(`${done}/${total}`)}</span>`;
+    sub = `<div class="muted small">${t("workout.partial", { done, total })}</div>`;
   } else {
     const prev = lastSets(state, e.exerciseId);
     const a = advice(prev, itemFor(state, e.exerciseId), ctx.lookup(e.exerciseId), state.settings);
     if (a.kind === "heavier")
       sub = `<div class="up small">↑ ${esc(a.message)}</div>`;
     else if (prev)
-      sub = `<div class="muted small">Last: ${esc(lastText(prev))}</div>`;
+      sub = `<div class="muted small">${t("workout.last", { text: esc(lastText(prev)) })}</div>`;
     else sub = "";
   }
   return `<a class="li" href="#/exercise/${encodeURIComponent(e.exerciseId)}">
@@ -86,24 +87,24 @@ export function render(root, ctx) {
   const listHtml = blocks(a)
     .map(({ g, rows }) =>
       g
-        ? `<div class="card list ss-group"><div class="muted small ss-head">Superset · rest ${g.rest === "each" ? "after each exercise" : "after the round"}</div>${rows.map((e) => rowHtml(e, ctx)).join("")}</div>`
+        ? `<div class="card list ss-group"><div class="muted small ss-head">${g.rest === "each" ? t("workout.ssEach") : t("workout.ssRound")}</div>${rows.map((e) => rowHtml(e, ctx)).join("")}</div>`
         : `<div class="card list">${rows.map((e) => rowHtml(e, ctx)).join("")}</div>`,
     )
     .join("");
   const mins = Math.max(0, Math.floor((Date.now() - a.startedAt) / 60000));
   root.innerHTML = `<div class="row">
       <h1 class="title grow">${esc(a.workoutName)}</h1>
-      <span class="muted">${mins} min</span>
+      <span class="muted">${minHtml(mins)}</span>
     </div>
-    <p class="subtitle">Tap any exercise. Do them in any order.</p>
-    ${listHtml || `<div class="card list"><div class="empty"><b>No exercises yet.</b><p class="muted">Tap "Add another exercise" below to build this workout.</p></div></div>`}
-    <button class="btn" data-act="add">+ Add another exercise</button>
-    <button class="btn btn-primary" data-act="finish">Finish workout</button>`;
+    <p class="subtitle">${t("workout.subtitle")}</p>
+    ${listHtml || `<div class="card list"><div class="empty"><b>${t("workout.empty")}</b><p class="muted">${t("workout.emptyHint")}</p></div></div>`}
+    <button class="btn" data-act="add">${t("workout.add")}</button>
+    <button class="btn btn-primary" data-act="finish">${t("workout.finish")}</button>`;
 
   root.addEventListener("click", async (ev) => {
-    const t = ev.target.closest("[data-act]");
-    if (!t) return;
-    if (t.dataset.act === "add") {
+    const el = ev.target.closest("[data-act]");
+    if (!el) return;
+    if (el.dataset.act === "add") {
       openPicker(
         ctx,
         (id) => {
@@ -122,11 +123,10 @@ export function render(root, ctx) {
     const anyDone = sets.length - open > 0;
     let msg = null;
     if (!anyDone)
-      msg =
-        "No sets are confirmed, so nothing will be saved and this workout will be discarded.";
+      msg = t("workout.noneConfirmed");
     else if (open > 0)
-      msg = `${open} ${open === 1 ? "set is" : "sets are"} not confirmed and will be dropped. Finish anyway?`;
-    if (msg && !(await confirmSheet(msg, "Finish workout"))) return;
+      msg = t("workout.openAsk", { n: open });
+    if (msg && !(await confirmSheet(msg, t("workout.finish")))) return;
     const id = a.id;
     finishSession(state, Date.now());
     ctx.go(state.sessions.some((s) => s.id === id) ? `#/history/${id}` : "#/today");

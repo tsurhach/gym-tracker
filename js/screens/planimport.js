@@ -10,6 +10,7 @@ import {
   planFromFile,
 } from "../planfile.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
+import { ltr, t as tr, tk } from "../i18n/index.js";
 
 let pending = null; // { preview, back } the plan being previewed
 const ai = { request: "", mode: "describe", pasted: "", filePasted: "" }; // survives going to the preview and back
@@ -17,7 +18,7 @@ const MAX_FILE = 1_000_000;
 
 const head = (t, sub = "") =>
   `<h1 class="title">${esc(t)}</h1>${sub ? `<p class="muted" style="margin:0 0 12px">${sub}</p>` : ""}`;
-const back = `<a class="btn" href="#/plan">Back to Plan</a>`;
+const back = () => `<a class="btn" href="#/plan">${tr("import.back")}</a>`;
 const repsText = (x) =>
   x.repMin === x.repMax ? `${x.repMin}` : `${x.repMin}–${x.repMax}`;
 
@@ -28,7 +29,7 @@ function submit(text, ctx, box, backTo) {
     ? planFromFile(read.obj, ctx.library, ctx.state.customExercises)
     : read;
   if (!p.ok) {
-    box.innerHTML = `<section class="card"><h3 style="margin-top:0">This plan cannot be used</h3><ul>${p.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul><p class="muted small">Nothing was changed.</p></section>`;
+    box.innerHTML = `<section class="card"><h3 style="margin-top:0">${tr("import.err.title")}</h3><ul>${p.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul><p class="muted small">${tr("import.err.nothing")}</p></section>`;
     return false;
   }
   pending = { preview: p, back: backTo, fixes: read.fixes ?? [] };
@@ -47,9 +48,9 @@ async function copyText(text, fb) {
   try {
     await navigator.clipboard.writeText(text);
     fb.innerHTML = "";
-    showBanner("Instructions copied.", { kind: "ok" });
+    showBanner(tr("import.copied"), { kind: "ok" });
   } catch {
-    fb.innerHTML = `<p class="muted small">Copying did not work here. Select all of this text and copy it yourself.</p><textarea id="prompt" rows="8" readonly style="width:100%"></textarea>`;
+    fb.innerHTML = `<p class="muted small">${tr("import.copyfail")}</p><textarea id="prompt" rows="8" readonly style="width:100%"></textarea>`;
     const ta = fb.querySelector("#prompt");
     ta.value = text;
     ta.focus();
@@ -58,8 +59,8 @@ async function copyText(text, fb) {
 }
 
 // "Paste the AI's answer" box -> preview. Same on the AI screen and the file screen.
-const answerHtml = `${pasteBox("answer", "Paste the AI's answer")}
-      <button class="btn btn-primary" id="checkAnswer">Check the plan</button>`;
+const answerHtml = () => `${pasteBox("answer", tr("import.paste.answer"))}
+      <button class="btn btn-primary" id="checkAnswer">${tr("import.check")}</button>`;
 function wireAnswer(root, ctx, out, backTo) {
   const a = root.querySelector("#answer");
   a.value = ai.pasted;
@@ -69,7 +70,7 @@ function wireAnswer(root, ctx, out, backTo) {
 }
 
 function programsView(root, ctx) {
-  root.innerHTML = `${head("Ready-made programs", "Pick one to see it first. Nothing changes until you confirm.")}<div id="list"><p class="muted">Loading…</p></div>${back}`;
+  root.innerHTML = `${head(tr("import.programs.title"), tr("import.programs.sub"))}<div id="list"><p class="muted">${tr("import.loading")}</p></div>${back()}`;
   fetch("./data/programs.json")
     .then((r) => r.json())
     .then((list) => {
@@ -79,8 +80,8 @@ function programsView(root, ctx) {
           (
             p,
             i,
-          ) => `<button class="card btn" data-i="${i}" style="display:block;width:100%;text-align:left">
-        <b>${esc(p.name)}</b><div class="muted small">${p.days.length} ${p.days.length === 1 ? "workout" : "workouts"} · ${esc(GOALS[p.goal]?.label ?? "")}</div>
+          ) => `<button class="card btn" data-i="${i}" style="display:block;width:100%;text-align:start">
+        <b>${esc(p.name)}</b><div class="muted small">${tr("import.programs.line", { workouts: tr("import.workouts", { n: p.days.length, num: ltr(p.days.length) }), goal: GOALS[p.goal] ? esc(tk("goal", p.goal)) : "" })}</div>
         <div class="muted small">${esc(p.notes ?? "")}</div></button>`,
         )
         .join("");
@@ -92,7 +93,7 @@ function programsView(root, ctx) {
           ctx.library,
           ctx.state.customExercises,
         );
-        if (!p.ok) return showBanner("This program could not be read.");
+        if (!p.ok) return showBanner(tr("import.program.unreadable"));
         pending = { preview: p, back: "#/import/programs" };
         ctx.go("#/import/preview");
       };
@@ -100,23 +101,22 @@ function programsView(root, ctx) {
     .catch(() => {
       if (root.isConnected)
         root.querySelector("#list").innerHTML =
-          `<p class="muted">Could not load the programs. Check your connection and try again.</p>`;
+          `<p class="muted">${tr("import.programs.fail")}</p>`;
     });
 }
 
 // PDF, photo or Word file: the app cannot read it, so help the owner hand it to their AI app. The File is never read here.
 function docPanel(root, ctx, docs, out, f) {
-  docs.innerHTML = `<section class="card"><h2>This app can't read PDFs or photos on its own yet.</h2>
-    <p>Your AI app can: two taps.</p>
-    <button class="btn btn-primary" id="copyDoc">Copy instructions</button>
+  docs.innerHTML = `<section class="card"><h2>${tr("import.doc.title")}</h2>
+    <p>${tr("import.doc.two")}</p>
+    <button class="btn btn-primary" id="copyDoc">${tr("import.copy")}</button>
     <div id="docFallback"></div>
-    <button class="btn" id="shareDoc">Send the file to your AI app</button>
+    <button class="btn" id="shareDoc">${tr("import.doc.send")}</button>
     <p class="muted small" id="shareMsg"></p>
-    <p class="muted small">In your AI app, paste the instructions, send, then copy its whole answer and come back.</p>
-    ${answerHtml}</section>`;
+    <p class="muted small">${tr("import.doc.after")}</p>
+    ${answerHtml()}</section>`;
   const $ = (q) => docs.querySelector(q);
-  const hint =
-    "Open your AI app, attach the file there, and paste the instructions.";
+  const hint = tr("import.doc.hint");
   $("#copyDoc").onclick = () =>
     copyText(
       buildAiPrompt({
@@ -140,12 +140,12 @@ function docPanel(root, ctx, docs, out, f) {
 }
 
 function fileView(root, ctx) {
-  root.innerHTML = `${head("Load a plan from a file", "Choose a plan file (.json), or paste the plan text, for example an answer from an AI chat.")}
-    <label class="btn file-btn">Choose a plan file<input type="file" accept="application/json,text/plain,application/pdf,image/jpeg,image/png,image/heic,image/heif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.json,.txt,.pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" id="file" /></label>
-    ${pasteBox("paste", "Or paste plan text")}
-    <button class="btn btn-primary" id="check">Check pasted plan</button>
+  root.innerHTML = `${head(tr("import.file.title"), tr("import.file.sub"))}
+    <label class="btn file-btn">${tr("import.file.choose")}<input type="file" accept="application/json,text/plain,application/pdf,image/jpeg,image/png,image/heic,image/heif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.json,.txt,.pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" id="file" /></label>
+    ${pasteBox("paste", tr("import.file.paste"))}
+    <button class="btn btn-primary" id="check">${tr("import.file.check")}</button>
     <div id="docs"></div>
-    <div id="out"></div>${back}`;
+    <div id="out"></div>${back()}`;
   const out = root.querySelector("#out");
   const docs = root.querySelector("#docs");
   const paste = root.querySelector("#paste");
@@ -159,9 +159,9 @@ function fileView(root, ctx) {
     const kind = fileKind(f.name, f.type);
     if (kind === "ai") return docPanel(root, ctx, docs, out, f);
     if (kind === "unsupported")
-      return (out.innerHTML = `<section class="card"><p>This kind of file cannot be used. Choose a plan file (.json or .txt), a PDF, a photo or a Word file.</p></section>`);
+      return (out.innerHTML = `<section class="card"><p>${tr("import.file.unsupported")}</p></section>`);
     if (f.size > MAX_FILE)
-      return (out.innerHTML = `<section class="card"><p>This file is too big to be a plan.</p></section>`);
+      return (out.innerHTML = `<section class="card"><p>${tr("import.file.big")}</p></section>`);
     submit(await f.text(), ctx, out, "#/import/file");
   };
   root.querySelector("#check").onclick = () =>
@@ -169,23 +169,23 @@ function fileView(root, ctx) {
 }
 
 function aiView(root, ctx) {
-  root.innerHTML = `${head("Build a plan with AI", "Free: use the Claude or ChatGPT app you already have.")}
-    <section class="card"><h2>Step 1</h2>
-      <label class="setting" style="display:block">What do you want? (e.g. 3 days a week, build muscle, 1 hour, bad knees)
+  root.innerHTML = `${head(tr("import.ai.title"), tr("import.ai.sub"))}
+    <section class="card"><h2>${tr("import.ai.step1")}</h2>
+      <label class="setting" style="display:block">${tr("import.ai.want")}
         <textarea id="req" dir="auto" rows="3" style="width:100%;margin-top:6px" maxlength="1000"></textarea></label>
-      <div class="seg" role="group" aria-label="Kind of request">
-        <button class="chip" data-mode="describe">Describe what I want</button>
-        <button class="chip" data-mode="convert">I have a plan to convert (I'll attach it in the AI app)</button>
+      <div class="seg" role="group" aria-label="${tr("import.ai.kind")}">
+        <button class="chip" data-mode="describe">${tr("import.ai.describe")}</button>
+        <button class="chip" data-mode="convert">${tr("import.ai.convert")}</button>
       </div>
-      <button class="btn btn-primary" id="copy">Copy instructions</button>
+      <button class="btn btn-primary" id="copy">${tr("import.copy")}</button>
       <div id="fallback"></div>
-      <p class="muted small" id="attachNote" hidden>You can attach your file (PDF, photo or Word) in the AI app itself.</p>
-      <p class="muted small">Paste this into the Claude or ChatGPT app (attach your plan file or photo there if you have one), then copy its whole answer and come back.</p>
+      <p class="muted small" id="attachNote" hidden>${tr("import.ai.attach")}</p>
+      <p class="muted small">${tr("import.ai.paste")}</p>
     </section>
-    <section class="card"><h2>Step 2</h2>
-      ${answerHtml}
+    <section class="card"><h2>${tr("import.ai.step2")}</h2>
+      ${answerHtml()}
     </section>
-    <div id="out"></div>${back}`;
+    <div id="out"></div>${back()}`;
   const $ = (s) => root.querySelector(s);
   $("#req").value = ai.request;
   $("#req").oninput = (e) => (ai.request = e.target.value);
@@ -223,17 +223,17 @@ function previewView(root, ctx) {
   const active = !!ctx.state.active;
   root.innerHTML = `${head(p.name)}
     ${p.notes ? `<p class="muted">${esc(p.notes)}</p>` : ""}
-    <p class="small"><b>Goal:</b> ${esc(GOALS[p.goal].label)} · ${p.days.length} ${p.days.length === 1 ? "workout" : "workouts"}</p>
-    ${fixes.length ? `<details class="card" id="fixes"><summary>Adjusted while reading (${fixes.length})</summary><ul>${fixes.map((f) => `<li class="small">${esc(f)}</li>`).join("")}</ul></details>` : ""}
-    ${active ? `<section class="card"><p>A workout is in progress. Finish or discard it before using a new plan.</p></section>` : ""}
+    <p class="small">${tr("import.preview.goal", { goal: esc(tk("goal", p.goal)), workouts: tr("import.workouts", { n: p.days.length, num: ltr(p.days.length) }) })}</p>
+    ${fixes.length ? `<details class="card" id="fixes"><summary>${tr("import.fixes", { n: ltr(fixes.length) })}</summary><ul>${fixes.map((f) => `<li class="small">${esc(f)}</li>`).join("")}</ul></details>` : ""}
+    ${active ? `<section class="card"><p>${tr("import.active.card")}</p></section>` : ""}
     ${
       p.newExercises.length
-        ? `<section class="card"><h3 style="margin-top:0">New exercises of your own</h3>
-        <p class="muted small">These are not in the exercise list. They will be added as your own exercises. Choose the main muscle for each.</p>
+        ? `<section class="card"><h3 style="margin-top:0">${tr("import.new.title")}</h3>
+        <p class="muted small">${tr("import.new.sub")}</p>
         ${p.newExercises
           .map(
-            (n, i) => `<label class="setting">${esc(n.name)}
-          <select data-n="${i}" aria-label="Muscle group for ${esc(n.name)}"><option value="">Choose…</option>${MUSCLES.map((m) => `<option${n.muscle === m ? " selected" : ""}>${esc(m)}</option>`).join("")}</select></label>`,
+            (n, i) => `<label class="setting"><span dir="auto">${esc(n.name)}</span>
+          <select data-n="${i}" aria-label="${tr("import.muscle.aria", { name: esc(n.name) })}"><option value="">${tr("import.choose")}</option>${MUSCLES.map((m) => `<option value="${esc(m)}"${n.muscle === m ? " selected" : ""}>${esc(tk("muscle", m))}</option>`).join("")}</select></label>`,
           )
           .join("")}
       </section>`
@@ -242,19 +242,19 @@ function previewView(root, ctx) {
     ${p.days
       .map(
         (d) =>
-          `<section class="card"><h3 style="margin-top:0">${esc(d.name)}</h3><ul class="items">${d.exercises
+          `<section class="card"><h3 style="margin-top:0" dir="auto">${esc(d.name)}</h3><ul class="items">${d.exercises
             .map(
               (
                 x,
-              ) => `<li class="item"><div class="row"><div class="grow"><div class="ex-name">${esc(x.name)}</div>
-          ${x.kind === "new" ? `<span class="tag">New exercise of your own</span>` : x.kind === "existing" ? `<span class="tag">Your exercise</span>` : ""}</div>
-          <div class="muted">${x.sets} × ${repsText(x)}${x.step !== 2.5 ? ` · +${fmtKg(x.step)} kg` : ""}</div></div></li>`,
+              ) => `<li class="item"><div class="row"><div class="grow"><div class="ex-name" dir="auto">${esc(x.name)}</div>
+          ${x.kind === "new" ? `<span class="tag">${tr("import.tag.new")}</span>` : x.kind === "existing" ? `<span class="tag">${tr("import.tag.existing")}</span>` : ""}</div>
+          <div class="muted">${ltr(`${x.sets} × ${repsText(x)}${x.step !== 2.5 ? ` · +${fmtKg(x.step)} kg` : ""}`)}</div></div></li>`,
             )
             .join("")}</ul></section>`,
       )
       .join("")}
-    <button class="btn btn-primary" id="use">Use this plan</button>
-    <a class="btn" href="${esc(backTo)}">Cancel</a>`;
+    <button class="btn btn-primary" id="use">${tr("import.use")}</button>
+    <a class="btn" href="${esc(backTo)}">${tr("import.cancel")}</a>`;
   const use = root.querySelector("#use");
   const sync = () => (use.disabled = active || needsMuscle(p));
   sync();
@@ -266,13 +266,11 @@ function previewView(root, ctx) {
   });
   use.onclick = async () => {
     if (ctx.state.active)
-      return showBanner(
-        "A workout is in progress. Finish or discard it first.",
-      );
+      return showBanner(tr("import.active.banner"));
     if (
       !(await confirmSheet(
-        `Use "${p.name}"? It replaces your current plan. Your workout history is kept. Making a backup first is a good idea (Plan, Export backup).`,
-        "Use this plan",
+        tr("import.confirm", { name: p.name }),
+        tr("import.use"),
       ))
     )
       return;
@@ -290,7 +288,7 @@ function previewView(root, ctx) {
     }
     if (await ctx.save({ render: false })) {
       pending = null;
-      showBanner("Plan changed.", { kind: "ok" });
+      showBanner(tr("import.changed"), { kind: "ok" });
       ctx.go("#/today");
     } else {
       state.workouts = prev.workouts;

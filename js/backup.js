@@ -1,11 +1,12 @@
 import { isValidState } from "./store.js";
+import { t } from "./i18n/index.js";
 
 // "Full backup": the normal backup document plus every stored photo, video and sound as base64.
 // The data keeps its usual top-level fields, so an older app still reads the data part.
 export const FULL_FORMAT = "gym-tracker-full-backup";
+// English texts, kept as constants for tests; thrown errors use t() at throw time so they follow the language.
 export const NOT_BACKUP = "This file is not a Gym Tracker backup.";
-export const BAD_MEDIA =
-  "The photos or sound in this backup file are damaged. Nothing was changed.";
+export const BAD_MEDIA = "The photos or sound in this backup file are damaged. Nothing was changed.";
 
 const B64 = /^[A-Za-z0-9+/]*={0,2}$/;
 const KINDS = ["blob", "image", "video"];
@@ -20,7 +21,7 @@ export function bytesToBase64(bytes) {
 
 export function base64ToBytes(b64) {
   if (typeof b64 !== "string" || b64.length % 4 || !B64.test(b64))
-    throw new Error(BAD_MEDIA);
+    throw new Error(t("backup.damaged"));
   const s = atob(b64);
   const out = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
@@ -68,14 +69,14 @@ export async function buildFullBackup(state, keys, read) {
 }
 
 const toBlob = (j) => {
-  if (!isObj(j) || typeof j.type !== "string") throw new Error(BAD_MEDIA);
+  if (!isObj(j) || typeof j.type !== "string") throw new Error(t("backup.damaged"));
   return new Blob([base64ToBytes(j.data)], { type: j.type });
 };
 
 // One entry of `media` -> { key, value } ready for IndexedDB. Throws BAD_MEDIA when malformed.
 export function decodeMedia(item) {
   if (!isObj(item) || typeof item.key !== "string" || !item.key || !KINDS.includes(item.kind))
-    throw new Error(BAD_MEDIA);
+    throw new Error(t("backup.damaged"));
   const blob = toBlob(item);
   if (item.kind === "blob") return { key: item.key, value: blob };
   const thumb = item.thumb == null ? null : toBlob(item.thumb);
@@ -89,10 +90,10 @@ export function readBackup(text) {
   try {
     parsed = JSON.parse(text);
   } catch {}
-  if (!isValidState(parsed)) throw new Error(NOT_BACKUP);
+  if (!isValidState(parsed)) throw new Error(t("backup.notBackup"));
   if (parsed.backupFormat !== FULL_FORMAT) return { state: parsed, media: null };
   if (parsed.backupVersion !== 1 || !Array.isArray(parsed.media))
-    throw new Error(BAD_MEDIA);
+    throw new Error(t("backup.damaged"));
   const media = parsed.media.map(decodeMedia);
   delete parsed.media;
   delete parsed.backupFormat;

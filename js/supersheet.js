@@ -1,4 +1,5 @@
 import { esc } from "./ui.js";
+import { t } from "./i18n/index.js";
 import { groupItems, supersetsOf } from "./planbuild.js";
 
 // "Make a superset" sheet on the Plan screen: tick 2 or more exercises of a day (tick order = alternation order),
@@ -22,19 +23,19 @@ export function openSuperset(ctx, w, group, onDone) {
     : null;
   let order = own ? [...own.ids] : [];
   let rest = own?.rest ?? "round";
-  const nameOf = (id) => ctx.lookup(id)?.name ?? "Unknown exercise";
+  const nameOf = (id) => ctx.lookup(id)?.name ?? t("super.unknown");
   const scrim = document.createElement("div");
   scrim.className = "scrim";
   const sheet = document.createElement("div");
   sheet.className = "sheet";
   sheet.setAttribute("role", "dialog");
   sheet.setAttribute("aria-modal", "true");
-  sheet.setAttribute("aria-label", own ? "Edit superset" : "Make a superset");
+  sheet.setAttribute("aria-label", own ? t("super.edit") : t("super.make"));
   scrim.append(sheet);
 
   const paint = () => {
-    sheet.innerHTML = `<h2 style="margin-top:0">${own ? "Edit superset" : "Make a superset"}</h2>
-      <p class="muted small">Tap the exercises in the order you want to alternate them.</p>
+    sheet.innerHTML = `<h2 style="margin-top:0">${own ? t("super.edit") : t("super.make")}</h2>
+      <p class="muted small">${t("super.hint")}</p>
       ${present
         .map((id) => {
           const n = order.indexOf(id) + 1;
@@ -43,17 +44,17 @@ export function openSuperset(ctx, w, group, onDone) {
           );
           return `<button class="pick-row ss-pick" data-id="${esc(id)}" aria-pressed="${n > 0}">
             <span class="ss-num${n ? " on" : ""}" aria-hidden="true">${n || ""}</span>
-            <span class="pick-name">${esc(nameOf(id))}${g >= 0 && !n ? ` <span class="muted small">(in Superset ${String.fromCharCode(65 + g)})</span>` : ""}</span>
+            <span class="pick-name">${esc(nameOf(id))}${g >= 0 && !n ? ` <span class="muted small">${t("super.inGroup", { letter: String.fromCharCode(65 + g) })}</span>` : ""}</span>
           </button>`;
         })
         .join("")}
-      <div class="seg" role="group" aria-label="When to rest">
-        <button class="chip" data-rest="round" aria-pressed="${rest === "round"}">Rest after the round</button>
-        <button class="chip" data-rest="each" aria-pressed="${rest === "each"}">Rest after each exercise</button>
+      <div class="seg" role="group" aria-label="${t("super.whenRest")}">
+        <button class="chip" data-rest="round" aria-pressed="${rest === "round"}">${t("super.restRound")}</button>
+        <button class="chip" data-rest="each" aria-pressed="${rest === "each"}">${t("super.restEach")}</button>
       </div>
-      <button class="btn btn-primary" data-act="make" style="margin-top:var(--gap)"${order.length < 2 ? " disabled" : ""}>${own ? "Save" : "Make superset"}</button>
-      ${own ? `<button class="btn btn-warn" data-act="remove">Remove superset</button>` : ""}
-      <button class="btn" data-act="cancel">Cancel</button>`;
+      <button class="btn btn-primary" data-act="make" style="margin-top:var(--gap)"${order.length < 2 ? " disabled" : ""}>${own ? t("super.save") : t("super.makeBtn")}</button>
+      ${own ? `<button class="btn btn-warn" data-act="remove">${t("super.remove")}</button>` : ""}
+      <button class="btn" data-act="cancel">${t("swap.cancel")}</button>`;
   };
   paint();
 

@@ -1,5 +1,6 @@
 // Rest timer: one bar fixed to the bottom of the page, outside the per-render screen root.
 import * as push from "./push.js";
+import { ltr, ltrText, t } from "./i18n/index.js";
 import { deleteBlob, getBlob, putBlob, SOUND_KEY } from "./media.js";
 
 // State lives in state.active.rest = { endsAt, total } (ms timestamp, seconds) so it survives a kill.
@@ -88,15 +89,15 @@ function build() {
   bar.id = "rest";
   bar.hidden = true;
   bar.setAttribute("role", "region");
-  bar.setAttribute("aria-label", "Rest timer");
+  bar.setAttribute("aria-label", t("rest.timer"));
   bar.innerHTML = `<div class="rest-prog"><i></i></div>
     <div class="rest-row">
       <div class="rest-time" aria-live="off">0:00</div>
       <div class="rest-msg" aria-live="polite"></div>
       <div class="rest-btns">
-        <button type="button" data-d="-15">−15s</button>
-        <button type="button" data-d="15">+15s</button>
-        <button type="button" data-d="0">Skip</button>
+        <button type="button" data-d="-15">${ltr(t("rest.minus15"))}</button>
+        <button type="button" data-d="15">${ltr(t("rest.plus15"))}</button>
+        <button type="button" data-d="0">${t("rest.skip")}</button>
       </div>
     </div>`;
   bar.addEventListener("click", (e) => {
@@ -272,8 +273,8 @@ function paint() {
   const left = remaining(r.endsAt, now);
   const over = left === 0;
   bar.classList.toggle("over", over);
-  bar.querySelector(".rest-time").textContent = fmtRest(left);
-  bar.querySelector(".rest-msg").textContent = over ? "Rest over" : "";
+  bar.querySelector(".rest-time").textContent = ltrText(fmtRest(left));
+  bar.querySelector(".rest-msg").textContent = over ? t("rest.over") : "";
   bar.querySelector("i").style.transform =
     `scaleX(${Math.min(1, Math.max(0, (r.endsAt - now) / (r.total * 1000)))})`;
 }

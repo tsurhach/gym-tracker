@@ -1,5 +1,6 @@
 // Thin wrapper around navigator.credentials. No server calls here; sync.js drives it.
 import { b64u, unb64u, prfSalt } from "./synccrypto.js";
+import { t } from "./i18n/index.js";
 
 // [major, minor] of iOS/iPadOS from a user agent, or null for anything else.
 export function iosVersion(ua) {
@@ -47,7 +48,7 @@ export async function register({ challenge, accountId }) {
   });
   const alg = cred.response.getPublicKeyAlgorithm();
   if (alg !== -7)
-    throw new Error("This device made a passkey type the app cannot use.");
+    throw new Error(t("passkey.badType"));
   return {
     credentialId: b64u(cred.rawId),
     publicKey: b64u(cred.response.getPublicKey()),

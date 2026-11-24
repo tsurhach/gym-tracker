@@ -1,5 +1,6 @@
 import { GOALS } from "./constants.js";
 import { localDate } from "./weight.js";
+import { t } from "./i18n/index.js";
 
 export const KEY = "gymtracker.v1";
 export const CORRUPT_KEY = "gymtracker.corrupt";
@@ -276,6 +277,6 @@ export function importJson(text) {
     parsed = JSON.parse(text);
   } catch {}
   if (!isValidState(parsed))
-    throw new Error("This file is not a Gym Tracker backup.");
+    throw new Error(t("store.notBackup"));
   return parsed;
 }

@@ -47,8 +47,26 @@ export const t = (key, vars) => translate(DICTS, current, currentGender, key, va
 // Western digits in both languages.
 export const fmtNum = (n) => Number(n).toLocaleString("en-US");
 
-// Numbers, units and timers keep their left-to-right order inside a Hebrew sentence. Pass text already escaped.
-export const ltr = (html) => `<bdi dir="ltr">${html}</bdi>`;
+// Numbers, units and timers keep their left-to-right order inside a Hebrew sentence. Pass html already escaped.
+// In English both return their input unchanged, so English output stays byte-for-byte what it was.
+export const ltr = (html) => (current === "he" ? `<bdi dir="ltr">${html}</bdi>` : html);
+// Same for text set with textContent / aria-label (uses Unicode isolates instead of an element).
+export const ltrText = (s) => (current === "he" ? "⁦" + s + "⁩" : s);
+
+const DAYS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS_EN_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const heFmt = (opts, d) => new Intl.DateTimeFormat("he-IL", opts).format(d);
+// Day of week 0 (Sunday) to 6, "short" | "long".
+export const weekday = (i, style = "short") =>
+  current === "he" ? heFmt({ weekday: style }, new Date(2023, 0, 1 + i)) : (style === "long" ? DAYS_EN_LONG : DAYS_EN)[i];
+// "Thu 12 Nov" (local time).
+export const fmtDate = (ms) => {
+  const d = new Date(ms);
+  return current === "he" ? heFmt({ weekday: "short", day: "numeric", month: "short" }, d) : `${DAYS_EN[d.getDay()]} ${d.getDate()} ${MONTHS_EN[d.getMonth()]}`;
+};
+// A key whose last part is a data value (muscle, goal, equipment): tk("muscle", "Chest"). Every value must have a key (tests check).
+export const tk = (prefix, value) => t(`${prefix}.${value}`);
 
 // The page language and direction (the head script sets the same before first paint).
 export function applyLang(settings, navLang = globalThis.navigator?.language, doc = globalThis.document) {

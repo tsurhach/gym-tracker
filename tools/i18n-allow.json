@@ -1,0 +1,157 @@
+[
+ {
+  "file": "js/app.js",
+  "text": "storage unavailable",
+  "why": "internal error, never shown"
+ },
+ {
+  "file": "js/calendar.js",
+  "text": "Error(\"server\"",
+  "why": "internal error code"
+ },
+ {
+  "file": "js/media.js",
+  "text": "Error(\"no indexedDB\"",
+  "why": "internal error code"
+ },
+ {
+  "file": "js/media.js",
+  "text": "Error(\"decode\"",
+  "why": "internal error code"
+ },
+ {
+  "file": "js/sync.js",
+  "text": "Error(\"media\"",
+  "why": "internal error code"
+ },
+ {
+  "file": "js/sync.js",
+  "text": "Error(\"pull\"",
+  "why": "internal error code"
+ },
+ {
+  "file": "js/sync.js",
+  "text": "Error(\"push\"",
+  "why": "internal error code"
+ },
+ {
+  "file": "js/planbuild.js",
+  "text": "length",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "length",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "lo && x",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Only needed for exercises",
+  "why": "JSON schema description inside the AI prompt (sent to an external AI, English by design)"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Gym Tracker plan",
+  "why": "plan file schema title (file format, not UI)"
+ },
+ {
+  "file": "js/rest.js",
+  "text": "item.restSec",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/screens/history.js",
+  "text": "x.startedAt",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/screens/weight.js",
+  "text": "e.date",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/store.js",
+  "text": "cal.mins",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/weight.js",
+  "text": "date",
+  "why": "comparison operators matched as tags"
+ },
+ {
+  "file": "js/screens/people.js",
+  "text": "ABCD-2345-XY",
+  "why": "example code format, not language text"
+ },
+ {
+  "file": "js/screens/people.js",
+  "text": "Gym Tracker",
+  "why": "app name in the share sheet title"
+ },
+ {
+  "file": "js/screens/plan.js",
+  "text": "Language / שפה",
+  "why": "always-bilingual language row"
+ },
+ {
+  "file": "*",
+  "text": "Gym Tracker",
+  "why": "the app name (also the dummy username for the password manager)"
+ },
+ {
+  "file": "js/backup.js",
+  "text": "This file is not",
+  "why": "English constants kept for tests; thrown errors use t()"
+ },
+ {
+  "file": "js/backup.js",
+  "text": "The photos or sound",
+  "why": "English constants kept for tests; thrown errors use t()"
+ },
+ {
+  "file": "js/media.js",
+  "text": "That video is too large",
+  "why": "English constant kept for tests; messages use t()"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Plain exercise name",
+  "why": "schema text inside the AI prompt (English by design)"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Full Body Beginner",
+  "why": "example plan inside the AI prompt"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Two workouts, alternate",
+  "why": "example plan inside the AI prompt"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Barbell Squat",
+  "why": "example plan inside the AI prompt"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Bench Press",
+  "why": "example plan inside the AI prompt"
+ },
+ {
+  "file": "js/planfile.js",
+  "text": "Cable Hip Abduction",
+  "why": "example plan inside the AI prompt"
+ },
+ {
+  "file": "js/screens/plan.js",
+  "text": "Auto (phone)",
+  "why": "always-bilingual language row"
+ }
+]

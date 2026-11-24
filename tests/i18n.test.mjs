@@ -71,7 +71,7 @@ test("he.js has no keys English lacks; every t() key used in code exists in en.j
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).forEach((e) => (e.isDirectory() ? walk(d + e.name + "/") : /\.js$/.test(e.name) && !d.includes("i18n") && files.push(d + e.name)));
   walk(fileURLToPath(new URL("../js/", import.meta.url)).replaceAll("\\", "/") + "/");
   for (const f of files)
-    for (const m of fs.readFileSync(f, "utf8").matchAll(/\bt\("([\w.]+)"/g)) assert.ok(m[1] in en, `${f}: ${m[1]}`);
+    for (const m of fs.readFileSync(f, "utf8").matchAll(/\b(?:t|tr)\("([\w.]+)"/g)) assert.ok(m[1] in en, `${f}: ${m[1]}`);
 });
 
 // Head script: html lang/dir before first paint.
@@ -118,4 +118,25 @@ test("styles.css: only symmetric left/right remain (everything else is logical)"
   const found = css.split(/\r?\n/).map((l) => l.trim()).filter((l) => /\b(left|right)\b/.test(l) && !l.startsWith("/*") && !l.includes('[dir="rtl"]'));
   const allowed = new Set(["left: 0;", "right: 0;", "left: 12px;", "right: 12px;", "transform-origin: left;", "border-right: 2px solid var(--muted);", "transform-origin: right;"]);
   for (const l of found) assert.ok(allowed.has(l), l);
+});
+
+import { scanAll } from "../tools/i18n-leftovers.mjs";
+import { addressesUser } from "../js/i18n/en.js";
+import { MUSCLES, GOALS } from "../js/constants.js";
+import lib from "../data/exercises.json" with { type: "json" };
+
+test("no user-visible English literal is left outside js/i18n (allow-list in tools/i18n-allow.json)", () => {
+  const left = scanAll();
+  assert.deepEqual(left.map((o) => `${o.file}:${o.line} ${o.text}`), []);
+});
+
+test("every muscle, goal and equipment value has a key; addressesUser keys exist", () => {
+  for (const m of MUSCLES) assert.ok(`muscle.${m}` in en, m);
+  for (const g of Object.keys(GOALS)) assert.ok(`goal.${g}` in en, g);
+  for (const e of new Set(lib.map((x) => x.equipment))) assert.ok(`equip.${e}` in en, e);
+  for (const k of addressesUser) assert.ok(k in en, k);
+});
+
+test("every plural value has one and other", () => {
+  for (const [k, v] of Object.entries(en)) if (v && typeof v === "object") assert.ok(typeof v.one === "string" && typeof v.other === "string", k);
 });

@@ -1,5 +1,6 @@
 import { isValidState } from "./store.js";
 import { ago } from "./friendly.js";
+import { t as tr } from "./i18n/index.js";
 import { SERVER } from "./push.js";
 import * as sc from "./synccrypto.js";
 import { allMediaKeys, readMedia, restoreMedia, deleteMedia, pendingDeletes, clearDeleted } from "./media.js";
@@ -127,9 +128,6 @@ export function readEnvelope(env) {
 const SESSION_KEY = "gymtracker.sync";
 const KEEPALIVE_MAX = 60 * 1024;
 const DAY = 24 * 3600 * 1000;
-const NOTE_BIG = "A photo or sound is too big to sync (4 MB limit). It stays on this phone.";
-const NOTE_FULL = "Your cloud space for photos and sound is full (25 MB). New ones stay on this phone.";
-const NOTE_LATER = "Some photos or sounds could not sync yet. They will be tried again.";
 // Cheap change check for a stored photo or sound; the real hash is only computed when this differs.
 const sigOf = (v) =>
   v instanceof Blob ? `b:${v.type}:${v.size}` : `${v.kind}:${v.blob?.type}:${v.blob?.size}:${v.thumb?.size ?? 0}`;
@@ -214,7 +212,7 @@ export function createSync(h) {
     h.signedOut?.();
     persist();
     keys.set(null).catch(() => {});
-    status = "Sync was turned off on another device.";
+    status = tr("sync.offElsewhere");
   }
 
   // Local state plus any remote data we hold but have not applied yet (what the cloud copy must contain).
@@ -274,7 +272,7 @@ export function createSync(h) {
       const put = async (key, local, lh) => {
         const r = refs[key];
         const bytes = await sc.sealMedia(dataKey, await encodeMedia(key, local));
-        if (bytes.length > 4 * 1024 * 1024) return void (note = NOTE_BIG);
+        if (bytes.length > 4 * 1024 * 1024) return void (note = tr("sync.noteBig"));
         const id = sc.b64u(sc.randomBytes(16));
         const head = new TextEncoder().encode(JSON.stringify({ ...auth(), id }));
         const frame = new Uint8Array(4 + head.length + bytes.length);
@@ -284,7 +282,7 @@ export function createSync(h) {
         const res = await doFetch(url + "/media/put", { method: "POST", headers: { "content-type": "text/plain" }, body: frame });
         if (res.status === 413) {
           const e = await res.json().catch(() => ({}));
-          return void (note = e.error === "account" ? NOTE_FULL : NOTE_BIG);
+          return void (note = e.error === "account" ? tr("sync.noteFull") : tr("sync.noteBig"));
         }
         if (res.status !== 200) throw new Error("media");
         if (r?.id) trash.push(r.id);
@@ -339,7 +337,7 @@ export function createSync(h) {
           } else if (live) await get(key, live); // missing but not deleted by the user: fetch it again if the server has it
           else delete seen[key];
         } catch {
-          note ||= NOTE_LATER;
+          note ||= tr("sync.noteLater");
         }
       }
       if (Object.keys(mine).length) {
@@ -349,7 +347,7 @@ export function createSync(h) {
       files.clearDeleted([...deletedHere]);
       mnote = note;
     } catch {
-      mnote = NOTE_LATER;
+      mnote = tr("sync.noteLater");
     }
     return out;
   }
@@ -375,17 +373,17 @@ export function createSync(h) {
             try {
               env = readEnvelope(await sc.open(dataKey, p.json.blob));
             } catch {
-              status = "Sync stopped: the cloud copy could not be read.";
+              status = tr("sync.cantRead");
               return;
             }
             if (env.error) {
-              status = env.error === "update" ? "Update the app to keep syncing." : "Sync stopped: the cloud copy could not be read.";
+              status = env.error === "update" ? tr("sync.updateApp") : tr("sync.cantRead");
               return;
             }
             remoteDoc = env.state;
             const m = merge(h.getState(), remoteDoc);
             if (m.error) {
-              status = "Sync stopped: the cloud copy could not be combined.";
+              status = tr("sync.cantCombine");
               return;
             }
             if (m.changed) {
@@ -410,7 +408,7 @@ export function createSync(h) {
           }
           if (q.status === 404) return gone();
           if (q.status === 413) {
-            status = "Too much data to sync. Make a backup file.";
+            status = tr("sync.tooMuch");
             return;
           }
           if (q.status !== 200) throw new Error("push");
@@ -430,7 +428,7 @@ export function createSync(h) {
       } catch {
         if (session) {
           session.dirty = session.dirty || d0;
-          status = "Waiting for internet";
+          status = tr("sync.offline");
         }
       } finally {
         persist();
@@ -514,7 +512,7 @@ export function createSync(h) {
     }
     const r = await post("/auth/register", body);
     if (r.status !== 200)
-      throw new Error("Could not create the account. Try again later.");
+      throw new Error(tr("sync.errCreate"));
     if (stampMissing(h.getState())) h.setState(h.getState());
     await finish(accountId, r.json.token, key);
     return { recoveryCode: sc.makeRecoveryCode(codeBytes) };
@@ -547,7 +545,7 @@ export function createSync(h) {
       authenticatorData: a.authenticatorData,
       signature: a.signature,
     });
-    if (r.status !== 200) throw new Error("Sign-in failed. Try again.");
+    if (r.status !== 200) throw new Error(tr("sync.errSignIn"));
     const { token, wrapPrf, wrapCode } = r.json;
     pending = { accountId: a.userHandle, token, wrapCode, prf: a.prf };
     if (a.prf?.length === 32 && wrapPrf) {
@@ -566,22 +564,20 @@ export function createSync(h) {
         key = await sc.unwrapDataKey(pending.wrapCode, bytes, "code");
     } catch {}
     if (!key)
-      throw new Error(
-        "That code does not open this data. Check it and try again.",
-      );
+      throw new Error(tr("sync.errCode"));
     return done(key, true);
   }
 
   async function newRecoveryCode() {
     const key = await ensureKey();
-    if (!session || !key) throw new Error("Not signed in.");
+    if (!session || !key) throw new Error(tr("sync.errNotSignedIn"));
     const bytes = sc.randomBytes(16);
     const r = await post("/account/rewrap", {
       ...auth(),
       wrapCode: await sc.wrapDataKey(key, bytes, "code"),
     });
     if (r.status !== 200)
-      throw new Error("Could not make a new code. Try again later.");
+      throw new Error(tr("sync.errNewCode"));
     return sc.makeRecoveryCode(bytes);
   }
 
@@ -592,7 +588,7 @@ export function createSync(h) {
   }
   async function deleteCloud() {
     const r = await post("/account/delete", auth());
-    if (r.status !== 200) throw new Error("Could not delete. Try again later.");
+    if (r.status !== 200) throw new Error(tr("sync.errDelete"));
     gone();
     status = "";
   }
@@ -614,9 +610,10 @@ export function createSync(h) {
       status ||
       (session
         ? session.lastSyncAt
-          ? `Synced ${ago(session.lastSyncAt, now())}`
-          : "Not synced yet"
-        : "Sync off"),
+          ? tr("sync.synced", { ago: ago(session.lastSyncAt, now()) })
+          : tr("sync.notYet")
+        : tr("sync.off")),
+    isOk: () => !status && !!session?.lastSyncAt, // "Synced ..." is showing (language-proof, unlike testing the text)
     mediaNote: () => mnote,
     hasHeld: () => !!held,
     changed,

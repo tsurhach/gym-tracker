@@ -1,5 +1,6 @@
-import { parseNum } from "../logic.js";
-import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
+import { kgHtml, kgText, parseNum } from "../logic.js";
+import { confirmSheet, esc, fmtKg } from "../ui.js";
+import { fmtDate, t } from "../i18n/index.js";
 import {
   dateMs,
   dayNum,
@@ -11,15 +12,15 @@ import {
 } from "../weight.js";
 
 const move = (c) =>
-  c === 0 ? "No change" : `${c > 0 ? "Up" : "Down"} ${fmtKg(Math.abs(c))} kg`;
+  c === 0 ? t("weight.noChange") : t(c > 0 ? "weight.up" : "weight.down", { kg: kgText(fmtKg(Math.abs(c))) });
 
 export function summary(list, today) {
   const s = weightStats(list, today);
-  if (s.latest === null) return "No entries yet.";
-  const out = [`Latest: ${fmtKg(s.latest)} kg.`];
+  if (s.latest === null) return t("weight.noEntries");
+  const out = [t("weight.latest", { kg: kgText(fmtKg(s.latest)) })];
   if (s.change !== null)
-    out.push(`${move(s.change)} since the previous entry.`);
-  if (s.change30 !== null) out.push(`${move(s.change30)} in the last 30 days.`);
+    out.push(t("weight.sincePrev", { move: move(s.change) }));
+  if (s.change30 !== null) out.push(t("weight.since30", { move: move(s.change30) }));
   return out.join(" ");
 }
 
@@ -41,7 +42,7 @@ function sparkline(list, today) {
   ]);
   const a = pts[0];
   const b = pts.at(-1);
-  const label = `Weight trend: ${fmtKg(a.kg)} kg on ${fmtDate(dateMs(a.date))} to ${fmtKg(b.kg)} kg on ${fmtDate(dateMs(b.date))}`;
+  const label = t("weight.trend", { from: kgText(fmtKg(a.kg)), fromDate: fmtDate(dateMs(a.date)), to: kgText(fmtKg(b.kg)), toDate: fmtDate(dateMs(b.date)) });
   const [lx, ly] = xy.at(-1);
   return `<section class="card"><svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">
     <polyline points="${xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ")}" />
@@ -52,16 +53,16 @@ export function render(root, ctx) {
   const list = ctx.state.bodyWeights ?? [];
   const today = localDate();
   const latest = list.length ? fmtKg(list.at(-1).kg) : "";
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/today"><span class="flip">‹</span> Today</a></div>
-    <h1 class="title">Body weight</h1>
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/today"><span class="flip">‹</span> ${t("weight.back")}</a></div>
+    <h1 class="title">${t("weight.title")}</h1>
     <p class="muted" style="margin-bottom:var(--gap)">${esc(summary(list, today))}</p>
     <form class="card" novalidate>
       <div class="fields" style="grid-template-columns:1fr 1fr">
-        <label>Weight (kg)<input name="kg" inputmode="decimal" autocomplete="off" value="${esc(latest)}" /></label>
-        <label>Date<input name="date" type="date" value="${today}" max="${today}" /></label>
+        <label>${t("weight.weightKg")}<input name="kg" inputmode="decimal" autocomplete="off" value="${esc(latest)}" /></label>
+        <label>${t("weight.date")}<input name="date" type="date" value="${today}" max="${today}" /></label>
       </div>
       <p class="err" role="alert"></p>
-      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn btn-primary" type="submit">${t("weight.save")}</button>
     </form>
     ${sparkline(list, today)}
     <section class="card list">${
@@ -71,11 +72,11 @@ export function render(root, ctx) {
             .map(
               (
                 e,
-              ) => `<div class="li"><span class="grow">${esc(fmtDate(dateMs(e.date)))}</span><b>${esc(fmtKg(e.kg))} kg</b>
-        <button class="btn btn-warn inline" data-act="del" data-id="${esc(e.id)}" aria-label="Delete ${esc(fmtDate(dateMs(e.date)))}">Delete</button></div>`,
+              ) => `<div class="li"><span class="grow">${esc(fmtDate(dateMs(e.date)))}</span><b>${kgHtml(esc(fmtKg(e.kg)))}</b>
+        <button class="btn btn-warn inline" data-act="del" data-id="${esc(e.id)}" aria-label="${t("weight.deleteDate", { date: esc(fmtDate(dateMs(e.date))) })}">${t("weight.delete")}</button></div>`,
             )
             .join("")
-        : `<p class="muted empty">Nothing logged yet.</p>`
+        : `<p class="muted empty">${t("weight.nothing")}</p>`
     }</section>`;
 
   const err = root.querySelector(".err");
@@ -84,20 +85,19 @@ export function render(root, ctx) {
     const kg = parseNum(e.target.kg.value);
     const date = e.target.date.value;
     if (!validKg(kg))
-      err.textContent =
-        "Enter a weight between 20 and 400 kg, like 82.4 or 82,4.";
+      err.textContent = t("weight.badKg");
     else if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > localDate())
-      err.textContent = "Pick a date that is not in the future.";
+      err.textContent = t("weight.badDate");
     else {
       logWeight(ctx.state, date, kg);
       ctx.save();
     }
   });
   root.addEventListener("click", async (e) => {
-    const t = e.target.closest('[data-act="del"]');
-    if (!t || !(await confirmSheet("Delete this weight entry?", "Delete")))
+    const el = e.target.closest('[data-act="del"]');
+    if (!el || !(await confirmSheet(t("weight.deleteAsk"), t("weight.delete"))))
       return;
-    deleteWeight(ctx.state, t.dataset.id);
+    deleteWeight(ctx.state, el.dataset.id);
     ctx.save();
   });
 }
