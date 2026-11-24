@@ -146,10 +146,12 @@ export function beats(curr, prev) {
   return total(curr) > total(prev);
 }
 
-// A new best: nothing done before was at least this heavy for at least this many reps.
 // No past sets, no record.
+// Heavier than ever, or more reps than ever at a weight used before (so warm-ups and back-off sets get no badge).
 export const isPersonalBest = (pastSets, { weight, reps }) =>
-  pastSets.length > 0 && !pastSets.some((p) => p.weight >= weight && p.reps >= reps);
+  pastSets.length > 0 &&
+  (weight > Math.max(...pastSets.map((p) => p.weight)) ||
+    (pastSets.some((p) => p.weight === weight) && !pastSets.some((p) => p.weight >= weight && p.reps >= reps)));
 
 export function isStuck(history) {
   if (history.length < 3) return false;

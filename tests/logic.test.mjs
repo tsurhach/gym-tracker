@@ -202,7 +202,11 @@ test("isPersonalBest: heavier, same weight more reps, same or lower, no history"
   assert.equal(isPersonalBest(past, { weight: 52.5, reps: 1 }), true);
   assert.equal(isPersonalBest(past, { weight: 50, reps: 11 }), true);
   assert.equal(isPersonalBest(past, { weight: 50, reps: 10 }), false);
-  assert.equal(isPersonalBest(past, { weight: 45, reps: 20 }), true); // more reps than every heavier set
+  assert.equal(isPersonalBest(past, { weight: 45, reps: 20 }), false); // a weight never used: warm-up or back-off
+  assert.equal(isPersonalBest(past, { weight: 40, reps: 16 }), true); // used before, more reps than anything as heavy
+  assert.equal(isPersonalBest([{ weight: 60, reps: 10 }], { weight: 20, reps: 15 }), false);
+  assert.equal(isPersonalBest([{ weight: 55, reps: 10 }, { weight: 60, reps: 10 }], { weight: 55, reps: 12 }), true);
+  assert.equal(isPersonalBest([{ weight: 0, reps: 10 }], { weight: 0, reps: 11 }), true);
   assert.equal(isPersonalBest(past, { weight: 45, reps: 8 }), false);
   assert.equal(isPersonalBest([], { weight: 50, reps: 10 }), false);
 });

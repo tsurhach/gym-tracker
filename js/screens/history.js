@@ -232,7 +232,7 @@ function sessionScreen(root, ctx) {
   }
   root.innerHTML = `<div class="row topbar"><a class="back" href="#/history">‹ History</a></div>
     <h1 class="title">${esc(ses.workoutName)}</h1>
-    <p class="subtitle">${esc(fmtDate(ses.startedAt))} · ${durationMin(ses)} min</p>
+    <p class="subtitle">${esc(fmtDate(ses.startedAt))}</p>
     ${summaryHtml(ses, ctx.state.sessions)}
     ${ses.entries
       .map(

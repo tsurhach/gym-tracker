@@ -106,7 +106,7 @@ const SECTIONS = [
     <p><b>Rest-over sound:</b> in <b>Settings</b> you can record your own sound or pick an audio file. Turn on <b>Notify me when rest is over</b> to get an alert when the phone is locked.</p>
     <p><b>Your own photo or video:</b> on an exercise you added yourself, tap <b>Add photo or video</b>.</p>
     <p><b>Plates per side:</b> for bar exercises the app shows which plates to put on each side.</p>
-    <p><b>New best:</b> a 🏆 shows when nothing you did before was this heavy for this many reps. When you finish, you see a short summary with your new bests.</p>`,
+    <p><b>New best:</b> a 🏆 shows when a set is heavier than ever, or has more reps than ever at that weight. When you finish, you see a short summary with your new bests.</p>`,
   ],
   [
     "progress",

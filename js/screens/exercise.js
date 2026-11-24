@@ -136,12 +136,14 @@ if (typeof window !== "undefined")
 // The set just confirmed: a second tap within 400 ms is a double-tap, not an undo.
 let justConfirmed = null;
 
+const base = new WeakMap();
+
 const val = (n) => (n == null ? "" : fmtKg(n));
 
 export const pbHtml = `<div class="pb" role="note"><span aria-hidden="true">🏆</span> New best</div>`;
 
 function setHtml(s, i, past, next) {
-  return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}" data-i="${i}" data-w0="${esc(val(s.weight))}">
+  return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}" data-i="${i}">
     <span class="set-n">${i + 1}</span>
     <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="kg" aria-label="Set ${i + 1} weight in kg" value="${esc(val(s.weight))}" />
     <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="reps" aria-label="Set ${i + 1} reps" value="${esc(s.reps ?? "")}" />
@@ -213,6 +215,7 @@ export function render(root, ctx) {
     <a class="btn btn-primary" href="#/workout" data-primary>Done, back to list</a>
     <button class="btn" data-act="swap" style="margin-top:var(--gap)">Swap exercise</button>`;
 
+  entry.sets.forEach((x) => base.set(x, x.weight));
   current = { root, entry, ctx, past, rule };
   paintPlates();
 
@@ -239,9 +242,17 @@ export function render(root, ctx) {
     el.innerHTML = `Superset with ${others.join(" + ")} · round ${round} of ${entry.sets.length}`;
   }
   paintSs();
+  // Arriving mid-workout (superset partner, "Next"): bring the next set above the rest bar.
+  if (entry.sets.some((s) => s.done) || supersetOf(a, entry.exerciseId))
+    requestAnimationFrame(() => root.querySelector(".set.next")?.scrollIntoView({ block: "nearest" }));
 
-  // Tapping a number box selects it, so typing replaces the value.
-  root.addEventListener("focusin", (e) => e.target.matches?.(".set input") && e.target.select());
+  // Tapping a number box selects it, so typing replaces the value (the timeout beats iOS undoing it on release).
+  root.addEventListener("focusin", (e) => {
+    const t = e.target;
+    if (!t.matches?.(".set input")) return;
+    t.select();
+    setTimeout(() => t.setSelectionRange(0, t.value.length), 0);
+  });
 
   // Only the media area is redrawn, so typed set values are never disturbed.
   const mediaBox = root.querySelector("[data-media]");
@@ -335,9 +346,10 @@ export function render(root, ctx) {
         cancelRest(ctx);
       } else if (validSet(s.weight, s.reps)) {
         s.done = true;
-        // data-w0 = the weight this row showed when drawn: a change event may already have copied the typed one
-        const old = parseNum(row.dataset.w0);
+        // base = each set's weight before the last carry: a change event may already have copied the typed one
+        const old = base.get(s);
         if (old !== s.weight) carryWeight(entry.sets, i, old);
+        entry.sets.forEach((x) => base.set(x, x.weight));
         justConfirmed = { s, at: Date.now() };
         const after = afterSupersetSet(a, entry.exerciseId);
         if (after.rest) startRest(ctx, item);

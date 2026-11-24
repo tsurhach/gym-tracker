@@ -61,7 +61,7 @@ function itemHtml(it, ctx, i, n, wid) {
         <span class="ex-name">${esc(name)}</span>
         <span class="xsum muted">${esc(summaryText(it))}</span><span class="xchev" aria-hidden="true">›</span>
       </button>
-      ${L ? `<button class="tag ss-tag" data-act="ss-edit" aria-label="Edit Superset ${L}">Superset ${L}</button>` : ""}
+      ${L ? `<button class="tag ss-tag" data-act="ss-edit" aria-label="Edit Superset ${L}">${L}</button>` : ""}
     </div>
     ${
       open
