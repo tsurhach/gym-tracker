@@ -50,11 +50,12 @@ sections.push(`<details open><summary>Exercises <span class="cnt">${lib.length}<
 const page = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hebrew review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
 :root{--bg:#fafaf7;--fg:#1c1c1a;--muted:#6b6b66;--card:#fff;--line:#e3e3dc;--acc:#1a6b4a;--chip:#eef3ef}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecece8;--muted:#9a9a93;--card:#1d1d1b;--line:#33332f;--acc:#6fcf9f;--chip:#23302a}}
 :root[data-theme="dark"]{--bg:#141413;--fg:#ecece8;--muted:#9a9a93;--card:#1d1d1b;--line:#33332f;--acc:#6fcf9f;--chip:#23302a}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 h1{font-size:22px;margin:0 0 4px}p.lead{margin:0 0 12px;color:var(--muted)}
 .bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2}
 input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);font:inherit}
@@ -79,6 +80,7 @@ const q=document.getElementById("q");
 q.addEventListener("input",()=>{const v=q.value.trim().toLowerCase();document.querySelectorAll("tr").forEach(r=>r.classList.toggle("hide",!!v&&!r.textContent.toLowerCase().includes(v)))});
 </script></body></html>
 `;
+const body = inline ? page.split(String.fromCharCode(10)).filter((l) => !/^<!doctype|^<html|^<meta charset|^<meta name="viewport"/.test(l)).join(String.fromCharCode(10)).replace("</head><body>", "").replace("</body></html>", "") : page;
 fs.mkdirSync(new URL("../docs/", import.meta.url), { recursive: true });
-fs.writeFileSync(out, page);
+fs.writeFileSync(out, body);
 console.log(`${out}: ${n} rows, ${(page.length / 1024) | 0} KB`);
