@@ -29,13 +29,13 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
           <button class="icon-btn" data-act="close" aria-label="Close">✕</button>
           <h2>${esc(title)}</h2>
         </div>
-        <input type="search" data-search placeholder="Search exercises" aria-label="Search exercises" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
+        <input type="search" dir="auto" data-search placeholder="Search exercises" aria-label="Search exercises" autocomplete="off" autocapitalize="none" enterkeyhint="search" />
         <nav class="pick-jump" data-jump aria-label="Jump to a muscle group"></nav>
       </div>
       <details class="card" style="margin-top:12px">
         <summary>Create a custom exercise</summary>
         <form data-form novalidate>
-          <input data-name placeholder="Exercise name" aria-label="Exercise name" maxlength="60" autocomplete="off" />
+          <input data-name dir="auto" placeholder="Exercise name" aria-label="Exercise name" maxlength="60" autocomplete="off" />
           <label class="muted small">Main muscle
             <select data-primary>${MUSCLES.map((m) => `<option>${esc(m)}</option>`).join("")}</select>
           </label>

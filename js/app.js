@@ -21,6 +21,7 @@ import * as person from "./screens/person.js";
 import { createShare } from "./share.js";
 import { createCalSync } from "./calendar.js";
 import * as passkey from "./passkey.js";
+import { applyLang } from "./i18n/index.js";
 
 const screens = {
   today,
@@ -97,6 +98,7 @@ function startSync(ctx, store, render) {
     },
     isSafe: calm,
     applied: () => {
+      applyLang(ctx.state.settings); // a language change from the other phone
       render();
       showBanner("Updated from your other device.", { kind: "ok" });
     },
@@ -130,6 +132,7 @@ async function main() {
 
   const store = createStore(browserStorage());
   const loaded = store.load();
+  applyLang(loaded.state.settings);
   // Customs an import made from a near-miss name become the library exercise (once; skipped if media is unreadable).
   if (loaded.kept && !loaded.recovered && loaded.state.customExercises.length) {
     try {

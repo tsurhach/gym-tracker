@@ -26,10 +26,23 @@
           set("apple-mobile-web-app-status-bar-style", light ? "default" : "black-translucent");
         } catch (e) {}
       };
+      // Page language and direction before first paint. Hebrew only when enabled (js/i18n/index.js HE_READY, or ?he=1).
+      window.gymLang = function (setting) {
+        try {
+          var he = false;
+          if (/[?&]he=1(&|$)/.test(location.search))
+            he = setting === "he" || (setting !== "en" && String(navigator.language).toLowerCase().indexOf("he") === 0);
+          document.documentElement.lang = he ? "he" : "en";
+          document.documentElement.dir = he ? "rtl" : "ltr";
+        } catch (e) {}
+      };
       try {
-        window.gymTheme(JSON.parse(localStorage.getItem("gymtracker.v1")).settings.theme);
+        var st = JSON.parse(localStorage.getItem("gymtracker.v1")).settings;
+        window.gymTheme(st.theme);
+        window.gymLang(st.lang);
       } catch (e) {
         window.gymTheme();
+        window.gymLang();
       }
     </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />

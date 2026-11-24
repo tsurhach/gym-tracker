@@ -230,7 +230,7 @@ function sessionScreen(root, ctx) {
     location.replace("#/history");
     return;
   }
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history">‹ History</a></div>
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> History</a></div>
     <h1 class="title">${esc(ses.workoutName)}</h1>
     <p class="subtitle">${esc(fmtDate(ses.startedAt))}</p>
     ${summaryHtml(ses, ctx.state.sessions)}
@@ -339,7 +339,7 @@ export function renderProgress(root, ctx) {
     : hist.length < 3
       ? "Not stuck: it takes at least 3 sessions to tell."
       : "Not stuck: one of your last two sessions beat the one before it.";
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history">‹ History</a></div>
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> History</a></div>
     <h1 class="title">${esc(name)}</h1>
     <p class="${stuck ? "stuck" : "muted"}" style="margin-bottom:var(--gap)">${esc(note)}</p>
     <section class="card">${chartHtml(hist.map((h) => heaviest(h.sets)))}</section>

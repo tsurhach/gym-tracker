@@ -40,7 +40,7 @@ const pasteBox = (
   id,
   label,
 ) => `<label class="setting" style="display:block">${label}
-    <textarea id="${id}" rows="8" style="width:100%;margin-top:6px" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>`;
+    <textarea id="${id}" dir="auto" rows="8" style="width:100%;margin-top:6px" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>`;
 
 // Copies `text`; on failure shows a select-all box in `fb`. Call straight from a tap handler (iOS needs a fresh tap).
 async function copyText(text, fb) {
@@ -172,7 +172,7 @@ function aiView(root, ctx) {
   root.innerHTML = `${head("Build a plan with AI", "Free: use the Claude or ChatGPT app you already have.")}
     <section class="card"><h2>Step 1</h2>
       <label class="setting" style="display:block">What do you want? (e.g. 3 days a week, build muscle, 1 hour, bad knees)
-        <textarea id="req" rows="3" style="width:100%;margin-top:6px" maxlength="1000"></textarea></label>
+        <textarea id="req" dir="auto" rows="3" style="width:100%;margin-top:6px" maxlength="1000"></textarea></label>
       <div class="seg" role="group" aria-label="Kind of request">
         <button class="chip" data-mode="describe">Describe what I want</button>
         <button class="chip" data-mode="convert">I have a plan to convert (I'll attach it in the AI app)</button>

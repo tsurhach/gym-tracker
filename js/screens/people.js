@@ -81,7 +81,7 @@ export function render(root, ctx) {
 
 const nameCard = (ctx) =>
   `<section class="card"><label class="setting">Your name for others
-      <input data-name type="text" autocomplete="off" maxlength="40" value="${esc(ctx.state.settings.shareName ?? "")}" /></label>
+      <input data-name type="text" dir="auto" autocomplete="off" maxlength="40" value="${esc(ctx.state.settings.shareName ?? "")}" /></label>
     <p class="muted small">Only the people you allow see it.</p></section>`;
 
 const weightCard = (ctx) => `<section class="card"><label class="setting">Show my body weight to my coach <input type="checkbox" data-weight${ctx.state.settings.shareWeight === true ? " checked" : ""} /></label>

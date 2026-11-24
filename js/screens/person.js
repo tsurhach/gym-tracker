@@ -83,7 +83,7 @@ export function render(root, ctx) {
       ...(view?.bodyWeights ? [["weight", "Body weight"]] : []),
     ];
     if (!tabs.some(([k]) => k === tab)) tab = "history";
-    root.innerHTML = `<div class="row topbar"><a class="back" href="#/people">‹ People</a></div>
+    root.innerHTML = `<div class="row topbar"><a class="back" href="#/people"><span class="flip">‹</span> People</a></div>
       <h1 class="title">${esc(name)}</h1>
       <p class="muted small">${name ? `${esc(name)}'s workouts · ` : ""}view only${at ? ` · updated ${esc(ago(at))}` : ""}</p>
       ${gone ? `<section class="card"><p>Nothing to see yet. ${name ? esc(name) : "They"} may not have tapped Allow yet, or stopped sharing.</p><button class="btn" data-leave>Remove from my list</button></section>` : ""}

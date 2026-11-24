@@ -191,7 +191,7 @@ export function render(root, ctx) {
   revokeMedia();
 
   root.innerHTML = `<div class="row topbar">
-      <a class="back" href="#/workout">‹ ${esc(a.workoutName)}</a>
+      <a class="back" href="#/workout"><span class="flip">‹</span> ${esc(a.workoutName)}</a>
     </div>
     <h1 class="title">${esc(entry.name)}</h1>
     <p class="muted" data-ss-line hidden></p>
@@ -209,7 +209,7 @@ export function render(root, ctx) {
       ${adv.message ? `<div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>` : ""}
       ${stuck ? `<div class="muted small" role="note">${esc(stuck)}</div>` : ""}
       ${rule.on ? `<div class="muted small" role="note" data-plates style="visibility:hidden"></div>` : ""}
-      <input data-note maxlength="200" enterkeyhint="done" placeholder="Note for next time (seat 4, wide grip…)" aria-label="Note for next time" value="${esc(entry.note ?? "")}" style="margin-top:8px" />
+      <input data-note dir="auto" maxlength="200" enterkeyhint="done" placeholder="Note for next time (seat 4, wide grip…)" aria-label="Note for next time" value="${esc(entry.note ?? "")}" style="margin-top:8px" />
     </section>
     <section class="card" data-sets>${setsInner(entry, past)}</section>
     <a class="btn btn-primary" href="#/workout" data-primary>Done, back to list</a>
@@ -224,7 +224,7 @@ export function render(root, ctx) {
     const link = root.querySelector("[data-primary]");
     const id = entry.sets.length && entry.sets.every((s) => s.done) ? nextEntryId(a, entry.exerciseId) : null;
     const nx = id && a.entries.find((e) => e.exerciseId === id);
-    link.textContent = nx ? `Next: ${nx.name} ›` : "Done, back to list";
+    link.innerHTML = nx ? `Next: ${esc(nx.name)} <span class="flip">›</span>` : "Done, back to list";
     link.setAttribute("href", nx ? `#/exercise/${encodeURIComponent(id)}` : "#/workout");
   }
   paintNext();

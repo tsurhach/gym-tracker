@@ -73,7 +73,7 @@ function stepHtml(d, ctx) {
     ${d.drafts
       .map(
         (w, i) => `<section class="card" data-i="${i}">
-          <input class="name-input" data-name value="${esc(w.name)}" aria-label="Workout ${i + 1} name" maxlength="40" />
+          <input class="name-input" dir="auto" data-name value="${esc(w.name)}" aria-label="Workout ${i + 1} name" maxlength="40" />
           <div class="chips">${MUSCLES.map(
             (m) =>
               `<button class="chip" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(m)}</button>`,

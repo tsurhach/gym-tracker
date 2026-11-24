@@ -52,7 +52,7 @@ export function render(root, ctx) {
   const list = ctx.state.bodyWeights ?? [];
   const today = localDate();
   const latest = list.length ? fmtKg(list.at(-1).kg) : "";
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/today">‹ Today</a></div>
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/today"><span class="flip">‹</span> Today</a></div>
     <h1 class="title">Body weight</h1>
     <p class="muted" style="margin-bottom:var(--gap)">${esc(summary(list, today))}</p>
     <form class="card" novalidate>

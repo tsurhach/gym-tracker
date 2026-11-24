@@ -29,6 +29,7 @@ import {
 } from "../rest.js";
 import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
+import { applyLang, heEnabled, lang, t } from "../i18n/index.js";
 import { runningVersion } from "../update.js";
 
 const isoDay = (d = new Date()) =>
@@ -229,7 +230,7 @@ function workoutHtml(w, ctx, i, n) {
   return section(
     `w:${w.id}`,
     w.name,
-    `<input class="name-input" data-field="wname" value="${esc(w.name)}" aria-label="Workout name" maxlength="40" />
+    `<input class="name-input" dir="auto" data-field="wname" value="${esc(w.name)}" aria-label="Workout name" maxlength="40" />
     <div class="row" style="margin-top:8px">
       <button class="icon-btn" data-act="w-up" aria-label="Move workout up"${i === 0 ? " disabled" : ""}>↑</button>
       <button class="icon-btn" data-act="w-down" aria-label="Move workout down"${i === n - 1 ? " disabled" : ""}>↓</button>
@@ -334,6 +335,7 @@ export function render(root, ctx) {
           .map(([m, l]) => `<button class="chip" data-act="theme" data-mode="${m}" aria-pressed="${(settings.theme ?? "dark") === m}">${l}</button>`)
           .join("")}</div>
       </div>
+      ${languageHtml(settings)}
       <label class="setting">Show exercise photos
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
       </label>
@@ -415,6 +417,13 @@ export function render(root, ctx) {
         globalThis.gymTheme?.(settings.theme);
         for (const b of t.parentElement.children) b.setAttribute("aria-pressed", String(b === t));
         await ctx.save({ render: false }); // no redraw: the owner may be typing in a field
+        return;
+      }
+      case "lang":
+      case "gender": {
+        settings[t.dataset.act] = t.dataset.mode;
+        applyLang(settings); // page language, direction and wording now; the screen redraws below
+        await ctx.save();
         return;
       }
       case "goal": {
@@ -787,6 +796,22 @@ function applyField(ctx, t) {
     : field === "sets"
       ? "Sets must be a whole number, 1 or more."
       : "Reps must be whole numbers, 1 or more, with min no higher than max.";
+}
+
+// Language (always bilingual, so a wrong language can be undone) and, in Hebrew, the wording choice. Hidden until Hebrew is enabled.
+function languageHtml(settings) {
+  if (!heEnabled()) return "";
+  const seg = (act, cur, opts) =>
+    `<div class="seg">${opts.map(([m, l]) => `<button class="chip" data-act="${act}" data-mode="${m}" aria-pressed="${cur === m}">${l}</button>`).join("")}</div>`;
+  const langRow = `<div class="setting-group" role="group" aria-label="Language / שפה">
+    <div>Language / שפה</div>
+    ${seg("lang", settings.lang ?? "auto", [["auto", "Auto (phone)"], ["en", "English"], ["he", "עברית"]])}
+  </div>`;
+  if (lang() !== "he") return langRow;
+  return `${langRow}<div class="setting-group" role="group" aria-label="${esc(t("settings.wording"))}">
+    <div>${esc(t("settings.wording"))}</div>
+    ${seg("gender", settings.gender ?? "neutral", [["neutral", t("settings.gender.neutral")], ["male", t("settings.gender.male")], ["female", t("settings.gender.female")]])}
+  </div>`;
 }
 
 const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step", "emptyKg", "xRestMin", "xRestSec"]);
