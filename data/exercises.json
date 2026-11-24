@@ -80,6 +80,39 @@
     "howto": "Stand in the middle with a handle in each hand, one foot forward and a slight lean. Sweep your hands down and together in front of your hips. Keep your elbows slightly bent and control the return."
   },
   {
+    "id": "high-to-low-cable-crossover",
+    "name": "High-to-Low Cable Crossover",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Set both pulleys high. Stand in the middle with a handle in each hand, one foot forward and a slight lean. Sweep your hands down and together in front of your hips, keeping your elbows slightly bent. This works the lower part of your chest. Control the way back up."
+  },
+  {
+    "id": "mid-cable-crossover",
+    "name": "Mid Cable Crossover",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Set both pulleys at shoulder height. Stand in the middle with a handle in each hand, one foot forward, arms out wide and elbows slightly bent. Bring your hands together in front of your chest in a wide hugging arc, then open slowly. This works the middle of your chest."
+  },
+  {
+    "id": "low-to-high-cable-crossover",
+    "name": "Low-to-High Cable Crossover",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Set both pulleys low. Stand in the middle with a handle in each hand, one foot forward and your hands by your hips. Sweep your hands up and together to the height of your chin, keeping your elbows slightly bent. This works the upper part of your chest. Lower slowly."
+  },
+  {
     "id": "decline-barbell-bench-press",
     "name": "Decline Barbell Bench Press",
     "primary": "Chest",
@@ -773,6 +806,24 @@
     "equipment": "body only",
     "images": 2,
     "howto": "Lie on your back with your knees bent and feet flat. Curl your upper body up until you are sitting, then lower slowly. Keep your neck relaxed and do not yank on your head."
+  },
+  {
+    "id": "bosu-ball-crunch",
+    "name": "Bosu Ball Crunch",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Lie back on the dome of the Bosu with your lower back on top, knees bent and feet flat on the floor. Put your hands by your head and curl your shoulders up by squeezing your belly, then lower slowly. Do not pull on your neck."
+  },
+  {
+    "id": "bosu-ball-sit-up",
+    "name": "Bosu Ball Sit-Up",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Sit on the Bosu dome, then lie back with your hands by your head and your feet flat on the floor. Sit all the way up using your belly, then lower back slowly. Keep your feet planted so the Bosu stays steady."
   },
   {
     "id": "pallof-press",
@@ -1560,6 +1611,15 @@
     "equipment": "dumbbell",
     "images": 2,
     "howto": "Stand holding a dumbbell in one hand at your side. Bend sideways at your waist towards the weight, then use your side muscles to come back upright. Keep your hips still and do all reps on one side before switching."
+  },
+  {
+    "id": "roman-chair-side-bend",
+    "name": "Roman Chair Side Bend",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Lie sideways on a 45 degree hyperextension bench with the pad under your hip and your feet hooked under the pads. Bend down sideways from your waist, then use your side muscles to lift your body back in line. Move slowly, do all reps on one side before switching. Hold a plate against your chest if you want it harder."
   },
   {
     "id": "bicycle-crunch",
