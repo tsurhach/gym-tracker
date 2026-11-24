@@ -211,6 +211,7 @@ function sessionScreen(root, ctx) {
       .map(
         (en, e) => `<section class="card">
       <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${esc(en.name)}</a>${en.primary ? `<span class="tag">${esc(en.primary)}</span>` : ""}</div>
+      ${en.note ? `<p class="muted small">${esc(en.note)}</p>` : ""}
       <div class="set hist set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span></div>
       ${en.sets.map((s, i) => setRow(s, e, i, earlier(ctx.state.sessions, ses, en.exerciseId))).join("")}
     </section>`,

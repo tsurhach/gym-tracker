@@ -291,3 +291,17 @@ test("nextEntryId skips finished entries, wraps, and is null when all are done",
   assert.equal(nextEntryId(all, "a"), null);
   assert.equal(nextEntryId({ entries: [e("a", false)] }, "a"), null);
 });
+
+test("startSession copies the last note; an empty latest note is not replaced by an older one; finish keeps it", () => {
+  const s = withPlan();
+  const ses = (t, note) => ({ id: "s" + t, workoutId: "w1", workoutName: "A", startedAt: t, finishedAt: t + 1, entries: [{ exerciseId: "bench", name: "Bench Press", primary: "Chest", sets: [{ weight: 50, reps: 10, done: true }], ...(note ? { note } : {}) }] });
+  s.sessions.push(ses(1, "seat 4"));
+  startSession(s, "w1", lookup, NOW);
+  assert.equal(s.active.entries[0].note, "seat 4");
+  s.active.entries[0].sets[0].done = true;
+  finishSession(s, NOW + 1);
+  assert.equal(s.sessions.at(-1).entries[0].note, "seat 4");
+  s.sessions.push(ses(NOW + 5, ""));
+  startSession(s, "w1", lookup, NOW + 9);
+  assert.equal(s.active.entries[0].note, undefined);
+});

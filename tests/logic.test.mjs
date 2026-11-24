@@ -154,8 +154,8 @@ test("exerciseHistory", () => {
     ]),
   ];
   assert.deepEqual(exerciseHistory(sessions, "x"), [
-    { startedAt: 100, sets: [{ weight: 8, reps: 6 }] },
-    { startedAt: 200, sets: [{ weight: 10, reps: 5 }] },
+    { startedAt: 100, sets: [{ weight: 8, reps: 6 }], note: "" },
+    { startedAt: 200, sets: [{ weight: 10, reps: 5 }], note: "" },
   ]);
   assert.deepEqual(exerciseHistory(sessions, "nope"), []);
 });
@@ -365,4 +365,10 @@ test("settings: stuck reminder off (missing = on)", () => {
   assert.ok(stuckNote(flat, adv, { stuckNote: true }));
   assert.equal(stuckNote(flat, adv, { stuckNote: false }), null);
   assert.equal(isStuck(flat), true); // History flag unaffected
+});
+
+test("exerciseHistory returns the entry note (empty for old entries)", () => {
+  const ses = (t, note) => ({ startedAt: t, entries: [{ exerciseId: "b", sets: [{ weight: 1, reps: 1, done: true }], ...(note ? { note } : {}) }] });
+  const h = exerciseHistory([ses(1, "wide grip"), ses(2)], "b");
+  assert.deepEqual(h.map((x) => x.note), ["wide grip", ""]);
 });

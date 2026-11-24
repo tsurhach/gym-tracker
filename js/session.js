@@ -31,11 +31,13 @@ function makeEntry(state, item, lookup) {
   if (!ex) return null;
   const history = exerciseHistory(state.sessions, item.exerciseId);
   const last = history.length ? history[history.length - 1].sets : null;
+  const note = history.at(-1)?.note;
   return {
     exerciseId: ex.id,
     name: ex.name,
     primary: ex.primary,
     sets: prefill(last, item, ex, state.settings).map((s) => ({ ...s, done: false })),
+    ...(note ? { note } : {}),
   };
 }
 

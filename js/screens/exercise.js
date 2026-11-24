@@ -60,6 +60,12 @@ function syncAll() {
       .querySelector(".confirm")
       .setAttribute("aria-pressed", String(!!s.done));
   }
+  const n = root.querySelector("[data-note]");
+  if (n) {
+    const v = n.value.trim().slice(0, 200);
+    if (v) entry.note = v;
+    else delete entry.note;
+  }
   paintBadges();
 }
 
@@ -200,6 +206,7 @@ export function render(root, ctx) {
       ${adv.message ? `<div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>` : ""}
       ${stuck ? `<div class="muted small" role="note">${esc(stuck)}</div>` : ""}
       ${rule.on ? `<div class="muted small" role="note" data-plates style="visibility:hidden"></div>` : ""}
+      <input data-note maxlength="200" enterkeyhint="done" placeholder="Note for next time (seat 4, wide grip…)" aria-label="Note for next time" value="${esc(entry.note ?? "")}" style="margin-top:8px" />
     </section>
     <section class="card" data-sets>${setsInner(entry, past)}</section>
     <a class="btn btn-primary" href="#/workout" data-primary>Done, back to list</a>
@@ -252,7 +259,7 @@ export function render(root, ctx) {
       if (f && (await saveMedia(entry.exerciseId, f))) drawMedia();
       return;
     }
-    if (!e.target.dataset.f) return;
+    if (!e.target.dataset.f && e.target.dataset.note === undefined) return;
     syncAll();
     ctx.save({ render: false });
   });

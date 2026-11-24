@@ -71,9 +71,10 @@ const SECTIONS = [
       <li>Tap any exercise. You can do them in any order.</li>
       <li>The weight and reps are filled in from last time.</li>
       <li>After each set, tap the <b>✓</b> to confirm it.</li>
-      <li>To change a number, tap it and type.</li>
+      <li>To change a number, tap it and type. A weight you type on the first set is copied to the sets below it.</li>
+      <li>Want to remember something, like the seat setting? Type it in the note box. It shows again next time.</li>
       <li>Machine taken? On the exercise, tap <b>Swap exercise</b> to switch to a similar one. Ones you picked before show <b>★ Usual</b>.</li>
-      <li>Tap <b>Done, back to list</b>, then pick the next exercise.</li>
+      <li>When all sets are ticked, tap <b>Next</b> to go to the next exercise, or <b>Done, back to list</b>.</li>
       <li>At the end, tap <b>Finish workout</b>.</li>
     </ol>`,
   ],

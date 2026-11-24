@@ -30,6 +30,7 @@ export function exerciseHistory(sessions, exerciseId) {
       sets: entry.sets
         .filter((x) => x.done)
         .map(({ weight, reps }) => ({ weight, reps })),
+      note: typeof entry.note === "string" ? entry.note : "",
     });
   }
   return out.sort((a, b) => a.startedAt - b.startedAt);
