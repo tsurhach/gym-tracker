@@ -12,6 +12,8 @@ import {
   deleteSession,
   removeSet,
   deleteCustomExercise,
+  carryWeight,
+  nextEntryId,
 } from "../js/session.js";
 
 const LIB = {
@@ -265,4 +267,27 @@ test("deleteCustomExercise with an unknown id changes nothing", () => {
   const before = JSON.stringify(s);
   deleteCustomExercise(s, "custom-nope");
   assert.equal(JSON.stringify(s), before);
+});
+
+test("carryWeight fills blank and equal later sets, skips done rows and keeps a drop set", () => {
+  const sets = [{ weight: 60 }, { weight: null }, { weight: 50 }, { weight: 55, done: true }, { weight: 55 }];
+  carryWeight(sets, 0, 55);
+  assert.deepEqual(sets.map((s) => s.weight), [60, 60, 50, 55, 60]);
+});
+
+test("carryWeight does nothing for a null weight", () => {
+  const sets = [{ weight: null }, { weight: 40 }, { weight: null }];
+  carryWeight(sets, 0, 40);
+  assert.deepEqual(sets.map((s) => s.weight), [null, 40, null]);
+});
+
+test("nextEntryId skips finished entries, wraps, and is null when all are done", () => {
+  const e = (id, ...done) => ({ exerciseId: id, sets: done.map((d) => ({ done: d })) });
+  const a = { entries: [e("a", true), e("b", true), e("c", false), e("d", false)] };
+  assert.equal(nextEntryId(a, "b"), "c");
+  assert.equal(nextEntryId(a, "d"), "c");
+  assert.equal(nextEntryId(a, "c"), "d");
+  const all = { entries: [e("a", true), e("b", true)] };
+  assert.equal(nextEntryId(all, "a"), null);
+  assert.equal(nextEntryId({ entries: [e("a", false)] }, "a"), null);
 });

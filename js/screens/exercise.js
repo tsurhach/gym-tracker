@@ -21,6 +21,7 @@ import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
 import { cancelRest, startRest } from "../rest.js";
 import { openSwap } from "../swapsheet.js";
+import { carryWeight, nextEntryId } from "../session.js";
 
 // Pure: a set plus the two input texts gives the updated set. A confirmed set whose
 // values are no longer valid becomes unconfirmed; weight may stay null while unconfirmed.
@@ -75,7 +76,7 @@ function paintPlates() {
   const text = w
     ? plateText(w, current.rule.empty, gymPlates(current.ctx.state.settings))
     : "";
-  el.hidden = !text;
+  el.style.visibility = text ? "visible" : "hidden"; // keeps its height: no layout jump
   el.textContent = text;
   el.setAttribute("aria-label", text.replaceAll(" + ", ", "));
 }
@@ -133,8 +134,8 @@ const val = (n) => (n == null ? "" : fmtKg(n));
 
 export const pbHtml = `<div class="pb" role="note"><span aria-hidden="true">★</span> New best</div>`;
 
-function setHtml(s, i, past) {
-  return `<div class="set${s.done ? " done" : ""}" data-i="${i}">
+function setHtml(s, i, past, next) {
+  return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}" data-i="${i}">
     <span class="set-n">${i + 1}</span>
     <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="kg" aria-label="Set ${i + 1} weight in kg" value="${esc(val(s.weight))}" />
     <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="reps" aria-label="Set ${i + 1} reps" value="${esc(s.reps ?? "")}" />
@@ -148,7 +149,7 @@ const setsInner = (
   entry,
   past,
 ) => `<div class="set set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span><span></span></div>
-      ${entry.sets.map((s, i) => setHtml(s, i, past)).join("")}
+      ${entry.sets.map((s, i) => setHtml(s, i, past, i === entry.sets.findIndex((x) => !x.done))).join("")}
       <button class="btn" data-act="add" style="margin:8px 0 0">+ Add set</button>`;
 
 export function render(root, ctx) {
@@ -198,14 +199,27 @@ export function render(root, ctx) {
       ${prev ? `<div class="last-sets">${esc(lastText(prev))}</div>` : ""}
       ${adv.message ? `<div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>` : ""}
       ${stuck ? `<div class="muted small" role="note">${esc(stuck)}</div>` : ""}
-      ${rule.on ? `<div class="muted small" role="note" data-plates hidden></div>` : ""}
+      ${rule.on ? `<div class="muted small" role="note" data-plates style="visibility:hidden"></div>` : ""}
     </section>
     <section class="card" data-sets>${setsInner(entry, past)}</section>
-    <a class="btn btn-primary" href="#/workout">Done, back to list</a>
+    <a class="btn btn-primary" href="#/workout" data-primary>Done, back to list</a>
     <button class="btn" data-act="swap" style="margin-top:var(--gap)">Swap exercise</button>`;
 
   current = { root, entry, ctx, past, rule };
   paintPlates();
+
+  // "Next: <exercise> ›" once every set here is ticked and another exercise still has open sets.
+  function paintNext() {
+    const link = root.querySelector("[data-primary]");
+    const id = entry.sets.length && entry.sets.every((s) => s.done) ? nextEntryId(a, entry.exerciseId) : null;
+    const nx = id && a.entries.find((e) => e.exerciseId === id);
+    link.textContent = nx ? `Next: ${nx.name} ›` : "Done, back to list";
+    link.setAttribute("href", nx ? `#/exercise/${encodeURIComponent(id)}` : "#/workout");
+  }
+  paintNext();
+
+  // Tapping a number box selects it, so typing replaces the value.
+  root.addEventListener("focusin", (e) => e.target.matches?.(".set input") && e.target.select());
 
   // Only the media area is redrawn, so typed set values are never disturbed.
   const mediaBox = root.querySelector("[data-media]");
@@ -246,6 +260,7 @@ export function render(root, ctx) {
   root.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-act], a");
     if (!t) return;
+    const before = entry.sets.map((x) => x.weight);
     syncAll();
     const act = t.dataset.act;
     if (!act) {
@@ -298,6 +313,7 @@ export function render(root, ctx) {
         cancelRest(ctx);
       } else if (validSet(s.weight, s.reps)) {
         s.done = true;
+        if (before[i] !== s.weight) carryWeight(entry.sets, i, before[i]);
         justConfirmed = { s, at: Date.now() };
         startRest(ctx, item);
       } else {
@@ -320,6 +336,8 @@ export function render(root, ctx) {
     }
     root.querySelector("[data-sets]").innerHTML = setsInner(entry, past);
     paintPlates();
+    paintNext();
+    if (act === "confirm") root.querySelector(".set.next")?.scrollIntoView({ block: "nearest" });
     ctx.save({ render: false });
   });
 }

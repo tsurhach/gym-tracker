@@ -971,6 +971,15 @@ a.btn-primary {
 .set:not(.set-head):not(.done) input {
   color: var(--muted);
 }
+.set.next:not(.done) input {
+  border-color: var(--accent);
+}
+.set {
+  scroll-margin-bottom: 96px; /* keeps the next set above the rest bar */
+}
+[data-plates] {
+  min-height: 1.3em;
+}
 .set-n {
   color: var(--muted);
   text-align: center;

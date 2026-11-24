@@ -91,6 +91,26 @@ export function swapEntry(state, oldId, newId, lookup, { inPlan = false } = {}) 
   return state;
 }
 
+// Weight typed on set i fills later unticked sets whose weight is blank or still the old value.
+export function carryWeight(sets, i, oldWeight) {
+  if (sets[i]?.weight == null) return sets;
+  for (let j = i + 1; j < sets.length; j++)
+    if (!sets[j].done && (sets[j].weight == null || sets[j].weight === oldWeight))
+      sets[j].weight = sets[i].weight;
+  return sets;
+}
+
+// First entry after the current one (wrapping, never the current) with an unticked set, or null.
+export function nextEntryId(active, currentId) {
+  const es = active?.entries ?? [];
+  const k = es.findIndex((e) => e.exerciseId === currentId);
+  for (let n = 1; n < es.length; n++) {
+    const e = es[(k + n) % es.length];
+    if (e.exerciseId !== currentId && e.sets.some((s) => !s.done)) return e.exerciseId;
+  }
+  return null;
+}
+
 export function finishSession(state, now) {
   const a = state.active;
   if (!a) return state;
