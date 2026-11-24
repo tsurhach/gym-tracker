@@ -252,7 +252,7 @@ async function main() {
     });
   }
 
-  ctx.cal = createCalSync({ getState: () => ctx.state, storage: browserStorage() });
+  ctx.cal = createCalSync({ getState: () => ctx.state, storage: browserStorage(), onRefused: () => showBanner("Your calendar could not be updated. Try shortening your workout names.", { sticky: true }) });
   if (SYNC_ENABLED) startSync(ctx, store, () => (ctx.cal.changed(), render())); // sync may bring new calendar keys or days
   ctx.cal.changed(); // app start: send if the feed is out of date or old
   window.addEventListener("hashchange", render);

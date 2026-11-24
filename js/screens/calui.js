@@ -18,7 +18,7 @@ const DEFAULT_TIME = "18:00";
 const TIP = [
   "Your calendar won't remind you by default. To get alerts:",
   "iPhone: Settings > Calendar > Default Alert Times, or tap the event > Alert.",
-  "Google Calendar app: Settings > Gym Tracker > Default notifications.",
+  "Google Calendar: it may not let you set alerts for a linked calendar.",
   "Outlook: the event > Reminder.",
 ];
 
@@ -44,6 +44,12 @@ export function calHtml(state) {
   for (let m = 15; m <= 240; m += 15) mins.push(m);
   const shown = c.autoMins && avg ? avg : c.mins;
   if (!mins.includes(shown)) mins.push(shown);
+  h += `<a class="btn btn-primary" href="${esc(webcalUrl(c.id))}" style="margin-top:8px">Add to Apple Calendar</a>
+    <a class="btn" href="${esc(googleUrl(c.id))}" target="_blank" rel="noopener">Add to Google Calendar</a>
+    <p class="muted small" style="margin-top:0">If that doesn't work: copy the link, open calendar.google.com in Chrome or Safari, switch to Desktop site (browser menu), tap Other calendars + &gt; From URL, paste, then Add calendar. It then shows in the Google Calendar app.</p>
+    <button class="btn" data-cal="copy">Copy link</button>
+    ${ui.showLink ? `<input readonly value="${esc(feedUrl(c.id))}" aria-label="Calendar link" onfocus="this.select()" />` : ""}
+    <p class="muted small"><b>Keep this link private.</b> Anyone who has it can see your workout names and days.</p>`;
   h += `<div class="seg" role="group" aria-label="When it shows in the calendar" style="margin-top:8px">
       <button class="chip" data-cal="allday" aria-pressed="${!timed}">All day</button>
       <button class="chip" data-cal="timed" aria-pressed="${timed}">At a set time</button>
@@ -67,13 +73,7 @@ export function calHtml(state) {
       ${c.autoMins ? `<p class="muted small" style="margin-top:0">${avg ? `About ${avg} min, from your last finished workouts.` : "Needs 3 finished workouts. Until then the length you picked is used."}</p>` : ""}
       <label class="check"><input type="checkbox" data-cal="alarm"${c.alarm ? " checked" : ""} /> Remind me 30 min before</label>
       <p class="muted small" style="margin-top:0">Reminders depend on your calendar app. To be sure, turn on alerts for this calendar in its settings.</p>`;
-  h += `<a class="btn btn-primary" href="${esc(webcalUrl(c.id))}" style="margin-top:8px">Add to Apple Calendar</a>
-    <a class="btn" href="${esc(googleUrl(c.id))}" target="_blank" rel="noopener">Add to Google Calendar</a>
-    <p class="muted small" style="margin-top:0">If that doesn't work: copy the link, open calendar.google.com in Chrome or Safari, switch to Desktop site (browser menu), tap Other calendars + &gt; From URL, paste, then Add calendar. It then shows in the Google Calendar app.</p>
-    <button class="btn" data-cal="copy">Copy link</button>
-    ${ui.showLink ? `<input readonly value="${esc(feedUrl(c.id))}" aria-label="Calendar link" onfocus="this.select()" />` : ""}
-    <p class="muted small"><b>Keep this link private.</b> Anyone who has it can see your workout names and days.</p>
-    <p class="muted small" style="margin-top:0">Outlook: Outlook on the web (Desktop site on a phone) &gt; Add calendar &gt; Subscribe from web, and paste.</p>
+  h += `    <p class="muted small" style="margin-top:0">Outlook: Outlook on the web (Desktop site on a phone) &gt; Add calendar &gt; Subscribe from web, and paste.</p>
     <p class="muted small" style="margin-top:0">Changes show here at once, but your calendar app decides when to check: Apple Calendar usually within an hour (pull down to refresh), Outlook every 3-4 hours, Google often 12-24 hours. In Google, to see changes now, remove the calendar and add it again. This is one-way: edit your plan here, not in the calendar.</p>
     <button class="btn" data-cal="renew">Make a new link</button>
     <button class="btn btn-warn" data-cal="off">Turn off</button>`;
@@ -162,12 +162,18 @@ export function bindCal(root, ctx) {
     ui.busy = true;
     ui.error = "";
     paint();
+    let deleted = false;
     try {
       await calDelete(state.settings.calendar);
+      deleted = true;
       const keys = await calNew();
       state.settings.calendar = { ...state.settings.calendar, ...keys };
     } catch {
-      return fail("Couldn't make a new link. Try again when you're online.");
+      return fail(
+        deleted
+          ? "Your old link is already off. Tap Make a new link again when you're online."
+          : "Couldn't make a new link. Try again when you're online.",
+      );
     }
     ui.busy = false;
     ui.showLink = false;

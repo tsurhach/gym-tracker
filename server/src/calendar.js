@@ -3,7 +3,7 @@
 import { b64u, sha256b64u } from "./syncauth.js";
 
 export const CAL_ID_RE = /^[A-Za-z0-9_-]{22}$/;
-export const MAX_CAL_BODY = 1024; // bytes
+export const MAX_CAL_BODY = 2048; // bytes: 7 names of 60 four-byte characters + id, token, tz fit
 export const IDLE_DELETE = 180 * 24 * 3600 * 1000;
 const DAY = 24 * 3600 * 1000;
 const NOT_FOUND = { status: 404, body: { error: "not found" } }; // same for "no feed" and "wrong token"
@@ -312,8 +312,8 @@ export async function calFeed(req, env, path) {
   if (r.status !== 200) return gone();
   const body = await buildIcs(m[1], r.body, Date.now());
   const etag = `"${[...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body)))].slice(0, 12).map((x) => x.toString(16).padStart(2, "0")).join("")}"`;
-  const headers = { etag, "last-modified": new Date(r.body.updatedAt).toUTCString(), "cache-control": "no-cache", "x-robots-tag": "noindex" };
-  if (req.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
+  const headers = { etag, "cache-control": "no-cache", "x-robots-tag": "noindex" };
+  if ((req.headers.get("if-none-match") ?? "").replace(/^W\//, "") === etag) return new Response(null, { status: 304, headers });
   return new Response(body, { headers: { ...headers, "content-type": "text/calendar; charset=utf-8" } });
 }
 

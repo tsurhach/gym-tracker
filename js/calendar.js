@@ -58,7 +58,7 @@ export async function pushCalendar(
   if (!c || sent?.dead === c.id) return sent;
   const today = localDate(new Date(now));
   const body = calendarBody(state, today, tz);
-  const ds = JSON.stringify(body.days);
+  const ds = JSON.stringify(body.days.map((e) => e.d)); // only the weekdays: a rename must not move `from`
   // `from` moves to today only when the training days change, so the feed never invents history.
   const from =
     sent?.id === c.id && sent.ds === ds && sent.from ? sent.from : today;
@@ -77,6 +77,7 @@ export async function pushCalendar(
     return sent; // offline: the next save or app start tries again
   }
   if (r.status === 404) return { dead: c.id };
+  if (r.status === 400 || r.status === 413) return { ...sent, refused: r.status }; // the server will not take it: tell the person once
   if (r.status !== 200) return sent;
   return { id: c.id, h, at: now, from, ds };
 }
@@ -88,6 +89,7 @@ export function createCalSync({
   fetchFn,
   delay = 2000,
   now = () => Date.now(),
+  onRefused,
 }) {
   let timer = 0;
   let running = false;
@@ -112,6 +114,7 @@ export function createCalSync({
       const s = read();
       const n = await pushCalendar(getState(), s, { fetchFn, now: now() });
       if (n !== s) write(n);
+      if (n?.refused && !s?.refused) onRefused?.();
     } catch {
     } finally {
       running = false;

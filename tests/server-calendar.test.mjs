@@ -62,7 +62,7 @@ test("new, put, GET (text/calendar, ETag, 304)", async () => {
   assert.equal(r.headers.get("cache-control"), "no-cache");
   assert.equal(r.headers.get("x-robots-tag"), "noindex");
   assert.equal(r.headers.get("access-control-allow-origin"), null);
-  assert.ok(r.headers.get("last-modified"));
+  assert.equal(r.headers.get("last-modified"), null); // the body rolls forward daily, so no stale date
   const text = await r.text();
   assert.ok(text.startsWith("BEGIN:VCALENDAR\r\n"));
   assert.match(text, /SUMMARY:.*Push/);
@@ -129,8 +129,8 @@ test("a bad id format is 404 without touching the DO", async () => {
 
 test("413 for a big body; 429 once the limiter says so; other paths and methods are not routed", async () => {
   const env = fakeEnv();
-  assert.equal((await post(env, "/cal/put", { id: "A".repeat(22), token: "t", pad: "x".repeat(1100) })).status, 413);
-  assert.equal((await post(env, "/cal/put", "x".repeat(2000), { "content-length": "2000" })).status, 413);
+  assert.equal((await post(env, "/cal/put", { id: "A".repeat(22), token: "t", pad: "x".repeat(2100) })).status, 413);
+  assert.equal((await post(env, "/cal/put", "x".repeat(3000), { "content-length": "3000" })).status, 413);
   const lim = fakeEnv({ limit: 2 });
   assert.equal((await post(lim, "/cal/new", {})).status, 200);
   assert.equal((await post(lim, "/cal/new", {})).status, 200);
@@ -163,4 +163,15 @@ test("new answers 409 if the object already holds a feed", async () => {
   const c = new CalendarCore(memStore(), { now: () => T0 });
   assert.equal((await c.run("/cal/new", {})).status, 200);
   assert.equal((await c.run("/cal/new", {})).status, 409);
+});
+
+test("a legal worst case (7 names of 60 four-byte characters, long zone) fits the cap; a weak ETag still gets 304", async () => {
+  const env = fakeEnv();
+  const { id, token } = await make(env);
+  const days = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ d, t: "\u{1F3CB}".repeat(60) }));
+  const body = { ...BODY, tz: "America/Argentina/ComodRivadavia", days };
+  const r = await post(env, "/cal/put", { id, token, ...body });
+  assert.equal(r.status, 200);
+  const g = await get(env, id);
+  assert.equal((await get(env, id, { "if-none-match": "W/" + g.headers.get("etag") })).status, 304);
 });

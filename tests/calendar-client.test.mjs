@@ -362,3 +362,21 @@ test("old saved state (no calendar) loads and re-saves unchanged; a state with a
   assert.equal(again.recovered, false);
   assert.deepEqual(again.state.settings.calendar, cal({ time: "18:00" }));
 });
+
+test("renaming a workout does not move `from`; a refused upload is reported once", async () => {
+  const f = fakeFetch();
+  const s = state();
+  let sent = await run(s, null, f, T);
+  s.workouts[0].name = "Chest";
+  sent = await run(s, sent, f, T + 5 * 86400000);
+  assert.equal(f.calls[1].body.days[0].t, "Chest");
+  assert.equal(f.calls[1].body.from, "2026-11-24");
+  const m = new Map();
+  const storage = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), removeItem: (k) => m.delete(k) };
+  let told = 0;
+  const c = createCalSync({ getState: () => s, storage, fetchFn: fakeFetch(413), delay: 5, now: () => T, onRefused: () => told++ });
+  await c.now();
+  await c.now();
+  assert.equal(told, 1);
+  assert.equal(JSON.parse(m.get(SENT_KEY)).refused, 413);
+});
