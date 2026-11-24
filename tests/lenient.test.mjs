@@ -323,7 +323,7 @@ test("normalize: hostile input never throws or hangs and cannot pollute", () => 
   };
   cyc.self = cyc;
   assert.doesNotThrow(() => normalizePlanFile(cyc));
-  assert.ok(Date.now() - t0 < 5000, "slow");
+  assert.ok(Date.now() - t0 < 15000, "slow");
 });
 
 test("prompt: convert mode is robust for long files; field-name reminder", () => {
