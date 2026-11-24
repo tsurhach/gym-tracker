@@ -17,6 +17,11 @@ export function resolveLang(setting, navLang = "", enabled = heEnabled()) {
 }
 export const dirOf = (lang) => (lang === "he" ? "rtl" : "ltr");
 
+// Hebrew one-letter prefix (ב ל מ) + value: attached directly before Hebrew text, joined with a maqaf before a number or Latin text.
+// Leading tags and bidi marks of the value are ignored when deciding. Used in he/*.js as {ב|name}.
+export const heP = (pf, value) =>
+  pf + (/^(?:<[^>]*>|[\u2066-\u2069\u200e\u200f\s])*[\u05d0-\u05ea]/.test(String(value)) ? "" : "־") + String(value);
+
 // Pure lookup (tests pass their own dictionaries). Order: language (gender variant, then neutral), then English, then the key.
 export function translate(dicts, lang, gender, key, vars = {}) {
   const suffix = gender === "male" ? ".m" : gender === "female" ? ".f" : null;
@@ -34,7 +39,7 @@ export function translate(dicts, lang, gender, key, vars = {}) {
     } catch {}
     v = v[cat] ?? v.other ?? key;
   }
-  return String(v).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+  return String(v).replace(/\{(?:([בלמ])\|)?(\w+)\}/g, (m, pf, k) => (k in vars ? (pf ? heP(pf, vars[k]) : String(vars[k])) : m));
 }
 
 let current = "en";

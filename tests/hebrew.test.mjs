@@ -118,3 +118,42 @@ test("index.html head script HE_READY equals the exported flag", () => {
   assert.equal(html.match(/var HE_READY = (true|false);/)[1], String(HE_READY));
   assert.ok(html.includes("HE_READY || /[?&]he=1"));
 });
+
+test("Help: every bold UI label equals the real value of the key it names (English and Hebrew)", () => {
+  const strip = (s) => s.replace(/[:\s]+$/, "").trim();
+  const byValue = new Map(); // English value -> keys
+  for (const [k, v] of Object.entries(en)) if (typeof v === "string" && !k.startsWith("help.")) (byValue.get(strip(v.replace(/<[^>]+>/g, ""))) ?? byValue.set(strip(v.replace(/<[^>]+>/g, "")), []).get(strip(v.replace(/<[^>]+>/g, "")))).push(k);
+  const bolds = (s) => [...s.matchAll(/<b>(.*?)<\/b>/g)].map((m) => strip(m[1]));
+  let checked = 0;
+  for (const k of Object.keys(en).filter((x) => /^help\..*\.body$/.test(x))) {
+    const eb = bolds(en[k]), hb = bolds(he[k]);
+    assert.equal(hb.length, eb.length, `${k}: same number of bold labels`);
+    eb.forEach((label, i) => {
+      const keys = byValue.get(label);
+      if (!keys) return; // not a UI label (Safari:, Important:, ...)
+      assert.ok(keys.some((x) => strip(String(he[x]).replace(/<[^>]+>/g, "")) === hb[i]), `${k}: "${hb[i]}" is not the Hebrew of ${keys.join("/")}`);
+      checked++;
+    });
+  }
+  assert.ok(checked > 40, `only ${checked} labels checked`);
+  // quoted section names point at Help titles
+  assert.ok(he["help.install.body"].includes(`ב"${he["help.sync.title"]}"`) && he["help.install.body"].includes(`ב"${he["help.backup.title"]}"`));
+  assert.ok(en["help.install.body"].includes(`"${en["help.sync.title"]}"`) && en["help.install.body"].includes(`"${en["help.backup.title"]}"`));
+});
+
+test("heP: maqaf before numbers and Latin text, attached before Hebrew; {ב|x} placeholders", async () => {
+  const { heP } = await import("../js/i18n/index.js");
+  assert.equal(heP("ב", "3"), "ב־3");
+  assert.equal(heP("ל", "Pull"), "ל־Pull");
+  assert.equal(heP("מ", "iPhone"), "מ־iPhone");
+  assert.equal(heP("ב", "יום ג׳"), "ביום ג׳");
+  assert.equal(heP("ל", "דנה"), "לדנה");
+  assert.equal(heP("ב", "<b>דנה</b>"), "ב<b>דנה</b>"); // tags ignored
+  assert.equal(heP("ב", '<bdi dir="ltr">3</bdi>'), 'ב־<bdi dir="ltr">3</bdi>');
+  const D = { he: { a: "הבא {ב|day}", b: "מ-{n} אימונים".replace("-", "") } };
+  assert.equal(translate(D, "he", "neutral", "a", { day: "יום ד׳" }), "הבא ביום ד׳");
+  assert.equal(translate(D, "he", "neutral", "a", { day: "24 בנוב׳" }), "הבא ב־24 בנוב׳");
+  assert.equal(translate({ he: { a: "ל{ל|name}".slice(1) } }, "he", "neutral", "a", { name: "Pull" }), "ל־Pull");
+  // no glued prefix + placeholder is left in the Hebrew strings
+  for (const [k, v] of Object.entries(he)) for (const s of typeof v === "object" ? Object.values(v) : [v]) assert.ok(!/(^|[^\u05d0-\u05eaA-Za-z])[בלמ]-?\{\w+\}/.test(s), `${k}: ${s}`);
+});

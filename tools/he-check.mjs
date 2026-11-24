@@ -2,7 +2,7 @@
 // Reports missing/extra keys, placeholder and HTML tag mismatches, bad plural shapes, bad .m/.f variants, Latin letters left in text.
 export async function checkArea(en, he) {
   const bad = [];
-  const ph = (s) => [...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(",");
+  const ph = (s) => [...String(s).matchAll(/\{(?:[^|{}]+\|)?(\w+)\}/g)].map((m) => m[1]).sort().join(",");
   const tags = (s) => [...String(s).matchAll(/<\/?([a-z0-9]+)[^>]*>/gi)].map((m) => m[0].toLowerCase().replace(/\s+/g, " ")).sort().join("");
   const vals = (v) => (typeof v === "object" ? Object.entries(v) : [["", v]]);
   for (const k of Object.keys(en)) if (!(k in he)) bad.push(`missing ${k}`);
