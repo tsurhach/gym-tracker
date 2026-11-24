@@ -383,6 +383,32 @@ const EXTRA_ALIASES = {
   "hip-abduction-machine": ["thigh abductor"],
   "skullcrusher": ["lying triceps press with barbell"],
   "dumbbell-upright-row": ["upright row w dumbbells", "standing dumbbell upright row"],
+  "roman-chair-side-bend": [
+    "roman chair side bends",
+    "lateral hyperextension",
+    "side hyperextension",
+    "45 degree side bend",
+    "side bend on roman chair",
+    "roman chair oblique",
+    "hyperextension bench side bend",
+    "weighted roman chair side bend",
+  ],
+  "bosu-ball-crunch": ["bosu crunch", "bosu crunches", "crunch on bosu", "crunches on bosu ball", "bosu ball crunches", "bosu sit up", "bosu sit ups", "bosu situp", "sit up on bosu", "sit ups on bosu ball", "bosu ball sit ups", "bosu ball sit up"],
+  "high-to-low-cable-crossover": [
+    "high to low cable fly",
+    "cable fly high to low",
+    "high pulley cable crossover",
+    "lower chest cable fly",
+    "downward cable fly",
+  ],
+  "mid-cable-crossover": ["mid cable fly", "mid chest cable fly", "middle cable crossover", "mid pulley cable crossover", "horizontal cable fly"],
+  "low-to-high-cable-crossover": [
+    "low to high cable fly",
+    "cable fly low to high",
+    "low pulley cable crossover",
+    "upper chest cable fly",
+    "upward cable fly",
+  ],
 };
 
 export const ALIAS_LIST = {};

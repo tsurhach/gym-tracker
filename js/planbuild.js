@@ -1,4 +1,5 @@
 import { newItem } from "./session.js";
+import { ALIAS_LIST } from "./planfile.js";
 
 // Pure helpers for building a plan: gym-word search, adding many exercises at once, duplicating a day,
 // reordering, and "recent" exercises. No DOM, so they are unit tested.
@@ -51,11 +52,19 @@ export function matchRank(name, query) {
   return want.every((w) => nw.some((x) => x.startsWith(w) || x.startsWith(stem(w)))) ? 2 : null;
 }
 
+// Name match, or the best match over the plan-file aliases of that exercise ("bosu sit up" finds Bosu Ball Crunch). Aliases rank after names.
+function rankWithAliases(e, query) {
+  const r = matchRank(e.name, query);
+  if (r !== null) return r;
+  const hit = (ALIAS_LIST[e.id] ?? []).some((a) => matchRank(a, query) !== null);
+  return hit ? 3 : null;
+}
+
 // The exercises that match, best first (ties keep the library order). An empty query returns the list as is.
 export function searchExercises(list, query) {
   if (!squash(query)) return list;
   return list
-    .map((e, i) => ({ e, i, r: matchRank(e.name, query) }))
+    .map((e, i) => ({ e, i, r: rankWithAliases(e, query) }))
     .filter((x) => x.r !== null)
     .sort((a, b) => a.r - b.r || a.i - b.i)
     .map((x) => x.e);
