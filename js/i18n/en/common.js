@@ -80,7 +80,7 @@ export default {
   "help.extras.title": "Rest timer, photos, sound",
   "help.extras.sub": "Small helpers while you train.",
   "help.extras.body": `<p><b>Rest timer:</b> after you tick a set, a countdown starts. Tap <b>−15s</b> or <b>+15s</b> to change it, or <b>Skip</b>. Set its length in <b>Plan</b>, then <b>Settings</b>.</p>
-    <p><b>Rest-over sound:</b> in <b>Settings</b> you can record your own sound or pick an audio file. Turn on <b>Notify me when rest is over</b> to get an alert when the phone is locked.</p>
+    <p><b>Rest-over sound:</b> in <b>Settings</b> you can record your own sound or pick an audio file. Turn on <b>Rest alert when I leave the app</b> to get a notification when rest ends and the phone is locked or the app is closed. It needs internet (Wi-Fi is fine) and uses the phone's normal notification sound.</p>
     <p><b>Your own photo or video:</b> on an exercise you added yourself, tap <b>Add photo or video</b>.</p>
     <p><b>Plates per side:</b> for bar exercises the app shows which plates to put on each side.</p>
     <p><b>New best:</b> a 🏆 shows when a set is heavier than ever, or has more reps than ever at that weight. When you finish, you see a short summary with your new bests.</p>`,
