@@ -75,3 +75,28 @@ test("swapping reps <-> timed takes the new exercise's own range", () => {
   swapEntry(s, "bench", "plank", lookup);
   assert.deepEqual([s.active.entries[0].target.repMin, s.active.entries[0].target.repMax], [30, 45]);
 });
+
+import { FORMAT, planFromFile, validatePlanFile } from "../js/planfile.js";
+import { cleanView, copyDay } from "../js/share.js";
+
+test("plan file: seconds above 100 only for timed exercises; reps stay capped at 100", () => {
+  const file = (name, reps) => ({ format: FORMAT, version: 1, goal: "strength", name: "P", days: [{ name: "D", exercises: [{ name, sets: 3, reps }] }] });
+  const lib = [plank, { id: "bench", name: "Bench Press", primary: "Chest" }];
+  assert.equal(validatePlanFile(file("Plank", [60, 120])).ok, true);
+  assert.equal(validatePlanFile(file("Plank", [60, 3601])).ok, false);
+  assert.equal(planFromFile(file("Plank", [60, 120]), lib).ok, true);
+  assert.equal(planFromFile(file("Bench Press", [8, 120]), lib).ok, false);
+  assert.equal(planFromFile(file("Bench Press", [8, 100]), lib).ok, true);
+});
+
+test("copying a shared plan keeps seconds above 100 and the timed flag of custom exercises", () => {
+  const view = cleanView({
+    name: "D", canCopy: true,
+    customExercises: [{ id: "c1", name: "Dead hang", primary: "Back", secondary: [], timed: true }],
+    workouts: [{ id: "d", name: "Hold", muscles: [], items: [{ exerciseId: "c1", sets: 3, repMin: 30, repMax: 180, step: 2.5 }] }],
+  });
+  const cx = { map: new Map(), fresh: [], byName: new Map() };
+  const { workout } = copyDay(view, "d", emptyState(), () => false, cx);
+  assert.equal(workout.items[0].repMax, 180);
+  assert.equal(cx.fresh[0].timed, true);
+});

@@ -10,6 +10,7 @@ export const LIMITS = {
   exercises: [1, 20],
   sets: [1, 10],
   reps: [1, 100],
+  seconds: [1, 3600], // timed exercises keep seconds in reps; only exercises flagged timed may go above reps[1]
   step: [0.25, 25],
   name: 80,
   dayName: 40, // the Plan screen's own limit for a workout name
@@ -613,7 +614,7 @@ export function validatePlanFile(obj) {
           if (
             !Array.isArray(r) ||
             r.length !== 2 ||
-            !r.every((n) => int(n, LIMITS.reps))
+            !r.every((n) => int(n, [LIMITS.reps[0], LIMITS.seconds[1]]))
           )
             errors.push(
               r === undefined
@@ -942,6 +943,7 @@ export function planFromFile(obj, library, customExercises = []) {
   const v = validatePlanFile(obj);
   if (!v.ok) return { ok: false, errors: v.errors };
   const news = new Map();
+  const tooMany = [];
   const days = obj.days.map((d) => ({
     name: clean(d.name),
     exercises: d.exercises.map((x) => {
@@ -959,6 +961,8 @@ export function planFromFile(obj, library, customExercises = []) {
       const lib = own
         ? library.find((e) => norm(e.name) === norm(name))
         : matchExercise(name, library);
+      if (repMax > LIMITS.reps[1] && !(own ?? lib)?.timed)
+        tooMany.push(tr("pf.err.reps.bad", { e: name, v: show(x.reps), min: N(LIMITS.reps[0]), max: N(LIMITS.reps[1]) }));
       if (lib)
         return {
           ...base,
@@ -985,6 +989,7 @@ export function planFromFile(obj, library, customExercises = []) {
       return { ...base, kind: "new", key };
     }),
   }));
+  if (tooMany.length) return { ok: false, errors: tooMany };
   return {
     ok: true,
     name: clean(obj.name),

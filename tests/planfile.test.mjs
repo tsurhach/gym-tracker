@@ -73,7 +73,7 @@ test("each kind of invalid input gives a plain error", () => {
     (p) => (ex0(p).sets = 2.5),
     (p) => (ex0(p).reps = [8, 5]),
     (p) => (ex0(p).reps = [0, 5]),
-    (p) => (ex0(p).reps = [1, 101]),
+    (p) => (ex0(p).reps = [1, 3601]),
     (p) => (ex0(p).reps = "8-12"),
     (p) => (ex0(p).step = 0.1),
     (p) => (ex0(p).step = 26),

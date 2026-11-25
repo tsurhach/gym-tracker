@@ -104,7 +104,7 @@ export function buildView(
     sessions,
     customExercises: state.customExercises
       .filter((c) => used.has(c.id))
-      .map((c) => pick(c, ["id", "name", "primary", "secondary", "equipment"])),
+      .map((c) => pick(c, ["id", "name", "primary", "secondary", "equipment", "timed"])),
   };
   if (workouts) view.workouts = workouts;
   if (copy) view.canCopy = true; // the sharer's "let them copy" tick, sealed inside the view
@@ -125,7 +125,7 @@ export function cleanView(v) {
     name: String(o.name ?? ""),
     updatedAt: n0(o.updatedAt),
     canCopy: o.canCopy === true,
-    customExercises: arr(o.customExercises).map((c) => ({ id: String(c?.id), name: String(c?.name ?? ""), primary: String(c?.primary ?? ""), secondary: arr(c?.secondary).map(String), equipment: c?.equipment === undefined ? undefined : String(c.equipment) })),
+    customExercises: arr(o.customExercises).map((c) => ({ id: String(c?.id), name: String(c?.name ?? ""), primary: String(c?.primary ?? ""), secondary: arr(c?.secondary).map(String), equipment: c?.equipment === undefined ? undefined : String(c.equipment), ...(c?.timed === true ? { timed: true } : {}) })),
     sessions: arr(o.sessions).map((s) => ({
       id: String(s?.id),
       workoutName: String(s?.workoutName ?? ""),
@@ -154,6 +154,8 @@ export function cleanView(v) {
 // Built only from cleanView output, and only when the sharer allowed it (view.canCopy, sealed in the view).
 // A copy is plain new records: new ids, no link back; the store stamps them on save.
 // has(id) = is this a library exercise. The sharer's custom exercises are re-made as mine (matched by name, no media).
+// Timed exercises keep seconds in reps, so a copied plan allows up to an hour.
+const MAX_SEC = 3600;
 const clamp = (x, lo, hi, d) => (num(x) ? Math.min(hi, Math.max(lo, Math.round(x))) : d);
 const cap = (x, n) => String(x ?? "").trim().slice(0, n);
 const copyName = (base, taken, suffixFirst) => {
@@ -182,6 +184,7 @@ function resolveEx(view, id, state, has, cx) {
     secondary: arr(c.secondary).filter((m) => MUSCLES.includes(m) && m !== c.primary).slice(0, 6),
     images: 0, // photos and videos are not copied
     ...(c.equipment ? { equipment: cap(c.equipment, 30) } : {}),
+    ...(c.timed === true ? { timed: true } : {}),
   };
   if (!mine) cx.fresh.push(ex);
   cx.map.set(id, ex.id);
@@ -207,9 +210,9 @@ export function copyDay(view, dayId, state, has, cx = newCopy()) {
 }
 function dayCopy(view, d, state, has, cx) {
   const rows = arr(d.items).map((it) => {
-    const repMin = clamp(it.repMin, 1, 100, 8);
+    const repMin = clamp(it.repMin, 1, MAX_SEC, 8);
     const step = num(it.step) && it.step > 0 ? Math.min(LIMITS.step[1], Math.max(LIMITS.step[0], Math.round(it.step * 100) / 100)) : DEFAULT_STEP;
-    return { exerciseId: it.exerciseId, rest: { sets: clamp(it.sets, 1, LIMITS.sets[1], 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, 100, 12)), step } };
+    return { exerciseId: it.exerciseId, rest: { sets: clamp(it.sets, 1, LIMITS.sets[1], 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, MAX_SEC, 12)), step } };
   });
   const r = make(view, state, d.name, rows, cx, has, false);
   if (r.workout) r.workout.muscles = arr(d.muscles).filter((m) => MUSCLES.includes(m)).slice(0, 8);
@@ -223,7 +226,7 @@ export function dayFromSession(view, sessionId, state, has, cx = newCopy()) {
   const rows = arr(s.entries)
     .filter((e) => arr(e.sets).length)
     .map((e) => {
-      const reps = e.sets.map((t) => clamp(t.reps, 1, 100, 1));
+      const reps = e.sets.map((t) => clamp(t.reps, 1, MAX_SEC, 1));
       return { exerciseId: e.exerciseId, rest: { sets: clamp(e.sets.length, 1, LIMITS.sets[1], 1), repMin: Math.min(...reps), repMax: Math.max(...reps), step: DEFAULT_STEP } };
     });
   return make(view, state, s.workoutName, rows, cx, has, true);
