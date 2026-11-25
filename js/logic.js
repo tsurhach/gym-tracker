@@ -32,6 +32,21 @@ export function parseNum(text) {
   return Number.isFinite(n) ? n : null;
 }
 
+// A timed exercise (plank, dead hang, wall sit) logs seconds in the set's `reps` field, so every
+// reps rule (valid set, new best, charts, sync, sharing) works unchanged. Missing flag = reps.
+export const isTimed = (ex) => ex?.timed === true;
+
+// "45" -> 45 s, "1:30" -> 90 s. Anything else (or over 99:59) -> null. Plain digits suit the numeric keypad.
+export function parseTime(text) {
+  const m = /^(?:(\d{1,2}):([0-5]?\d)|(\d{1,4}))$/.exec(String(text ?? "").trim());
+  if (!m) return null;
+  const s = m[3] !== undefined ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2]);
+  return s <= 5999 ? s : null;
+}
+
+// 45 -> "0:45", 90 -> "1:30"
+export const fmtTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
 export const validSet = (weight, reps) =>
   typeof weight === "number" &&
   Number.isFinite(weight) &&
@@ -93,7 +108,9 @@ const isBodyOnly = (ex) => ex?.equipment === "body only";
 // settings.bodyAdvice === false: body-weight moves get no sentence (missing setting = on).
 export function advice(prevSets, item, ex, settings) {
   const quiet = settings?.bodyAdvice === false;
+  const timed = isTimed(ex);
   if (!prevSets || prevSets.length === 0) {
+    if (timed) return { kind: "first", weight: 0, message: quiet ? "" : t("logic.firstTimed") };
     if (isBodyOnly(ex))
       return quiet
         ? { kind: "first", weight: 0, message: "" }
@@ -111,6 +128,10 @@ export function advice(prevSets, item, ex, settings) {
   const { W, heavier } = analyse(prevSets, item);
   if (W === 0) {
     if (quiet) return { kind: "stay", weight: 0, message: "" };
+    if (timed)
+      return heavier
+        ? { kind: "heavier", weight: 0, message: t("logic.hitAddSec", { sec: t("logic.sec", { n: item.repMax }), kg: kgText(round2(item.step)) }) }
+        : { kind: "stay", weight: 0, message: t("logic.beatTime") };
     return heavier
       ? {
           kind: "heavier",
@@ -124,27 +145,29 @@ export function advice(prevSets, item, ex, settings) {
     return {
       kind: "heavier",
       weight,
-      message: t("logic.hitTry", { reps: item.repMax, kg: kgText(weight) }),
+      message: timed
+        ? t("logic.hitTryTimed", { sec: t("logic.sec", { n: item.repMax }), kg: kgText(weight) })
+        : t("logic.hitTry", { reps: item.repMax, kg: kgText(weight) }),
     };
   }
   return {
     kind: "stay",
     weight: W,
-    message: t("logic.stay", { kg: kgText(round2(W)) }),
+    message: t(timed ? "logic.stayTimed" : "logic.stay", { kg: kgText(round2(W)) }),
   };
 }
 
 export function prefill(prevSets, item, ex, settings) {
   const rows = Array.from({ length: item.sets }, (_, i) => i);
   if (!prevSets || prevSets.length === 0) {
-    return rows.map(() => ({ weight: isBodyOnly(ex) ? 0 : null, reps: item.repMin }));
+    return rows.map(() => ({ weight: isBodyOnly(ex) || isTimed(ex) ? 0 : null, reps: item.repMin }));
   }
   const a = advice(prevSets, item, ex, settings);
   if (a.kind === "heavier" && a.weight === 0) {
     // Body weight at the top of the range: same weight, one more rep than last time.
     return rows.map((i) => ({
       weight: 0,
-      reps: (prevSets[i] ?? prevSets[prevSets.length - 1]).reps + 1,
+      reps: (prevSets[i] ?? prevSets[prevSets.length - 1]).reps + (isTimed(ex) ? 5 : 1),
     }));
   }
   if (a.kind === "heavier") {

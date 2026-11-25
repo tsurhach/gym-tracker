@@ -77,11 +77,11 @@ export function searchExercises(list, query) {
 
 // Add exercises to a day in the given order, skipping ones already there (and repeats in ids).
 // Each gets the goal's sets and reps. Returns how many were added.
-export function addMany(workout, ids, goalKey) {
+export function addMany(workout, ids, goalKey, lookup = () => null) {
   let n = 0;
   for (const id of ids) {
     if (workout.items.some((it) => it.exerciseId === id)) continue;
-    workout.items.push(newItem(id, goalKey));
+    workout.items.push(newItem(id, goalKey, lookup(id)));
     n++;
   }
   return n;
@@ -162,4 +162,6 @@ export function recentIds(sessions, muscles, limit = 6) {
   return out;
 }
 
-export const summaryText = (it) => ltrText(`${it.sets} × ${it.repMin === it.repMax ? it.repMin : `${it.repMin}–${it.repMax}`}`);
+// timed: the range is seconds ("3 × 30–45 sec")
+export const summaryText = (it, ex) =>
+  ltrText(`${it.sets} × ${it.repMin === it.repMax ? it.repMin : `${it.repMin}–${it.repMax}`}${ex?.timed === true ? ` ${t("plan.unit.sec")}` : ""}`);

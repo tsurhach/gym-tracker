@@ -1,6 +1,6 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files and the exercise drawings); a release is a new VERSION.
-const VERSION = "9719c64e6ffb";
+const VERSION = "199de5b367b0";
 const SHELL = `gym-tracker-shell-${VERSION}`;
 const IMG_VERSION = "c7b2d949c956";
 const IMAGES = `gym-tracker-img-${IMG_VERSION}`; // drawings are cached per IMG_VERSION (hash of img/ex), so changed drawings replace the old cache on activate

@@ -24,7 +24,7 @@ export function openSwap(ctx, entry, plan) {
     const last = lastSets(state, e.id);
     return `<button class="pick-row" data-id="${esc(e.id)}">
       ${e.images ? `<img class="pick-thumb" src="${exImageUrls(e)[0]}" alt="" width="56" height="56" loading="lazy" decoding="async" />` : `<span class="pick-thumb"></span>`}
-      <span class="pick-name">${exTwo(e.id, e.name)}${state.swapCounts?.[pairKey(cur.id, e.id)] ? ` <span class="tag">${t("swap.usual")}</span>` : ""}<span class="muted small" style="display:block">${last ? t("swap.eqLast", { eq: esc(e.equipment ? equipName(e.equipment) : t("swap.custom")), text: esc(lastText(last)) }) : esc(e.equipment ? equipName(e.equipment) : t("swap.custom"))}</span></span>
+      <span class="pick-name">${exTwo(e.id, e.name)}${state.swapCounts?.[pairKey(cur.id, e.id)] ? ` <span class="tag">${t("swap.usual")}</span>` : ""}<span class="muted small" style="display:block">${last ? t("swap.eqLast", { eq: esc(e.equipment ? equipName(e.equipment) : t("swap.custom")), text: esc(lastText(last, e.timed === true)) }) : esc(e.equipment ? equipName(e.equipment) : t("swap.custom"))}</span></span>
     </button>`;
   });
   sheet.innerHTML = `<h2 style="margin-top:0">${t("swap.title", { name: esc(exName(entry.exerciseId, entry.name)) })}</h2>

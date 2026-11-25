@@ -60,6 +60,7 @@ export default {
       <li>To change a number, tap it and type. A weight you type on the first set is copied to the sets below it.</li>
       <li>Want to remember something, like the seat setting? Type it in the note box. It shows again next time.</li>
       <li>Machine taken? On the exercise, tap <b>Swap exercise</b> to switch to a similar one. Ones you picked before show <b>★ Usual</b>.</li>
+      <li>Plank and other holds count time, not reps. Tap <b>▶</b> on a set to time it, and <b>■</b> to stop. Or type the seconds. Your own exercises can count time too (Plan, Your exercises).</li>
       <li>When all sets are ticked, tap <b>Next</b> to go to the next exercise, or <b>Done, back to list</b>.</li>
       <li>At the end, tap <b>Finish workout</b>.</li>
     </ol>`,

@@ -962,6 +962,24 @@ a.btn-primary {
   gap: 8px;
   margin-bottom: 8px;
 }
+.set.timed {
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1.2fr) 44px 48px 44px;
+  gap: 6px;
+}
+.hold {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  color: var(--accent);
+  font-size: 16px;
+}
+.hold.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
 .set-head {
   margin-bottom: 4px;
   text-align: center;

@@ -177,6 +177,7 @@ async function main() {
           hint: e.hint,
           howto: exHowto(e.id, e.howto),
           equipment: e.equipment,
+          timed: e.timed === true,
         }
       );
     },

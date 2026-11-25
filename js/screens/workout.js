@@ -1,4 +1,4 @@
-import { advice, exerciseHistory, minHtml } from "../logic.js";
+import { advice, exerciseHistory, fmtTime, minHtml } from "../logic.js";
 import { ltr, ltrText, t, exTwo } from "../i18n/index.js";
 import { addEntry, finishSession, newItem } from "../session.js";
 import { groupItems, supersetsOf } from "../planbuild.js";
@@ -6,9 +6,10 @@ import { openPicker } from "../picker.js";
 import { confirmSheet, esc, fmtKg } from "../ui.js";
 
 // "50 kg × 10, 10, 9". Mixed weights: "50 × 10, 52.5 × 8".
-export function lastText(sets) {
+export function lastText(sets, timed = false) {
   if (!sets || !sets.length) return "";
   const kg = (w) => fmtKg(w);
+  if (timed) sets = sets.map((s) => ({ ...s, reps: fmtTime(s.reps) }));
   if (sets.every((s) => s.weight === 0))
     return t("workout.lastBody", { reps: ltrText(sets.map((s) => s.reps).join(", ")) });
   if (sets.every((s) => s.weight === sets[0].weight)) {
@@ -18,12 +19,12 @@ export function lastText(sets) {
 }
 
 // The plan item (sets, rep range, step) behind an entry (a swapped-in entry carries the old one's). Added-on exercises use goal defaults.
-export function itemFor(state, exerciseId) {
+export function itemFor(state, exerciseId, ex) {
   const w = state.workouts.find((x) => x.id === state.active?.workoutId);
   return (
     state.active?.entries.find((e) => e.exerciseId === exerciseId)?.target ??
     w?.items.find((it) => it.exerciseId === exerciseId) ??
-    newItem(exerciseId, state.settings.goal)
+    newItem(exerciseId, state.settings.goal, ex)
   );
 }
 
@@ -49,11 +50,11 @@ function rowHtml(e, ctx) {
     sub = `<div class="muted small">${t("workout.partial", { done, total })}</div>`;
   } else {
     const prev = lastSets(state, e.exerciseId);
-    const a = advice(prev, itemFor(state, e.exerciseId), ctx.lookup(e.exerciseId), state.settings);
+    const a = advice(prev, itemFor(state, e.exerciseId, ctx.lookup(e.exerciseId)), ctx.lookup(e.exerciseId), state.settings);
     if (a.kind === "heavier")
       sub = `<div class="up small">↑ ${esc(a.message)}</div>`;
     else if (prev)
-      sub = `<div class="muted small">${t("workout.last", { text: esc(lastText(prev)) })}</div>`;
+      sub = `<div class="muted small">${t("workout.last", { text: esc(lastText(prev, ctx.lookup(e.exerciseId)?.timed === true)) })}</div>`;
     else sub = "";
   }
   return `<a class="li" href="#/exercise/${encodeURIComponent(e.exerciseId)}">

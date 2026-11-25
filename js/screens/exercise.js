@@ -6,6 +6,9 @@ import {
   parseNum,
   gymPlates,
   muscleName,
+  fmtTime,
+  parseTime,
+  isTimed,
   plateRule,
   plateText,
   validSet,
@@ -27,8 +30,8 @@ import { afterSupersetSet, carryWeight, nextEntryId, supersetOf } from "../sessi
 
 // Pure: a set plus the two input texts gives the updated set. A confirmed set whose
 // values are no longer valid becomes unconfirmed; weight may stay null while unconfirmed.
-export function applyInputs(set, weightText, repsText) {
-  const reps = parseNum(repsText);
+export function applyInputs(set, weightText, repsText, timed = false) {
+  const reps = timed ? parseTime(repsText) : parseNum(repsText);
   const next = {
     ...set,
     weight: parseNum(weightText),
@@ -55,6 +58,7 @@ function syncAll() {
         s,
         row.querySelector('[data-f="weight"]').value,
         row.querySelector('[data-f="reps"]').value,
+        current.timed,
       ),
     );
     row.classList.toggle("done", !!s.done);
@@ -101,6 +105,7 @@ function paintBadges() {
       s,
       row.querySelector('[data-f="weight"]').value,
       row.querySelector('[data-f="reps"]').value,
+      current.timed,
     );
     const badge = row.nextElementSibling?.matches(".pb")
       ? row.nextElementSibling
@@ -142,13 +147,61 @@ const base = new WeakMap();
 
 const val = (n) => (n == null ? "" : fmtKg(n));
 
+// Hold timer for timed exercises: state.active.hold = { exerciseId, i, startedAt } (ms timestamp), so it survives
+// a lock screen or reload. Elapsed time is always Date.now() - startedAt; the interval only repaints.
+let holdTimer = 0;
+const heldHere = () => {
+  const h = current?.ctx.state.active?.hold;
+  return h && h.exerciseId === current.entry.exerciseId ? h : null;
+};
+function paintHold() {
+  if (!current?.root.isConnected) {
+    clearInterval(holdTimer);
+    holdTimer = 0;
+    return;
+  }
+  const h = heldHere();
+  for (const row of current.root.querySelectorAll(".set[data-i]")) {
+    const btn = row.querySelector('[data-act="hold"]');
+    if (!btn) continue;
+    const i = Number(row.dataset.i);
+    const on = !!h && h.i === i;
+    btn.classList.toggle("on", on);
+    btn.textContent = on ? "■" : "▶";
+    btn.setAttribute("aria-label", t(on ? "exercise.holdStop" : "exercise.holdStart", { n: i + 1 }));
+    const inp = row.querySelector('[data-f="reps"]');
+    if (on && document.activeElement !== inp) inp.value = fmtTime(Math.max(0, Math.floor((Date.now() - h.startedAt) / 1000)));
+  }
+  if (!h) {
+    clearInterval(holdTimer);
+    holdTimer = 0;
+  }
+}
+function runHold() {
+  clearInterval(holdTimer);
+  holdTimer = heldHere() ? setInterval(paintHold, 250) : 0;
+  paintHold();
+}
+// Stop the running hold: its elapsed seconds (at least 1) become the set's time.
+function stopHold(a) {
+  const h = a.hold;
+  delete a.hold;
+  const s = current?.entry.sets[h.i];
+  if (s && h.exerciseId === current.entry.exerciseId) s.reps = Math.min(5999, Math.max(1, Math.round((Date.now() - h.startedAt) / 1000)));
+}
+if (typeof document !== "undefined")
+  document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && heldHere() && runHold());
+
 export const pbHtml = () => `<div class="pb" role="note"><span aria-hidden="true">🏆</span> ${t("exercise.newBest")}</div>`;
 
-function setHtml(s, i, past, next) {
-  return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}" data-i="${i}">
+function setHtml(s, i, past, next, timed) {
+  return `<div class="set${s.done ? " done" : ""}${next ? " next" : ""}${timed ? " timed" : ""}" data-i="${i}">
     <span class="set-n">${i + 1}</span>
     <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="${t("exercise.kg")}" aria-label="${t("exercise.setWeight", { n: i + 1 })}" value="${esc(val(s.weight))}" />
-    <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="${t("exercise.repsPh")}" aria-label="${t("exercise.setReps", { n: i + 1 })}" value="${esc(s.reps ?? "")}" />
+    ${timed
+      ? `<input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="${t("exercise.timePh")}" aria-label="${t("exercise.setTime", { n: i + 1 })}" value="${esc(s.reps == null ? "" : fmtTime(s.reps))}" />
+    <button class="hold" data-act="hold" aria-label="${t("exercise.holdStart", { n: i + 1 })}">▶</button>`
+      : `<input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="${t("exercise.repsPh")}" aria-label="${t("exercise.setReps", { n: i + 1 })}" value="${esc(s.reps ?? "")}" />`}
     <button class="confirm" data-act="confirm" aria-pressed="${!!s.done}" aria-label="${s.done ? t("exercise.unconfirmSet", { n: i + 1 }) : t("exercise.confirmSet", { n: i + 1 })}">✓</button>
     <button class="icon-btn" data-act="remove" aria-label="${t("exercise.removeSet", { n: i + 1 })}">✕</button>
   </div>${s.done && isPersonalBest(past, s) ? pbHtml() : ""}`;
@@ -158,8 +211,9 @@ function setHtml(s, i, past, next) {
 const setsInner = (
   entry,
   past,
-) => `<div class="set set-head muted small"><span></span><span>${t("exercise.kg")}</span><span>${t("exercise.repsHead")}</span><span></span><span></span></div>
-      ${entry.sets.map((s, i) => setHtml(s, i, past, i === entry.sets.findIndex((x) => !x.done))).join("")}
+  timed,
+) => `<div class="set set-head muted small${timed ? " timed" : ""}"><span></span><span>${t("exercise.kg")}</span><span>${t(timed ? "exercise.timeHead" : "exercise.repsHead")}</span>${timed ? "<span></span>" : ""}<span></span><span></span></div>
+      ${entry.sets.map((s, i) => setHtml(s, i, past, i === entry.sets.findIndex((x) => !x.done), timed)).join("")}
       <button class="btn" data-act="add" style="margin:8px 0 0">${t("exercise.addSet")}</button>`;
 
 export function render(root, ctx) {
@@ -171,7 +225,8 @@ export function render(root, ctx) {
     return;
   }
   const ex = ctx.lookup(entry.exerciseId);
-  const item = itemFor(state, entry.exerciseId);
+  const item = itemFor(state, entry.exerciseId, ex);
+  const timed = isTimed(ex);
   const hasPhotos = !!ex && ex.images > 0;
   const showPhotos = hasPhotos && state.settings.showPhotos;
   const prev = lastSets(state, entry.exerciseId);
@@ -207,20 +262,21 @@ export function render(root, ctx) {
     ${isCustom ? `<div data-media></div>` : ""}
     <section class="card">
       <h3 style="margin-top:0">${hist.length ? t("exercise.lastTimeDate", { date: esc(fmtDate(hist[hist.length - 1].startedAt)) }) : t("exercise.lastTime")}</h3>
-      ${prev ? `<div class="last-sets">${esc(lastText(prev))}</div>` : ""}
+      ${prev ? `<div class="last-sets">${esc(lastText(prev, timed))}</div>` : ""}
       ${adv.message ? `<div class="advice ${adv.kind === "heavier" ? "up" : "muted"}">${esc(adv.message)}</div>` : ""}
       ${stuck ? `<div class="muted small" role="note">${esc(stuck)}</div>` : ""}
       ${rule.on ? `<div class="muted small" role="note" data-plates style="visibility:hidden"></div>` : ""}
       <input data-note dir="auto" maxlength="200" enterkeyhint="done" placeholder="${t("exercise.notePh")}" aria-label="${t("exercise.note")}" value="${esc(entry.note ?? "")}" style="margin-top:8px" />
     </section>
-    <section class="card" data-sets>${setsInner(entry, past)}</section>
+    <section class="card" data-sets>${setsInner(entry, past, timed)}</section>
     <a class="btn btn-primary" href="#/workout" data-primary>${t("exercise.done")}</a>
     <button class="btn" data-act="swap" style="margin-top:var(--gap)">${t("exercise.swap")}</button>`;
 
   armPhotos(root);
   entry.sets.forEach((x) => base.set(x, x.weight));
-  current = { root, entry, ctx, past, rule };
+  current = { root, entry, ctx, past, rule, timed };
   paintPlates();
+  runHold();
 
   // "Next: <exercise> ›" once every set here is ticked and another exercise still has open sets.
   function paintNext() {
@@ -321,6 +377,9 @@ export function render(root, ctx) {
       }
       ctx.save({ render: false });
       return;
+    } else if (act === "hold") {
+      if (a.hold?.exerciseId === entry.exerciseId && a.hold.i === i) stopHold(a);
+      else a.hold = { exerciseId: entry.exerciseId, i, startedAt: Date.now() }; // starting here replaces any other running hold
     } else if (act === "add") {
       const last = entry.sets[entry.sets.length - 1];
       entry.sets.push(
@@ -336,8 +395,10 @@ export function render(root, ctx) {
         ctx.save({ render: false });
         return;
       }
+      if (a.hold?.exerciseId === entry.exerciseId) delete a.hold; // set numbers shift
       entry.sets.splice(i, 1);
     } else if (act === "confirm") {
+      if (a.hold?.exerciseId === entry.exerciseId && a.hold.i === i) stopHold(a); // ticking a running hold ends it
       if (
         s.done &&
         justConfirmed?.s === s &&
@@ -375,7 +436,8 @@ export function render(root, ctx) {
       ctx.save(); // the picture appears or disappears: redraw the whole screen
       return;
     }
-    root.querySelector("[data-sets]").innerHTML = setsInner(entry, past);
+    root.querySelector("[data-sets]").innerHTML = setsInner(entry, past, timed);
+    runHold();
     paintPlates();
     paintNext();
     paintSs();

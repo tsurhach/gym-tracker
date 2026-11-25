@@ -96,7 +96,7 @@ export function proposeItems(muscles, library, goalKey) {
     for (const ex of library.filter((e) => e.primary === m).slice(0, countFor(m, muscles.length))) {
       if (seen.has(ex.id)) continue;
       seen.add(ex.id);
-      items.push(newItem(ex.id, goalKey));
+      items.push(newItem(ex.id, goalKey, ex));
     }
   }
   return items;

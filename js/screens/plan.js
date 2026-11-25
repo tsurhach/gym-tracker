@@ -61,7 +61,7 @@ function itemHtml(it, ctx, i, n, wid) {
       <button class="handle" data-handle aria-label="${tr("plan.handle.aria", { name: esc(name) })}">≡</button>
       <button class="xmain" data-act="x-toggle" aria-expanded="${open}">
         <span class="ex-name" dir="auto">${ex ? exTwo(it.exerciseId, name) : esc(name)}</span>
-        <span class="xsum muted">${ltr(esc(summaryText(it)))}</span><span class="xchev" aria-hidden="true">›</span>
+        <span class="xsum muted">${ltr(esc(summaryText(it, ex)))}</span><span class="xchev" aria-hidden="true">›</span>
       </button>
       ${L ? `<button class="tag ss-tag" data-act="ss-edit" aria-label="${tr("plan.ss.edit.aria", { letter: L })}">${L}</button>` : ""}
     </div>
@@ -76,8 +76,8 @@ function itemHtml(it, ctx, i, n, wid) {
     </div>
     <div class="fields">
       <label>${tr("plan.f.sets")}<input data-field="sets" inputmode="numeric" value="${esc(it.sets)}" /></label>
-      <label>${tr("plan.f.repmin")}<input data-field="repMin" inputmode="numeric" value="${esc(it.repMin)}" /></label>
-      <label>${tr("plan.f.repmax")}<input data-field="repMax" inputmode="numeric" value="${esc(it.repMax)}" /></label>
+      <label>${tr(ex?.timed === true ? "plan.f.secmin" : "plan.f.repmin")}<input data-field="repMin" inputmode="numeric" value="${esc(it.repMin)}" /></label>
+      <label>${tr(ex?.timed === true ? "plan.f.secmax" : "plan.f.repmax")}<input data-field="repMax" inputmode="numeric" value="${esc(it.repMax)}" /></label>
       <label>${tr("plan.f.step")}<input data-field="step" inputmode="decimal" value="${esc(fmtKg(it.step))}" /></label>
     </div>
     <div class="setting">${tr("plan.x.rest")}
@@ -320,6 +320,7 @@ export function render(root, ctx) {
               .map(
                 (c) => `<li class="item"><div class="row">
         <div class="grow"><div class="ex-name" dir="auto">${esc(c.name)}</div><span class="tag">${esc(MUSCLES.includes(c.primary) ? tk("muscle", c.primary) : c.primary)}</span></div>
+        <button class="btn" data-act="cx-timed" data-id="${esc(c.id)}" aria-pressed="${c.timed === true}" aria-label="${tr("plan.cx.timed.aria", { name: esc(c.name) })}">${tr(c.timed === true ? "plan.cx.byTime" : "plan.cx.byReps")}</button>
         <button class="btn" data-act="cx-del" data-id="${esc(c.id)}" aria-label="${tr("plan.cx.del.aria", { name: esc(c.name) })}">${tr("plan.cx.del")}</button>
       </div></li>`,
               )
@@ -481,7 +482,7 @@ export function render(root, ctx) {
         openPicker(
           ctx,
           (ids) => {
-            if (addMany(w, ids, settings.goal)) ctx.save();
+            if (addMany(w, ids, settings.goal, ctx.lookup)) ctx.save();
           },
           {
             exclude: new Set(w.items.map((it) => it.exerciseId)),
@@ -549,6 +550,14 @@ export function render(root, ctx) {
             },
           },
         );
+        return;
+      }
+      case "cx-timed": {
+        const c = state.customExercises.find((x) => x.id === t.dataset.id);
+        if (!c) return;
+        if (c.timed === true) delete c.timed;
+        else c.timed = true;
+        await ctx.save();
         return;
       }
       case "cx-del": {
@@ -740,7 +749,7 @@ function paintSums() {
   for (const li of current.root.querySelectorAll(".xlist [data-x]")) {
     const { w, xi } = findIn(current.ctx.state, li);
     const sum = li.querySelector(".xsum");
-    if (sum && w?.items[xi]) sum.textContent = ltrText(summaryText(w.items[xi]));
+    if (sum && w?.items[xi]) sum.textContent = ltrText(summaryText(w.items[xi], current.ctx.lookup(w.items[xi].exerciseId)));
   }
 }
 
@@ -795,7 +804,9 @@ function applyField(ctx, t) {
     ? tr("plan.err.step")
     : field === "sets"
       ? tr("plan.err.sets")
-      : tr("plan.err.reps");
+      : ctx.lookup(it.exerciseId)?.timed === true
+        ? tr("plan.err.secs")
+        : tr("plan.err.reps");
 }
 
 // Language (always bilingual, so a wrong language can be undone) and, in Hebrew, the wording choice. Hidden until Hebrew is enabled.

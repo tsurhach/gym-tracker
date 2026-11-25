@@ -47,6 +47,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
               ${MUSCLES.map((m) => `<button type="button" class="chip" aria-pressed="false" data-m="${esc(m)}">${esc(muscleName(m))}</button>`).join("")}
             </div>
           </div>
+          <label class="check"><input type="checkbox" data-timed /> ${t("picker.timed")}</label>
           <label class="btn file-btn">${t("exercise.mediaAdd")}
             <input type="file" data-media accept="image/*,video/*" />
           </label>
@@ -225,6 +226,7 @@ export function openPicker(ctx, onPick, { exclude = new Set(), muscles = [], tit
       primary,
       secondary,
       images: 0,
+      ...(el.querySelector("[data-timed]").checked ? { timed: true } : {}),
     };
     el.querySelector("[data-form] [type=submit]").disabled = true;
     ctx.state.customExercises.push(ex);
