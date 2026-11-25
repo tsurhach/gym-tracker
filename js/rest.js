@@ -79,9 +79,8 @@ const save = () => ctx.save({ render: false });
 const notify = () => ctx?.state.settings?.notifyRest === true;
 
 // Keep the server's alert in step with the rest. Never redraws or waits.
-// Only while the app is hidden: when it is visible the in-app timer is the alert.
 function schedulePush(r) {
-  if (!notify() || !document.hidden) return;
+  if (!notify()) return;
   if (r.endsAt - Date.now() <= PUSH_CUT_MS) return cancelPush();
   pushed = true;
   push.schedule(r.endsAt);
@@ -337,14 +336,9 @@ export function sync(name, shellCtx) {
   route = name;
   if (!bar) {
     build();
-    const away = () => rest() && schedulePush(rest()); // left the app mid-rest: ask the server to ping
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        cancelPush();
-        resume();
-      } else away();
+      if (document.visibilityState === "visible") resume();
     });
-    window.addEventListener("pagehide", away);
     // iOS standalone does not always fire visibilitychange.
     window.addEventListener("pageshow", (e) => e.persisted && resume());
     window.addEventListener("focus", resume);
