@@ -4,6 +4,8 @@ import { ID_RE, MAX_SYNC_BODY, makeChallenge, parseMediaFrame, parseSyncBody } f
 import { MEDIA_ITEM_MAX, VaultCore } from "./vault.js";
 import { InviteCore, SHARE_PATHS, shareRoute } from "./share.js";
 import { CalendarCore, calRoute, calFeed } from "./calendar.js";
+import { RestAlarmCore, restRoute } from "./restalarm.js";
+import { sendPush } from "./webpush.js";
 
 const SYNC_PATHS = new Set(["/auth/register", "/auth/signin", "/sync/pull", "/sync/push", "/account/rewrap", "/account/signout", "/account/delete", "/media/list", "/media/put", "/media/get", "/media/delete", ...SHARE_PATHS]);
 
@@ -34,6 +36,7 @@ export default {
     // Calendar feed. The URL holds the secret, so it is never logged; no CORS (calendar apps are not pages).
     if (req.method === "GET" && path.startsWith("/cal/")) return calFeed(req, env, path);
     if (req.method === "POST" && path.startsWith("/cal/")) return calRoute(req, env, path, cors);
+    if (req.method === "POST" && path.startsWith("/rest/")) return restRoute(req, env, path, cors);
     if (req.method === "POST" && (path === "/auth/challenge" || SYNC_PATHS.has(path)))
       return syncRoute(req, env, path, cors);
     if (req.method !== "POST" || (path !== "/schedule" && path !== "/cancel"))
@@ -83,6 +86,24 @@ export class Invite extends DurableObject {
   core() {
     const s = this.ctx.storage;
     return new InviteCore({ get: (k) => s.get(k), put: (k, v) => s.put(k, v), delete: (k) => s.delete(k), deleteAll: () => s.deleteAll(), setAlarm: (t) => s.setAlarm(t) });
+  }
+  run(path, body) {
+    return this.core().run(path, body);
+  }
+  alarm() {
+    return this.core().alarm();
+  }
+}
+
+// One per phone: keeps the push subscription and fires the "Rest over" push from an alarm.
+export class RestAlarm extends DurableObject {
+  core() {
+    const s = this.ctx.storage;
+    const keys = () => ({ privateJwk: JSON.parse(this.env.VAPID_PRIVATE_JWK), publicKey: this.env.VAPID_PUBLIC_KEY });
+    return new RestAlarmCore(
+      { get: (k) => s.get(k), put: (k, v) => s.put(k, v), deleteAll: () => s.deleteAll(), setAlarm: (t) => s.setAlarm(t), deleteAlarm: () => s.deleteAlarm() },
+      { send: async (sub, text) => { try { return await sendPush(sub, text, keys()); } catch { return 0; } } }, // missing secret: no push, no retry storm
+    );
   }
   run(path, body) {
     return this.core().run(path, body);

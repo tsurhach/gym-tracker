@@ -37,3 +37,7 @@ No new account is needed: this uses the same Cloudflare account and Worker as th
 
 ### Local checks
 `npm test` in the app root runs the server logic against an in-memory store (`tests/server-sync.test.mjs`, `tests/sync-flow.test.mjs`). Nothing here needs an account.
+
+## Rest alert v2 (RestAlarm)
+
+`POST /rest/register|schedule|cancel|unregister` with `{ device, ... }` (text/plain JSON, 2 KB cap, per-IP limit). `device` is a random id the phone makes (no account). One `RestAlarm` Durable Object per device (migration `v5`) stores the push subscription and one alarm: `schedule { endsAt }` (within 15 min) sets it, `cancel` clears it, and `alarm()` sends an encrypted Web Push (RFC 8291 aes128gcm + VAPID, WebCrypto, `src/webpush.js`) with TTL 60 and the generic text "Rest over - next set". 404/410 from the push service deletes the object; so does 60 days unused. The old `/schedule` and `/cancel` routes and the `Rest` class stay for phones still running an older app. Uses the same `VAPID_PRIVATE_JWK` secret. `node tools/gen-vapid.mjs` makes a new key pair (rotation only).
