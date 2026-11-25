@@ -87,6 +87,7 @@ export default {
   "help.progress.title": "History, Muscles, Body weight",
   "help.progress.sub": "See how you are doing.",
   "help.progress.body": `<p><b>History:</b> every past workout. Tap one to fix a mistake. Tap an exercise name for its chart.</p>
+    <p><b>Rating:</b> when you finish, tell the app how it felt, or tap <b>Skip</b>. Tap a workout in History to change it. It is never shared with friends or coaches.</p>
     <p><b>Muscles:</b> how many sets each muscle got in the last 7 days, and which ones you missed.</p>
     <p><b>Body weight:</b> on Today, tap <b>Body weight</b> to log your weight now and then.</p>`,
   "help.sync.title": "Sync",

@@ -3,6 +3,8 @@ import { deleteSession, removeSet } from "../session.js";
 import { confirmSheet, esc, fmtKg } from "../ui.js";
 import { fmtDate, ltr, ltrText, t, exTwo, exName } from "../i18n/index.js";
 import { applyInputs, pbHtml } from "./exercise.js";
+import { afterOpen, anyRated, clean, recent, weakCause, weekly } from "../rating.js";
+import { badgesHtml, openRating, takeRating } from "../ratesheet.js";
 
 // Whole minutes, at least 1.
 export const durationMin = (ses) =>
@@ -122,6 +124,38 @@ export function chartHtml(values, timed = false) {
   </svg>${n === 1 ? `<p class="muted small">${t("history.needTwo")}</p>` : ""}`;
 }
 
+// Badges and the note under a workout in the list; "" when not rated.
+const rateLine = (r) => {
+  const b = badgesHtml(r);
+  return b ? `<div class="rate-line">${b}</div>${clean(r)?.note ? `<div class="muted small rate-note" dir="auto">${esc(clean(r).note)}</div>` : ""}` : "";
+};
+
+const avgText = (n) => ltrText(n.toFixed(1));
+// "How workouts felt": weekly bars for effort and lifts felt, last 7 days against the 28-day average, the most common cause of weak days.
+export function trendHtml(sessions, now = Date.now()) {
+  if (!anyRated(sessions)) return "";
+  const row = (field, name) => {
+    const w = weekly(sessions, field, now);
+    const desc = t("rate.trend.aria", { name, list: w.map((v) => (v === null ? "-" : v.toFixed(1))).join(", ") });
+    return `<div class="trend-row"><span class="small">${esc(name)}</span><span class="bars" dir="ltr" role="img" aria-label="${esc(desc)}">${w
+      .map((v) => (v === null ? '<i class="none"></i>' : `<i style="height:${Math.round((v / 5) * 100)}%"></i>`))
+      .join("")}</span></div>`;
+  };
+  const names = { effort: t("rate.trend.effort"), lifts: t("rate.trend.lifts") };
+  const parts = ["effort", "lifts"]
+    .map((f) => [f, recent(sessions, f, now)])
+    .filter(([, r]) => r)
+    .map(([f, r]) => t("rate.trend.part", { name: names[f], a: avgText(r.last), b: avgText(r.avg28) }));
+  const cause = weakCause(sessions, now);
+  return `<section class="card" aria-label="${t("rate.trend.title")}">
+    <b>${t("rate.trend.title")}</b>
+    ${row("effort", names.effort)}${row("lifts", names.lifts)}
+    <p class="muted small" style="margin:8px 0 0">${t("rate.trend.note")}</p>
+    ${parts.length ? `<p style="margin:8px 0 0">${t("rate.trend.vs", { parts: parts.join(" · ") })}</p>` : ""}
+    ${cause ? `<p style="margin:8px 0 0">${t("rate.trend.cause", { reason: t(`rate.why.${cause.reason}`), n: cause.n, total: cause.total })}</p>` : ""}
+  </section>`;
+}
+
 function listHtml(state, ctx) {
   const sessions = [...state.sessions].sort(
     (a, b) => b.startedAt - a.startedAt,
@@ -130,12 +164,12 @@ function listHtml(state, ctx) {
     return `<section class="card"><p><b>${t("history.none")}</b></p><p class="muted">${t("history.noneHint")}</p></section>`;
   }
   const rows = exerciseRows(state.sessions, timedOf(ctx));
-  return `${sessions
+  return `${trendHtml(state.sessions)}${sessions
     .map((s) => {
       const sets = s.entries.reduce((n, e) => n + e.sets.length, 0);
       return `<a class="card block" href="#/history/${encodeURIComponent(s.id)}">
         <div class="row"><b class="grow ex-name">${esc(s.workoutName)}</b><span class="muted nowrap">${esc(fmtDate(s.startedAt))}</span></div>
-        <div class="muted small">${t("history.rowLine", { ex: t("history.exercises", { n: s.entries.length }), sets: t("history.sets", { n: sets }), min: minHtml(durationMin(s)) })}</div>
+        <div class="muted small">${t("history.rowLine", { ex: t("history.exercises", { n: s.entries.length }), sets: t("history.sets", { n: sets }), min: minHtml(durationMin(s)) })}</div>${rateLine(s.rating)}
       </a>`;
     })
     .join("")}
@@ -234,6 +268,17 @@ function setRow(s, e, i, past, timed) {
 const earlier = (sessions, ses, id) =>
   exerciseHistory(sessions.filter((x) => x.startedAt < ses.startedAt), id).flatMap((h) => h.sets);
 
+// Opens the rating sheet: a button when not rated, the badges (tap to change) when rated.
+function rateCard(ses) {
+  const b = badgesHtml(ses.rating);
+  if (!b) return `<button class="btn" data-act="rate">${t("rate.add")}</button>`;
+  const hint = !ses.rating.after && afterOpen(ses, Date.now()) ? t("rate.addAfter") : t("rate.edit");
+  return `<button class="card block rate-card" data-act="rate">
+      <div class="rate-line">${b}</div>${clean(ses.rating)?.note ? `<p class="rate-note-full" dir="auto">${esc(clean(ses.rating).note)}</p>` : ""}
+      <div class="muted small">${hint}</div>
+    </button>`;
+}
+
 function sessionScreen(root, ctx) {
   const id = ctx.params.id;
   const ses = ctx.state.sessions.find((s) => s.id === id);
@@ -245,6 +290,7 @@ function sessionScreen(root, ctx) {
     <h1 class="title">${esc(ses.workoutName)}</h1>
     <p class="subtitle">${esc(fmtDate(ses.startedAt))}</p>
     ${summaryHtml(ses, ctx.state.sessions, timedOf(ctx))}
+    ${rateCard(ses)}
     ${ses.entries
       .map(
         (en, e) => `<section class="card">
@@ -259,6 +305,7 @@ function sessionScreen(root, ctx) {
     <button class="btn btn-warn" data-act="del-ses">${t("history.deleteWorkout")}</button>`;
 
   current = { root, id, ctx };
+  if (takeRating(id)) openRating(ctx, ses);
 
   if (restore) {
     for (const r of restore) {
@@ -316,6 +363,9 @@ function sessionScreen(root, ctx) {
       // a session left empty is gone; the redraw sends us back to History
       await ctx.save();
       restore = null;
+    } else if (act === "rate") {
+      const s = findSession(current);
+      if (s) openRating(ctx, s);
     } else if (act === "del-ses") {
       if (
         !(await confirmSheet(

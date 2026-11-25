@@ -1525,3 +1525,92 @@ details.help .sec-body li {
 /* Hebrew exercise rows: the English name sits small under the Hebrew one. */
 .en-sub { display: block; font-size: 0.78em; font-weight: 400; color: var(--muted); text-align: start; unicode-bidi: isolate; }
 [dir="rtl"] .en-sub { text-align: right; direction: ltr; }
+
+/* End-of-workout rating */
+.rate-title {
+  margin: 0 0 4px;
+  font-size: var(--fs-lg);
+}
+.rate-q {
+  margin-bottom: var(--gap);
+}
+.rate-q .seg {
+  margin-top: 6px;
+}
+.rate-row .chip {
+  min-width: 0;
+  padding: 8px 2px;
+  font-size: 12px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.rate-row .face {
+  font-size: 24px;
+  line-height: 1;
+}
+.rate-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+.rate-q p {
+  margin: 6px 0 0;
+}
+.sheet.rate input[data-note] {
+  margin-bottom: var(--gap);
+}
+.rate-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.rate-note {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rate-note-full {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+button.card.rate-card {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+}
+button.card.rate-card .muted {
+  margin-top: 6px;
+}
+.trend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.trend-row > span:first-child {
+  flex: none;
+  width: 72px;
+}
+.bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 36px;
+}
+.bars i {
+  flex: 1;
+  min-height: 3px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+.bars i.none {
+  height: 3px;
+  background: var(--line);
+}

@@ -4,6 +4,7 @@ import { addEntry, finishSession, newItem } from "../session.js";
 import { groupItems, supersetsOf } from "../planbuild.js";
 import { openPicker } from "../picker.js";
 import { confirmSheet, esc, fmtKg } from "../ui.js";
+import { askRating } from "../ratesheet.js";
 
 // "50 kg × 10, 10, 9". Mixed weights: "50 × 10, 52.5 × 8".
 export function lastText(sets, timed = false) {
@@ -130,6 +131,7 @@ export function render(root, ctx) {
     if (msg && !(await confirmSheet(msg, t("workout.finish")))) return;
     const id = a.id;
     finishSession(state, Date.now());
+    if (state.sessions.some((s) => s.id === id)) askRating(id); // the History screen opens the rating sheet over the summary
     ctx.go(state.sessions.some((s) => s.id === id) ? `#/history/${id}` : "#/today");
     ctx.save();
   });
