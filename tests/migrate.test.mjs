@@ -139,3 +139,21 @@ test("every alias added after the legacy set re-links a matching custom (Pec Dec
   assert.ok(done.includes("Pec Deck") && done.includes("Squat (Barbell)"));
   assert.ok(s.customExercises.some((c) => c.id === "p3"));
 });
+
+test("old plank plans (8-12 reps) become 30-45 s once; other items and later edits are left alone", async () => {
+  const { fixTimedPlans } = await import("../js/migrate.js");
+  const s = {
+    settings: {},
+    workouts: [{ items: [
+      { exerciseId: "plank", sets: 3, repMin: 8, repMax: 12 },
+      { exerciseId: "crunch", sets: 3, repMin: 8, repMax: 12 },
+    ] }],
+    active: { entries: [{ exerciseId: "plank", target: { sets: 3, repMin: 8, repMax: 12 } }] },
+  };
+  assert.equal(fixTimedPlans(s, lib), 2);
+  assert.deepEqual(s.workouts[0].items.map((i) => [i.repMin, i.repMax]), [[30, 45], [8, 12]]);
+  assert.deepEqual([s.active.entries[0].target.repMin, s.active.entries[0].target.repMax], [30, 45]);
+  s.workouts[0].items[0].repMax = 15; // the owner's own short hold afterwards
+  assert.equal(fixTimedPlans(s, lib), 0);
+  assert.equal(s.workouts[0].items[0].repMax, 15);
+});

@@ -8,6 +8,19 @@ export function newItem(exerciseId, goalKey, ex) {
   return { exerciseId, sets, repMin, repMax, step: DEFAULT_STEP };
 }
 
+// Flip a custom exercise between reps and seconds. Its plan items get the default range for the new type
+// (past sets keep their numbers, which is why the screen asks first).
+export function setCustomTimed(state, c, timed) {
+  if (timed) c.timed = true;
+  else delete c.timed;
+  for (const w of state.workouts)
+    for (const it of w.items)
+      if (it.exerciseId === c.id) {
+        const n = newItem(c.id, state.settings.goal, c);
+        Object.assign(it, { sets: n.sets, repMin: n.repMin, repMax: n.repMax });
+      }
+}
+
 // Set the goal; with applyToAll, also give every plan item the goal's sets and reps (step is kept).
 export function applyGoal(state, goalKey, applyToAll) {
   state.settings.goal = goalKey;

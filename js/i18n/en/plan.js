@@ -241,6 +241,8 @@ export default {
   "plan.err.secs": "Seconds must be whole numbers, 1 or more, with min no higher than max.",
   "plan.cx.byReps": "By reps",
   "plan.cx.byTime": "By time",
+  "plan.cx.timed.confirm": "Switch \"{name}\" between reps and time? Past sets will be read in the new unit (reps as seconds, or seconds as reps), and its plan ranges reset to the default. Continue?",
+  "plan.cx.timed.go": "Switch",
   "plan.cx.timed.aria": "{name}: switch between counting reps and counting time",
   "plan.err.reps": "Reps must be whole numbers, 1 or more, with min no higher than max.",
   "plan.mic": "Recording is not available. Allow the microphone for this app, or choose a saved audio file.",

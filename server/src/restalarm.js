@@ -105,7 +105,14 @@ export class RestAlarmCore {
       await this.s.put("rec", rec);
       const st = await this.o.send(rec.sub, MESSAGE);
       if (st === 404 || st === 410) return this.s.deleteAll(); // the phone dropped it
+      // A schedule may have arrived while sending: work from what is stored now, never the stale copy.
+      const cur = await this.s.get("rec");
+      if (!cur) return;
+      return this.finish(cur, now);
     }
+    return this.finish(rec, now);
+  }
+  async finish(rec, now) {
     if (now - rec.used >= EXPIRE) return this.s.deleteAll();
     await this.s.setAlarm(rec.fireAt ?? rec.used + EXPIRE);
   }

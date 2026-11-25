@@ -100,3 +100,15 @@ test("copying a shared plan keeps seconds above 100 and the timed flag of custom
   assert.equal(workout.items[0].repMax, 180);
   assert.equal(cx.fresh[0].timed, true);
 });
+
+test("switching a custom exercise between reps and time resets its plan ranges to the new default", async () => {
+  const { setCustomTimed } = await import("../js/session.js");
+  const c = { id: "c1", name: "Hold" };
+  const s = { settings: { goal: "muscle" }, workouts: [{ items: [{ exerciseId: "c1", sets: 5, repMin: 8, repMax: 12, step: 2.5 }, { exerciseId: "x", sets: 5, repMin: 1, repMax: 2, step: 2.5 }] }] };
+  setCustomTimed(s, c, true);
+  assert.equal(c.timed, true);
+  assert.deepEqual(s.workouts[0].items.map((i) => [i.sets, i.repMin, i.repMax]), [[3, 30, 45], [5, 1, 2]]);
+  setCustomTimed(s, c, false);
+  assert.equal("timed" in c, false);
+  assert.deepEqual(s.workouts[0].items[0], { exerciseId: "c1", sets: 3, repMin: 8, repMax: 12, step: 2.5 });
+});

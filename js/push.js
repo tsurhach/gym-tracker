@@ -46,6 +46,7 @@ export async function sendTo(
     (
       await fetchFn(SERVER + p, {
         method: "POST",
+        keepalive: true, // survives the page being frozen or closed
         keepalive: true,
         // text/plain keeps this a simple request (no preflight); the server reads the body as JSON.
         headers: { "content-type": "text/plain" },
@@ -89,6 +90,8 @@ export async function enable() {
   }
 }
 
+// One chain: schedule and cancel reach the server in the order they were made.
+let queue = Promise.resolve();
 const send = (path, extra) => {
   try {
     if (
@@ -97,7 +100,8 @@ const send = (path, extra) => {
       navigator.onLine === false
     )
       return;
-    navigator.serviceWorker.ready
+    queue = queue
+      .then(() => navigator.serviceWorker.ready)
       .then((r) => r.pushManager.getSubscription())
       .then((sub) => sub && sendTo(sub, path, extra))
       .catch(() => {});

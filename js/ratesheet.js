@@ -32,7 +32,7 @@ const rowHtml = (g, n, label, cur) =>
 
 // The "How was it?" sheet. Nothing is saved until Save; Skip (or Escape) closes it unchanged. ctx.save() once, on Save.
 export function openRating(ctx, ses) {
-  const draft = { ...(clean(ses.rating) ?? {}), reasons: [...(ses.rating?.reasons ?? [])] };
+  const draft = { ...(clean(ses.rating) ?? {}), reasons: [...(clean(ses.rating)?.reasons ?? [])] };
   const had = !!clean(ses.rating);
   const showAfter = afterOpen(ses, Date.now()) || !!draft.after;
   const feel = (v) => ({ html: esc(t(`rate.feel.${v}`)), aria: t(`rate.feel.${v}`) });

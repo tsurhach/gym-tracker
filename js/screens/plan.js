@@ -1,7 +1,7 @@
 import { GOALS, MUSCLES } from "../constants.js";
 import { PLATE_SIZES, gymPlates, parseNum, plateRule } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
-import { applyGoal, deleteCustomExercise } from "../session.js";
+import { applyGoal, deleteCustomExercise, setCustomTimed } from "../session.js";
 import { exportCsv, exportJson } from "../store.js";
 import { addBackup } from "../sync.js";
 import { buildFullBackup, fmtSize, readBackup } from "../backup.js";
@@ -555,8 +555,8 @@ export function render(root, ctx) {
       case "cx-timed": {
         const c = state.customExercises.find((x) => x.id === t.dataset.id);
         if (!c) return;
-        if (c.timed === true) delete c.timed;
-        else c.timed = true;
+        if (!(await confirmSheet(tr("plan.cx.timed.confirm", { name: c.name }), tr("plan.cx.timed.go")))) return;
+        setCustomTimed(state, c, c.timed !== true);
         await ctx.save();
         return;
       }

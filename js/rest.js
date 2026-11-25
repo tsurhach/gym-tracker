@@ -257,7 +257,7 @@ async function beep(endsAt) {
     if (a.state !== "running")
       await Promise.race([a.resume(), new Promise((r) => setTimeout(r, 800))]);
   } catch {}
-  if (isLate(endsAt, Date.now())) return;
+  if (audio?.state !== "running" || isLate(endsAt, Date.now())) return; // frozen clock: the chime would play at the next tap
   play();
 }
 
@@ -313,6 +313,15 @@ function run() {
   wake(true);
 }
 
+// Leaving the app: the 3 s cut-off may already have dropped the push, so send it again (the server
+// clamps a past time to now). Only while the rest runs or ended less than PUSH_CUT_MS ago.
+function away() {
+  const r = rest();
+  if (!r || !notify() || pushed || Date.now() - r.endsAt > PUSH_CUT_MS) return;
+  pushed = true;
+  push.schedule(r.endsAt);
+}
+
 // Back in the foreground (visibilitychange, pageshow, focus): re-read the clock and repaint now.
 // A rest that ended while away shows "Rest over" for OVER_MS from now, without a late beep.
 function resume() {
@@ -338,11 +347,16 @@ export function sync(name, shellCtx) {
     build();
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") resume();
+      else away();
     });
+    window.addEventListener("pagehide", away);
+    document.addEventListener("freeze", away);
     // iOS standalone does not always fire visibilitychange.
     window.addEventListener("pageshow", (e) => e.persisted && resume());
     window.addEventListener("focus", resume);
-    document.addEventListener("pointerdown", wakeAudio, { capture: true, passive: true });
+    // pointerdown is not a user activation on iOS touch; pointerup / touchend are.
+    for (const ev of ["pointerup", "touchend"])
+      document.addEventListener(ev, wakeAudio, { capture: true, passive: true });
   }
   const r = rest();
   if (pushed && (!notify() || !restLength(ctx.state.settings))) cancelPush();

@@ -1,5 +1,5 @@
 import { createStore } from "./store.js";
-import { linkCustomsToLibrary } from "./migrate.js";
+import { fixTimedPlans, linkCustomsToLibrary } from "./migrate.js";
 import { allMediaKeys } from "./media.js";
 import { confirmSheet, showBanner } from "./ui.js";
 import * as setup from "./screens/setup.js";
@@ -145,6 +145,10 @@ async function main() {
   const store = createStore(browserStorage());
   const loaded = store.load();
   applyLang(loaded.state.settings);
+  if (loaded.kept && !loaded.recovered && !loaded.state.settings.timedFixed) {
+    fixTimedPlans(loaded.state, library);
+    store.save(loaded.state);
+  }
   // Customs an import made from a near-miss name become the library exercise (once; skipped if media is unreadable).
   if (loaded.kept && !loaded.recovered && loaded.state.customExercises.length) {
     try {
