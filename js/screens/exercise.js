@@ -17,6 +17,7 @@ import {
   fmtKg,
   howtoHtml,
   photoHtml,
+  armPhotos,
 } from "../ui.js";
 import { deleteMedia, getMedia, saveMedia } from "../media.js";
 import { itemFor, lastSets, lastText } from "./workout.js";
@@ -216,6 +217,7 @@ export function render(root, ctx) {
     <a class="btn btn-primary" href="#/workout" data-primary>${t("exercise.done")}</a>
     <button class="btn" data-act="swap" style="margin-top:var(--gap)">${t("exercise.swap")}</button>`;
 
+  armPhotos(root);
   entry.sets.forEach((x) => base.set(x, x.weight));
   current = { root, entry, ctx, past, rule };
   paintPlates();

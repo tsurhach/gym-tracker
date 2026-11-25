@@ -905,6 +905,17 @@ a.btn-primary {
   opacity: 0;
   animation-name: flip-b;
 }
+/* Until both drawings are decoded (.ready): show the first one still, no fade. */
+.photo:not(.ready) .a,
+.photo:not(.ready) .b {
+  animation: none;
+}
+.photo:not(.ready) .a {
+  opacity: 1;
+}
+.photo img {
+  will-change: opacity;
+}
 @keyframes flip-a {
   0%,
   45% {

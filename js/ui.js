@@ -31,10 +31,20 @@ export function photoHtml(ex) {
   const urls = exImageUrls(ex);
   if (!urls.length) return "";
   const imgs = urls
-    .map((u, i) => `<img class="${i ? "b" : "a"}" src="${u}" alt="" />`)
+    .map((u, i) => `<img class="${i ? "b" : "a"}" src="${u}" alt="" width="4" height="3" decoding="async" />`)
     .join("");
   const hint = ex.hint ? `<p class="muted small photo-hint">${esc(ex.hint)}</p>` : "";
   return `<div class="photo${urls.length === 1 ? " still" : ""}">${imgs}</div>${hint}`;
+}
+
+// The cross-fade starts only once every frame is decoded: before, the second drawing was still
+// loading (first view, nothing cached yet), so the fade showed a blank frame and stuttered.
+export function armPhotos(root) {
+  for (const box of root.querySelectorAll(".photo:not(.still)")) {
+    const go = () => box.classList.add("ready");
+    const imgs = [...box.querySelectorAll("img")];
+    Promise.all(imgs.map((i) => i.decode().catch(() => {}))).then(go, go);
+  }
 }
 
 // 57.5 -> "57.5", 50 -> "50", 1.25 -> "1.25"
