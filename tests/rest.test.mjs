@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { adjust, fmtRest, overDeadline, parseRest, remaining, restLength } from "../js/rest.js";
+import { adjust, fmtRest, isLate, overDeadline, parseRest, remaining, restLength } from "../js/rest.js";
 import { emptyState, isValidState } from "../js/store.js";
 import { finishSession, startSession } from "../js/session.js";
 
@@ -86,4 +86,10 @@ test("restLength: exercise rest wins, 0 means off, junk or missing falls back", 
   assert.equal(restLength(set, { restSec: "x" }), 90);
   assert.equal(restLength(set, { restSec: 99999 }), 90);
   assert.equal(restLength({}, {}), 90);
+});
+
+test("isLate: only a rest that ended more than 3 s ago stays silent", () => {
+  assert.equal(isLate(10_000, 10_000), false);
+  assert.equal(isLate(10_000, 13_000), false);
+  assert.equal(isLate(10_000, 13_001), true);
 });

@@ -4,11 +4,18 @@ import { ltr, ltrText, t } from "./i18n/index.js";
 import { deleteBlob, getBlob, putBlob, SOUND_KEY } from "./media.js";
 
 // State lives in state.active.rest = { endsAt, total } (ms timestamp, seconds) so it survives a kill.
+// Everything is drawn from endsAt vs Date.now(), never from counting ticks (iOS freezes timers in the background).
+// Hook for a future server push: set in startRest() and adjust (click handler in build()); cleared in clear().
+// push.schedule(endsAt) / push.cancel() are already called at exactly those points.
 
 export const DEFAULT_REST = 90;
 const OVER_MS = 5000; // how long "Rest over" stays
 const PUSH_CUT_MS = 3000; // visible this close to the end: the bar is enough, drop the push
 const MAX_REST = 3600; // longest rest you can set: 60 minutes
+const LATE_MS = 3000; // noticed this long after the end: show "Rest over", do not blast a late sound
+
+// A rest that ended more than LATE_MS ago is only shown, never sounded.
+export const isLate = (endsAt, now) => now - endsAt > LATE_MS;
 
 // Minutes and seconds as typed -> whole seconds, 0..3600. Blank or junk counts as 0;
 // seconds above 59 carry into minutes simply by being added.
@@ -153,8 +160,21 @@ function unlock() {
     if (navigator.audioSession) navigator.audioSession.type = "ambient";
   } catch {}
   try {
-    context().resume?.();
+    const a = context();
+    a.resume?.();
+    // A silent blip started inside the tap is what really unlocks iOS audio.
+    const src = a.createBufferSource();
+    src.buffer = a.createBuffer(1, 1, 22050);
+    src.connect(a.destination);
+    src.start(0);
     if (!custom) loadCustom();
+  } catch {}
+}
+
+// iOS suspends the context when the screen locks or the app is backgrounded; any tap or the return wakes it.
+function wakeAudio() {
+  try {
+    if (audio && audio.state !== "running") audio.resume?.();
   } catch {}
 }
 
@@ -201,6 +221,7 @@ function chime() {
 
 function play() {
   try {
+    context(); // reloaded mid-rest: there is no context yet
     if (!audio) return;
     if (custom) {
       try {
@@ -225,10 +246,18 @@ function play() {
   } catch {}
 }
 
-function beep() {
+// Once, while visible. A suspended context is resumed first (its clock is frozen, so a sound
+// scheduled on it would play late); if that takes too long the end is only shown.
+async function beep(endsAt) {
   try {
     navigator.vibrate?.(200);
   } catch {}
+  try {
+    const a = context();
+    if (a.state !== "running")
+      await Promise.race([a.resume(), new Promise((r) => setTimeout(r, 800))]);
+  } catch {}
+  if (isLate(endsAt, Date.now())) return;
   play();
 }
 
@@ -257,7 +286,7 @@ function tick() {
   }
   if (now >= r.endsAt && beepedFor !== r.endsAt) {
     beepedFor = r.endsAt;
-    beep();
+    if (!isLate(r.endsAt, now)) beep(r.endsAt);
   }
   paint();
 }
@@ -290,7 +319,7 @@ function resume() {
   const r = rest();
   if (!r) return;
   const now = Date.now();
-  if (now >= r.endsAt) beepedFor = r.endsAt;
+  wakeAudio();
   if (graceFor !== r.endsAt && now >= r.endsAt + OVER_MS) {
     graceFor = r.endsAt;
     graceUntil = overDeadline(r.endsAt, now);
@@ -313,12 +342,13 @@ export function sync(name, shellCtx) {
     // iOS standalone does not always fire visibilitychange.
     window.addEventListener("pageshow", (e) => e.persisted && resume());
     window.addEventListener("focus", resume);
+    document.addEventListener("pointerdown", wakeAudio, { capture: true, passive: true });
   }
   const r = rest();
   if (pushed && (!notify() || !restLength(ctx.state.settings))) cancelPush();
   if (r && !timer) {
     pushed = notify(); // reloaded mid-rest: a push may be waiting on the server; cancel is harmless
-    if (Date.now() >= r.endsAt) beepedFor = r.endsAt; // finished while away: no late beep
+    wakeAudio();
     run();
   }
   if (!r && timer) stop();
