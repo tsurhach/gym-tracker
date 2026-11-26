@@ -7,9 +7,9 @@ const lib = JSON.parse(
   readFileSync(new URL("../data/exercises.json", import.meta.url), "utf8"),
 );
 
-test("library has 80-200 entries with unique ids", () => {
+test("library has 80-300 entries with unique ids", () => {
   assert.ok(Array.isArray(lib));
-  assert.ok(lib.length >= 80 && lib.length <= 200, `got ${lib.length}`);
+  assert.ok(lib.length >= 80 && lib.length <= 300, `got ${lib.length}`);
   assert.equal(new Set(lib.map((e) => e.id)).size, lib.length);
 });
 

@@ -1641,5 +1641,1178 @@
     "equipment": "cable",
     "images": 2,
     "howto": "Clip an ankle strap to a low pulley and face the machine, holding the frame for balance. Keeping your leg nearly straight, kick it straight back and squeeze your bum, then return slowly. Do not lean forward or arch your lower back."
+  },
+  {
+    "id": "incline-chest-press-machine",
+    "name": "Incline Chest Press (Machine)",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Set the seat so the handles line up with your upper chest. Press forward and up until your arms are almost straight, then return slowly. Keep your back flat on the pad and shoulders down."
+  },
+  {
+    "id": "incline-push-up",
+    "name": "Incline Push-Up",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Put your hands on a bench a little wider than your shoulders and walk your feet back into a straight line. Lower your chest to the edge, then push away. Easier than a floor push-up and hits the lower chest."
+  },
+  {
+    "id": "decline-push-up",
+    "name": "Decline Push-Up",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Put your feet on a bench and hands on the floor, a little wider than your shoulders. Keep your body straight and lower your chest toward the floor, then push back up. Hits the upper chest and shoulders."
+  },
+  {
+    "id": "dumbbell-floor-press",
+    "name": "Dumbbell Floor Press",
+    "primary": "Chest",
+    "secondary": [
+      "Triceps",
+      "Shoulders"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie on the floor with a dumbbell in each hand and your knees bent. Lower until your upper arms touch the floor, pause, then press up. The floor stops the stretch, so it is easy on the shoulders."
+  },
+  {
+    "id": "wide-grip-bench-press",
+    "name": "Wide-Grip Bench Press",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Set up like a normal bench press but take the bar with your hands well outside shoulder width. Lower to your mid chest and press up. Keep your wrists stacked over your elbows."
+  },
+  {
+    "id": "cable-chest-press",
+    "name": "Cable Chest Press",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand facing away from the stack with a handle in each hand at chest height and one foot forward. Press both hands straight out until your arms are almost straight, then return slowly. Brace your stomach so you do not lean."
+  },
+  {
+    "id": "svend-press",
+    "name": "Svend Press",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Squeeze a light plate between your palms at chest height. Push it straight out in front of you, then pull it back in while still squeezing hard. Use a light plate, it is a squeeze exercise."
+  },
+  {
+    "id": "dumbbell-squeeze-press",
+    "name": "Dumbbell Squeeze Press",
+    "primary": "Chest",
+    "secondary": [
+      "Triceps",
+      "Shoulders"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie back and press two dumbbells together over your chest. Keep squeezing them into each other while you lower and press. This keeps the inner chest working the whole rep."
+  },
+  {
+    "id": "wide-push-up",
+    "name": "Wide Push-Up",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Place your hands clearly wider than your shoulders and keep your body straight. Lower your chest between your hands, then push up. Hits the outer chest more than a normal push-up."
+  },
+  {
+    "id": "trx-push-up",
+    "name": "TRX Push-Up",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps",
+      "Abs"
+    ],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Hold the handles at chest height and lean forward on your toes in a straight line. Lower your chest between your hands, then push up while keeping the straps steady. The unstable handles make your core and shoulders work harder."
+  },
+  {
+    "id": "single-arm-cable-crossover",
+    "name": "Single-Arm Cable Crossover",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Set a handle at shoulder height or higher and stand sideways. Sweep your arm across your body in an arc, squeeze, and return slowly. Keep a small bend in your elbow throughout."
+  },
+  {
+    "id": "low-incline-dumbbell-press",
+    "name": "Low-Incline Dumbbell Press",
+    "primary": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Set the bench to a very small slope. Press the dumbbells from your upper chest to straight arms, then lower slowly. Favors the upper chest with less shoulder than a steep incline."
+  },
+  {
+    "id": "seated-machine-row",
+    "name": "Seated Row (Machine)",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Sit with your chest on the pad and grab the handles. Pull your elbows back and squeeze your shoulder blades, then return slowly. Do not lean back to move the weight."
+  },
+  {
+    "id": "chest-supported-dumbbell-row",
+    "name": "Chest-Supported Dumbbell Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie face down on an incline bench with a dumbbell in each hand. Row the weights up toward your hips, squeeze, and lower under control. The bench removes lower-back swing."
+  },
+  {
+    "id": "assisted-pull-up-machine",
+    "name": "Assisted Pull-Up (Machine)",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Kneel or stand on the pad and set a counterweight, more weight makes it easier. Grab the handles and pull your chest up, then lower under control. Lower the assistance as you get stronger."
+  },
+  {
+    "id": "trap-bar-deadlift",
+    "name": "Trap Bar Deadlift",
+    "primary": "Back",
+    "secondary": [
+      "Quads",
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Stand inside the trap bar with feet hip-width and grip the handles. Brace your stomach, push the floor away and stand up tall. Lower the bar under control to the floor."
+  },
+  {
+    "id": "sumo-deadlift",
+    "name": "Sumo Deadlift",
+    "primary": "Back",
+    "secondary": [
+      "Glutes",
+      "Quads",
+      "Hamstrings"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Take a wide stance with toes turned out and grip the bar inside your knees. Push your knees out, keep your chest up and stand tall. Lower the bar back along your legs."
+  },
+  {
+    "id": "pendlay-row",
+    "name": "Pendlay Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Bend over with your back flat and torso close to parallel to the floor. Row the bar to your lower chest from a dead stop on the floor each rep, then lower it back down. Keep your hips still."
+  },
+  {
+    "id": "wide-grip-pull-up",
+    "name": "Wide-Grip Pull-Up",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Take the bar clearly wider than shoulder width. Pull your chest toward the bar, then lower to a full hang. Think of driving your elbows down."
+  },
+  {
+    "id": "single-arm-lat-pulldown",
+    "name": "Single-Arm Lat Pulldown",
+    "primary": "Back",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "ext": "png",
+    "howto": "Sit at the pulldown with one handle and pull your elbow down and in toward your hip. Feel the lat squeeze, then let the arm rise slowly to a full stretch. Do not twist your body."
+  },
+  {
+    "id": "single-arm-cable-row",
+    "name": "Single-Arm Cable Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Hold one handle and pull your elbow back past your ribs while keeping your torso still. Squeeze your lat, then reach forward again. Do not rotate your shoulders."
+  },
+  {
+    "id": "rack-pull",
+    "name": "Rack Pull",
+    "primary": "Back",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Set the bar on the rack at knee height. Grip it, tighten your back and stand up, pushing your hips forward. Lower the bar back down to the pins. A top-half deadlift for the upper back."
+  },
+  {
+    "id": "landmine-row",
+    "name": "Landmine Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Straddle the bar and hinge forward with a flat back. Pull the handle to your chest, squeeze, then lower slowly. Keep your hips still."
+  },
+  {
+    "id": "iso-lateral-row-machine",
+    "name": "Iso-Lateral Row (Machine)",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Sit with your chest on the pad and grab the handles. Pull each arm back by driving the elbows behind you, then return with a full stretch. Arms work separately so a weaker side cannot hide."
+  },
+  {
+    "id": "reverse-hyperextension",
+    "name": "Reverse Hyperextension",
+    "primary": "Back",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Lie face down with your hips at the edge and legs hanging. Squeeze your glutes and swing your legs up until in line with your body, then lower slowly. Do not swing with momentum."
+  },
+  {
+    "id": "weighted-pull-up",
+    "name": "Weighted Pull-Up",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Attach weight with a belt or vest and hang with a grip just wider than shoulders. Pull your chest to the bar and lower fully. Add weight gradually."
+  },
+  {
+    "id": "trx-row",
+    "name": "TRX Row",
+    "primary": "Back",
+    "secondary": [
+      "Biceps",
+      "Shoulders"
+    ],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Hold the handles and lean back with your body straight. Pull your chest to your hands, squeeze your shoulder blades, then lower slowly. Walk your feet forward to make it harder."
+  },
+  {
+    "id": "cable-shrug",
+    "name": "Cable Shrug",
+    "primary": "Back",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Hold a bar or handles on a low pulley with your arms straight. Shrug your shoulders straight up toward your ears, hold, and lower slowly. Do not roll your shoulders."
+  },
+  {
+    "id": "smith-machine-shrug",
+    "name": "Smith Machine Shrug",
+    "primary": "Back",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Hold the Smith bar in front of your thighs with straight arms. Shrug straight up, pause, and lower slowly. Do not roll your shoulders or bend your elbows."
+  },
+  {
+    "id": "lat-pulldown-machine",
+    "name": "Lat Pulldown (Machine)",
+    "primary": "Back",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "ext": "png",
+    "howto": "Sit under the handles and grab them. Pull your elbows down toward your sides while keeping your chest tall. Return slowly to a full stretch."
+  },
+  {
+    "id": "single-arm-cable-lateral-raise",
+    "name": "Single-Arm Cable Lateral Raise",
+    "primary": "Shoulders",
+    "secondary": [],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand sideways to the pulley and hold the handle with the far hand. Raise your arm out to the side to shoulder height, then lower slowly. The cable keeps tension at the bottom."
+  },
+  {
+    "id": "push-press",
+    "name": "Push Press",
+    "primary": "Shoulders",
+    "secondary": [
+      "Triceps",
+      "Quads"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Hold the bar at your shoulders, dip slightly by bending your knees, then drive up with your legs and press the bar overhead. Lower it back to your shoulders. Your legs start the lift, your shoulders finish it."
+  },
+  {
+    "id": "landmine-press",
+    "name": "Landmine Press",
+    "primary": "Shoulders",
+    "secondary": [
+      "Chest",
+      "Triceps"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Hold the end of the bar at your shoulder and press it up and forward along its arc. Lower it slowly. Keep your ribs down and do not lean back."
+  },
+  {
+    "id": "smith-machine-shoulder-press",
+    "name": "Smith Machine Shoulder Press",
+    "primary": "Shoulders",
+    "secondary": [
+      "Triceps"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "ext": "png",
+    "howto": "Sit under the bar with the bench upright and lower it to chin level. Press it straight up until your arms are almost straight. Control it on the way down."
+  },
+  {
+    "id": "kettlebell-overhead-press",
+    "name": "Kettlebell Overhead Press",
+    "primary": "Shoulders",
+    "secondary": [
+      "Triceps",
+      "Abs"
+    ],
+    "equipment": "kettlebells",
+    "images": 2,
+    "howto": "Hold the kettlebell at your shoulder with your wrist straight. Press it overhead and finish with your bicep by your ear. Lower it back to your shoulder."
+  },
+  {
+    "id": "pike-push-up",
+    "name": "Pike Push-Up",
+    "primary": "Shoulders",
+    "secondary": [
+      "Triceps",
+      "Chest"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Start in a push-up position then walk your feet in so your hips point to the ceiling. Bend your elbows to lower your head toward the floor, then push back up. A bodyweight shoulder press."
+  },
+  {
+    "id": "machine-lateral-raise",
+    "name": "Lateral Raise (Machine)",
+    "primary": "Shoulders",
+    "secondary": [],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Sit with your arms against the pads. Lift your arms out to the sides until about shoulder height, then lower slowly. Do not shrug."
+  },
+  {
+    "id": "band-pull-apart",
+    "name": "Band Pull-Apart",
+    "primary": "Shoulders",
+    "secondary": [
+      "Back"
+    ],
+    "equipment": "bands",
+    "images": 2,
+    "howto": "Hold a band in front of you at shoulder height with straight arms. Pull your hands apart until the band touches your chest, then return slowly. Squeeze your shoulder blades together."
+  },
+  {
+    "id": "plate-front-raise",
+    "name": "Plate Front Raise",
+    "primary": "Shoulders",
+    "secondary": [
+      "Chest"
+    ],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Hold a plate with both hands at the bottom of your thighs. Raise it to eye level with straight arms, then lower slowly. Do not lean back."
+  },
+  {
+    "id": "rear-delt-row",
+    "name": "Rear Delt Row",
+    "primary": "Shoulders",
+    "secondary": [
+      "Back",
+      "Biceps"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Hinge forward with dumbbells hanging. Row them up with elbows wide out to the sides, so your arms go level with your shoulders. Squeeze the back of the shoulders."
+  },
+  {
+    "id": "barbell-front-raise",
+    "name": "Barbell Front Raise",
+    "primary": "Shoulders",
+    "secondary": [
+      "Chest"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Hold a barbell at your thighs with an overhand grip. Raise it to shoulder height with straight arms, then lower with control. Keep your back tall."
+  },
+  {
+    "id": "seated-dumbbell-curl",
+    "name": "Seated Dumbbell Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Sit on an upright bench with a dumbbell in each hand. Curl them up one or both together and lower slowly. Seated means no body swing."
+  },
+  {
+    "id": "bayesian-curl",
+    "name": "Bayesian Cable Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand facing away from the low pulley with the handle behind you in one hand. Curl up keeping your elbow behind your torso, then lower slowly. The arm starts stretched which hits the biceps hard."
+  },
+  {
+    "id": "single-arm-cable-curl",
+    "name": "Single-Arm Cable Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Hold a handle on a low pulley, elbow close to your side. Curl up, squeeze, and lower slowly. Do not swing."
+  },
+  {
+    "id": "incline-hammer-curl",
+    "name": "Incline Hammer Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Lie back on an incline bench with arms hanging, palms facing in. Curl both dumbbells up with thumbs on top, then lower fully. The stretch hits the long head."
+  },
+  {
+    "id": "overhead-cable-curl",
+    "name": "Overhead Cable Curl",
+    "primary": "Biceps",
+    "secondary": [
+      "Forearms"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand between two high pulleys holding handles with arms out to the sides. Curl the handles toward your head like a double biceps pose, then extend slowly."
+  },
+  {
+    "id": "single-arm-triceps-pushdown",
+    "name": "Single-Arm Triceps Pushdown",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Hold a single handle on a high pulley with your elbow at your side. Press down to straight arm, then return slowly. Do not lean on the weight."
+  },
+  {
+    "id": "single-arm-overhead-cable-extension",
+    "name": "Single-Arm Overhead Cable Extension",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Face away from a low pulley, hold the handle overhead with your elbow pointing up. Extend your arm up to straight, then lower slowly. Keep the elbow in place."
+  },
+  {
+    "id": "weighted-triceps-dip",
+    "name": "Weighted Triceps Dip",
+    "primary": "Triceps",
+    "secondary": [
+      "Chest",
+      "Shoulders"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Hang weight from a belt and do dips on parallel bars. Stay upright to focus on the triceps. Lower until your elbows are at 90 degrees."
+  },
+  {
+    "id": "cable-triceps-kickback",
+    "name": "Cable Triceps Kickback",
+    "primary": "Triceps",
+    "secondary": [],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Hinge forward holding a handle at your side. Straighten your arm back, squeeze, and return slowly. Keep your upper arm fixed."
+  },
+  {
+    "id": "reverse-barbell-curl",
+    "name": "Reverse Barbell Curl",
+    "primary": "Forearms",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "barbell",
+    "images": 2,
+    "howto": "Hold the bar with palms facing down, shoulder width. Curl it up keeping your wrists straight, then lower slowly. Hits the top of the forearms."
+  },
+  {
+    "id": "farmers-walk",
+    "name": "Farmer's Walk",
+    "primary": "Forearms",
+    "secondary": [
+      "Back",
+      "Abs"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Pick up a heavy weight in each hand and stand tall. Walk with short quick steps without leaning. Great for grip and traps."
+  },
+  {
+    "id": "dead-hang",
+    "name": "Dead Hang",
+    "primary": "Forearms",
+    "secondary": [
+      "Back",
+      "Shoulders"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "timed": true,
+    "hint": "Hold this position.",
+    "howto": "Hang from a bar with an overhand grip and arms straight. Keep your shoulders active and breathe. Hold as long as you can, a grip and shoulder health builder."
+  },
+  {
+    "id": "reverse-ez-bar-curl",
+    "name": "Reverse EZ-Bar Curl",
+    "primary": "Forearms",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "e-z curl bar",
+    "images": 2,
+    "howto": "Hold the EZ bar overhand on the angled parts. Curl up with your elbows at your sides, then lower slowly. Easier on the wrists than a straight bar."
+  },
+  {
+    "id": "reverse-cable-curl",
+    "name": "Reverse Cable Curl",
+    "primary": "Forearms",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Hold a straight bar or EZ attachment on a low pulley, palms down. Curl up and lower slowly. Cable keeps tension at the bottom."
+  },
+  {
+    "id": "suitcase-carry",
+    "name": "Suitcase Carry",
+    "primary": "Forearms",
+    "secondary": [
+      "Abs",
+      "Back"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Hold a heavy weight on one side and walk tall without leaning. Do not let the weight pull you sideways. Switch sides."
+  },
+  {
+    "id": "side-plank",
+    "name": "Side Plank",
+    "primary": "Abs",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "body only",
+    "images": 1,
+    "timed": true,
+    "hint": "Hold this position.",
+    "howto": "Lie on your side with your forearm under your shoulder. Lift your hips so your body forms a straight line, hold, and breathe. Switch sides."
+  },
+  {
+    "id": "hanging-knee-raise",
+    "name": "Hanging Knee Raise",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Hang from a bar and pull your knees up toward your chest, curling your hips. Lower slowly without swinging."
+  },
+  {
+    "id": "captains-chair-leg-raise",
+    "name": "Captain's Chair Leg Raise",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Support yourself on the pads with your back against the backrest. Raise your knees or straight legs up and lower slowly."
+  },
+  {
+    "id": "hollow-body-hold",
+    "name": "Hollow Body Hold",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 1,
+    "timed": true,
+    "hint": "Hold this position.",
+    "howto": "Lie on your back and press your lower back into the floor. Lift your shoulders and legs a few inches and hold the banana shape."
+  },
+  {
+    "id": "l-sit",
+    "name": "L-Sit",
+    "primary": "Abs",
+    "secondary": [
+      "Triceps",
+      "Quads"
+    ],
+    "equipment": "body only",
+    "images": 1,
+    "timed": true,
+    "hint": "Hold this position.",
+    "howto": "Support yourself on straight arms with your legs straight out in front, parallel to the floor. Press down and hold. Bend your knees to make it easier."
+  },
+  {
+    "id": "dead-bug",
+    "name": "Dead Bug",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie on your back with arms up and knees bent at 90 degrees. Lower the opposite arm and leg while your lower back stays flat, then switch. Move slowly."
+  },
+  {
+    "id": "v-up",
+    "name": "V-Up",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie flat with arms overhead. Lift your legs and torso at the same time to touch your toes in a V shape, then lower."
+  },
+  {
+    "id": "decline-sit-up",
+    "name": "Decline Sit-Up",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Hook your feet under the pads on a decline bench. Curl up to sit, then lower slowly."
+  },
+  {
+    "id": "cable-woodchop",
+    "name": "Cable Woodchop",
+    "primary": "Abs",
+    "secondary": [
+      "Shoulders"
+    ],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Stand sideways to a high pulley, hold the handle with both hands. Pull diagonally down across your body, rotating your torso. Return slowly."
+  },
+  {
+    "id": "mountain-climber",
+    "name": "Mountain Climber",
+    "primary": "Abs",
+    "secondary": [
+      "Quads",
+      "Shoulders"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Start in a high plank. Drive one knee to your chest then switch quickly, like running in place. Keep hips low."
+  },
+  {
+    "id": "bird-dog",
+    "name": "Bird Dog",
+    "primary": "Abs",
+    "secondary": [
+      "Glutes",
+      "Back"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "On hands and knees, reach one arm forward and the opposite leg back. Hold briefly, return and switch. Keep your back flat."
+  },
+  {
+    "id": "flutter-kicks",
+    "name": "Flutter Kicks",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie on your back and lift your legs a few inches. Kick them up and down in small alternating motions with your lower back pressed down."
+  },
+  {
+    "id": "stability-ball-crunch",
+    "name": "Stability Ball Crunch",
+    "primary": "Abs",
+    "secondary": [],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Lie back on a ball with your lower back supported. Curl your upper body up, then lower. The ball gives a longer stretch."
+  },
+  {
+    "id": "toes-to-bar",
+    "name": "Toes to Bar",
+    "primary": "Abs",
+    "secondary": [
+      "Back"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Hang from a bar and lift your straight legs until your toes touch the bar. Lower with control. Advanced, build up with knee raises."
+  },
+  {
+    "id": "bulgarian-split-squat",
+    "name": "Bulgarian Split Squat",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "dumbbell",
+    "images": 1,
+    "howto": "Put your rear foot on a bench, front foot far enough forward. Lower your back knee toward the floor, then drive up through your front foot. Hold dumbbells for extra load."
+  },
+  {
+    "id": "wall-sit",
+    "name": "Wall Sit",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "body only",
+    "images": 1,
+    "timed": true,
+    "hint": "Hold this position.",
+    "howto": "Slide down a wall until your thighs are parallel to the floor. Keep your back flat and hold. Knees stay over ankles."
+  },
+  {
+    "id": "bodyweight-squat",
+    "name": "Bodyweight Squat",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Stand with feet shoulder width. Sit back and down until your thighs are parallel, then stand. Arms forward for balance."
+  },
+  {
+    "id": "dumbbell-reverse-lunge",
+    "name": "Dumbbell Reverse Lunge",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Hold dumbbells at your sides. Step back and lower your back knee, then push through your front foot to return. Easier on the knees than forward lunges."
+  },
+  {
+    "id": "lateral-lunge",
+    "name": "Lateral Lunge",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Step wide to the side and sit back onto that leg while the other stays straight. Push back to start. Hold a weight for extra."
+  },
+  {
+    "id": "jump-squat",
+    "name": "Jump Squat",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Calves"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Squat down then explode up into a jump. Land softly back into the squat."
+  },
+  {
+    "id": "box-jump",
+    "name": "Box Jump",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Calves"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Stand in front of a box. Swing your arms and jump onto it, landing softly. Step down to reset."
+  },
+  {
+    "id": "single-leg-press",
+    "name": "Single-Leg Press",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Place one foot on the platform. Lower under control and press back. Keep your hips flat on the seat."
+  },
+  {
+    "id": "single-leg-extension",
+    "name": "Single-Leg Extension",
+    "primary": "Quads",
+    "secondary": [],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Use one leg at a time on the machine. Extend until straight and lower slowly. Fixes strength imbalances."
+  },
+  {
+    "id": "sled-push",
+    "name": "Sled Push",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes",
+      "Calves"
+    ],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Lean into the sled with straight arms and drive with short steps. Keep your back flat."
+  },
+  {
+    "id": "pendulum-squat",
+    "name": "Pendulum Squat",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Stand on the platform with your back against the pad. Lower deeply on the arc and press back up. Great quad stretch."
+  },
+  {
+    "id": "pistol-squat",
+    "name": "Pistol Squat",
+    "primary": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Stand on one leg with the other straight out front. Lower down as far as you can, then stand. Hold a support if needed."
+  },
+  {
+    "id": "dumbbell-romanian-deadlift",
+    "name": "Dumbbell Romanian Deadlift",
+    "primary": "Hamstrings",
+    "secondary": [
+      "Glutes",
+      "Back"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Hold dumbbells in front of your thighs. Push your hips back, sliding the weights down your legs with soft knees. Feel the hamstring stretch, then stand."
+  },
+  {
+    "id": "single-leg-romanian-deadlift",
+    "name": "Single-Leg Romanian Deadlift",
+    "primary": "Hamstrings",
+    "secondary": [
+      "Glutes",
+      "Back"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Stand on one leg holding a dumbbell. Hinge forward while the other leg lifts behind you. Return to stand."
+  },
+  {
+    "id": "kettlebell-swing",
+    "name": "Kettlebell Swing",
+    "primary": "Hamstrings",
+    "secondary": [
+      "Glutes",
+      "Back"
+    ],
+    "equipment": "kettlebells",
+    "images": 2,
+    "howto": "Hinge back with the kettlebell between your legs. Snap your hips forward to swing it to chest height. Let it fall and hinge again."
+  },
+  {
+    "id": "nordic-hamstring-curl",
+    "name": "Nordic Hamstring Curl",
+    "primary": "Hamstrings",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Kneel with your feet anchored. Lower your body forward as slowly as you can, catching with your hands, then push back up."
+  },
+  {
+    "id": "stability-ball-leg-curl",
+    "name": "Stability Ball Leg Curl",
+    "primary": "Hamstrings",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "other",
+    "images": 2,
+    "howto": "Lie on your back with heels on the ball. Lift your hips and curl the ball toward your bum, then extend."
+  },
+  {
+    "id": "smith-machine-romanian-deadlift",
+    "name": "Smith Machine Romanian Deadlift",
+    "primary": "Hamstrings",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Hold the Smith bar in front of your thighs. Hinge back, sliding it down your legs, then stand."
+  },
+  {
+    "id": "glute-bridge",
+    "name": "Glute Bridge",
+    "primary": "Glutes",
+    "secondary": [
+      "Hamstrings"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lie on your back with knees bent. Lift your hips, squeeze your glutes at the top, then lower."
+  },
+  {
+    "id": "dumbbell-hip-thrust",
+    "name": "Dumbbell Hip Thrust",
+    "primary": "Glutes",
+    "secondary": [
+      "Hamstrings"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Sit with your back against a bench and a dumbbell on your hips. Drive your hips up until your body is straight, squeeze, then lower."
+  },
+  {
+    "id": "single-leg-hip-thrust",
+    "name": "Single-Leg Hip Thrust",
+    "primary": "Glutes",
+    "secondary": [
+      "Hamstrings"
+    ],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Set up for a hip thrust with one foot on the floor and the other leg raised. Drive up through one heel and lower."
+  },
+  {
+    "id": "machine-hip-thrust",
+    "name": "Hip Thrust (Machine)",
+    "primary": "Glutes",
+    "secondary": [
+      "Hamstrings"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Sit in the machine with the pad over your hips. Drive up through your heels and squeeze, then lower."
+  },
+  {
+    "id": "curtsy-lunge",
+    "name": "Curtsy Lunge",
+    "primary": "Glutes",
+    "secondary": [
+      "Quads"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Step one foot behind and across the other as you lower. Push back up to standing."
+  },
+  {
+    "id": "banded-lateral-walk",
+    "name": "Banded Lateral Walk",
+    "primary": "Glutes",
+    "secondary": [],
+    "equipment": "bands",
+    "images": 2,
+    "howto": "Place a band around your knees or ankles. Take small steps sideways in a half squat."
+  },
+  {
+    "id": "cable-hip-abduction",
+    "name": "Standing Cable Hip Abduction",
+    "primary": "Glutes",
+    "secondary": [],
+    "equipment": "cable",
+    "images": 2,
+    "howto": "Attach a cuff to a low pulley and lift your leg out to the side. Return slowly."
+  },
+  {
+    "id": "sumo-squat",
+    "name": "Sumo Squat",
+    "primary": "Glutes",
+    "secondary": [
+      "Quads"
+    ],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Take a wide stance with toes out and hold a dumbbell between your legs. Squat down and stand."
+  },
+  {
+    "id": "glute-kickback-machine",
+    "name": "Glute Kickback Machine",
+    "primary": "Glutes",
+    "secondary": [
+      "Hamstrings"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Stand and press your foot back against the pad. Squeeze at the end."
+  },
+  {
+    "id": "smith-machine-hip-thrust",
+    "name": "Smith Machine Hip Thrust",
+    "primary": "Glutes",
+    "secondary": [
+      "Hamstrings"
+    ],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Place a bar over your hips on the Smith machine. Thrust up and squeeze."
+  },
+  {
+    "id": "bodyweight-calf-raise",
+    "name": "Bodyweight Calf Raise",
+    "primary": "Calves",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Stand on a step or floor with heels free. Rise onto your toes then lower slowly."
+  },
+  {
+    "id": "single-leg-calf-raise",
+    "name": "Single-Leg Calf Raise",
+    "primary": "Calves",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Stand on one foot on a step. Rise as high as you can and lower fully. Hold a rail for balance."
+  },
+  {
+    "id": "single-leg-dumbbell-calf-raise",
+    "name": "One-Leg Dumbbell Calf Raise",
+    "primary": "Calves",
+    "secondary": [],
+    "equipment": "dumbbell",
+    "images": 2,
+    "howto": "Hold a dumbbell in one hand, stand on a step on the same-side foot. Raise and lower."
+  },
+  {
+    "id": "tibialis-raise",
+    "name": "Tibialis Raise",
+    "primary": "Calves",
+    "secondary": [],
+    "equipment": "body only",
+    "images": 2,
+    "howto": "Lean against a wall with heels forward. Pull your toes up toward your shins, then lower."
+  },
+  {
+    "id": "single-leg-calf-press",
+    "name": "Single-Leg Calf Press",
+    "primary": "Calves",
+    "secondary": [],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Place one foot on the leg press platform. Press through your toes and lower slowly."
+  },
+  {
+    "id": "plate-loaded-standing-calf-raise",
+    "name": "Standing Calf Raise (Plate-Loaded)",
+    "primary": "Calves",
+    "secondary": [],
+    "equipment": "machine",
+    "images": 2,
+    "howto": "Stand under the shoulder pads. Rise up and lower down to full stretch."
+  },
+  {
+    "id": "jump-rope",
+    "name": "Jump Rope",
+    "primary": "Calves",
+    "secondary": [
+      "Quads"
+    ],
+    "equipment": "other",
+    "images": 2,
+    "timed": true,
+    "hint": "Keep a steady rhythm.",
+    "howto": "Jump with small hops using your wrists to turn the rope. Land softly on your toes."
   }
 ]

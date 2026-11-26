@@ -12,7 +12,7 @@ const plank = { id: "plank", name: "Plank", primary: "Abs", equipment: "body onl
 
 test("only holds are timed; a missing flag means reps (old data keeps working)", () => {
   const lib = JSON.parse(readFileSync(new URL("../data/exercises.json", import.meta.url)));
-  assert.deepEqual(lib.filter((e) => e.timed).map((e) => e.id), ["plank"]);
+  assert.deepEqual(lib.filter((e) => e.timed).map((e) => e.id), ["plank", "dead-hang", "side-plank", "hollow-body-hold", "l-sit", "wall-sit", "jump-rope"]);
   assert.equal(isTimed(undefined), false);
   assert.equal(isTimed({ id: "x" }), false);
 });

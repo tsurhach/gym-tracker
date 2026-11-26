@@ -19,6 +19,7 @@ export default {
   "equip.other": "אחר",
   "equip.e-z curl bar": "מוט W",
   "equip.kettlebells": "קטלבל",
+  "equip.bands": "גומיות",
   "goal.strength": "כוח",
   "goal.muscle": "בניית שריר",
   "goal.endurance": "סיבולת",
