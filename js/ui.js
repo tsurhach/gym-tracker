@@ -13,11 +13,11 @@ const ENT = {
 export const esc = (text) =>
   String(text ?? "").replace(/[&<>"']/g, (c) => ENT[c]);
 
-// Picture files for a library exercise: 0, 1 or 2 drawings (ext defaults to svg).
+// Picture files for a library exercise: 0, 1 or 2 drawings (ext defaults to svg). `img` = borrow another exercise's drawing folder.
 export const exImageUrls = (ex) =>
   Array.from(
     { length: ex?.images ?? 0 },
-    (_, i) => `./img/ex/${encodeURIComponent(ex.id)}/${i}.${ex.ext ?? "svg"}`,
+    (_, i) => `./img/ex/${encodeURIComponent(ex.img ?? ex.id)}/${i}.${ex.ext ?? "svg"}`,
   );
 
 // The written how-to, a compact block under the picture. Only when the setting is on (missing = off).

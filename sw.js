@@ -1,8 +1,8 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files and the exercise drawings); a release is a new VERSION.
-const VERSION = "de23ceee19e9";
+const VERSION = "a5604f0cca49";
 const SHELL = `gym-tracker-shell-${VERSION}`;
-const IMG_VERSION = "18c8e8f10367";
+const IMG_VERSION = "86e841be1b3c";
 const IMAGES = `gym-tracker-img-${IMG_VERSION}`; // drawings are cached per IMG_VERSION (hash of img/ex), so changed drawings replace the old cache on activate
 
 const PRECACHE = [
@@ -183,9 +183,9 @@ async function cacheExerciseImages() {
     (await shell.match("./data/exercises.json")) ||
     (await fetch("./data/exercises.json"));
   const library = await res.json();
-  const urls = library.flatMap((e) =>
-    Array.from({ length: e.images || 0 }, (_, i) => `./img/ex/${e.id}/${i}.${e.ext || "svg"}`),
-  );
+  const urls = [
+    ...new Set(library.flatMap((e) => Array.from({ length: e.images || 0 }, (_, i) => `./img/ex/${e.img || e.id}/${i}.${e.ext || "svg"}`))),
+  ];
   for (let i = 0; i < urls.length; i += IMAGE_BATCH) {
     await Promise.all(
       urls.slice(i, i + IMAGE_BATCH).map(async (u) => {

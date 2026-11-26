@@ -39,8 +39,8 @@ const exRows = lib.map((e) => {
   n++;
   const x = heEx[e.id];
   const ext = e.ext ?? "svg";
-  let img = `./img/ex/${e.id}/0.${ext}`;
-  if (inline && e.images) img = `data:image/${ext === "svg" ? "svg+xml" : ext};base64,` + fs.readFileSync(new URL(`../img/ex/${e.id}/0.${ext}`, import.meta.url)).toString("base64");
+  let img = `./img/ex/${e.img ?? e.id}/0.${ext}`;
+  if (inline && e.images) img = `data:image/${ext === "svg" ? "svg+xml" : ext};base64,` + fs.readFileSync(new URL(`../img/ex/${e.img ?? e.id}/0.${ext}`, import.meta.url)).toString("base64");
   return `<tr id="r${n}"><td class="n">${n}</td><td class="thumb">${e.images ? `<img src="${img}" alt="" loading="lazy">` : ""}</td>
   <td><div class="en"><b>${esc(e.name)}</b></div><div class="en how">${esc(e.howto)}</div></td>
   <td><div class="he"><b>${esc(x.he)}</b></div><div class="he alias">${esc((x.aliases ?? []).join(" · "))}</div><div class="he how">${esc(x.howto)}</div></td></tr>`;
