@@ -3,6 +3,7 @@
 import * as sc from "./synccrypto.js";
 import { DEFAULT_STEP, MUSCLES } from "./constants.js";
 import { LIMITS, norm } from "./planfile.js";
+import { t } from "./i18n/index.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -103,7 +104,7 @@ export function buildView(
     sessions,
     customExercises: state.customExercises
       .filter((c) => used.has(c.id))
-      .map((c) => pick(c, ["id", "name", "primary", "secondary", "equipment"])),
+      .map((c) => pick(c, ["id", "name", "primary", "secondary", "equipment", "timed"])),
   };
   if (workouts) view.workouts = workouts;
   if (copy) view.canCopy = true; // the sharer's "let them copy" tick, sealed inside the view
@@ -124,7 +125,7 @@ export function cleanView(v) {
     name: String(o.name ?? ""),
     updatedAt: n0(o.updatedAt),
     canCopy: o.canCopy === true,
-    customExercises: arr(o.customExercises).map((c) => ({ id: String(c?.id), name: String(c?.name ?? ""), primary: String(c?.primary ?? ""), secondary: arr(c?.secondary).map(String), equipment: c?.equipment === undefined ? undefined : String(c.equipment) })),
+    customExercises: arr(o.customExercises).map((c) => ({ id: String(c?.id), name: String(c?.name ?? ""), primary: String(c?.primary ?? ""), secondary: arr(c?.secondary).map(String), equipment: c?.equipment === undefined ? undefined : String(c.equipment), ...(c?.timed === true ? { timed: true } : {}) })),
     sessions: arr(o.sessions).map((s) => ({
       id: String(s?.id),
       workoutName: String(s?.workoutName ?? ""),
@@ -153,13 +154,15 @@ export function cleanView(v) {
 // Built only from cleanView output, and only when the sharer allowed it (view.canCopy, sealed in the view).
 // A copy is plain new records: new ids, no link back; the store stamps them on save.
 // has(id) = is this a library exercise. The sharer's custom exercises are re-made as mine (matched by name, no media).
+// Timed exercises keep seconds in reps, so a copied plan allows up to an hour.
+const MAX_SEC = 3600;
 const clamp = (x, lo, hi, d) => (num(x) ? Math.min(hi, Math.max(lo, Math.round(x))) : d);
 const cap = (x, n) => String(x ?? "").trim().slice(0, n);
 const copyName = (base, taken, suffixFirst) => {
-  const t = new Set(taken.map((n) => n.toLowerCase()));
+  const seen = new Set(taken.map((n) => n.toLowerCase()));
   for (let i = suffixFirst ? 1 : 0; ; i++) {
-    const out = i === 0 ? base : `${base} (copy${i > 1 ? ` ${i}` : ""})`;
-    if (!t.has(out.toLowerCase())) return out;
+    const out = i === 0 ? base : i === 1 ? t("share.copy", { base }) : t("share.copyN", { base, n: i });
+    if (!seen.has(out.toLowerCase())) return out;
   }
 };
 // One per copy action: remembers the customs made, so several days share them.
@@ -181,6 +184,7 @@ function resolveEx(view, id, state, has, cx) {
     secondary: arr(c.secondary).filter((m) => MUSCLES.includes(m) && m !== c.primary).slice(0, 6),
     images: 0, // photos and videos are not copied
     ...(c.equipment ? { equipment: cap(c.equipment, 30) } : {}),
+    ...(c.timed === true ? { timed: true } : {}),
   };
   if (!mine) cx.fresh.push(ex);
   cx.map.set(id, ex.id);
@@ -196,7 +200,7 @@ const make = (view, state, name, rows, cx, has, suffixFirst) => {
     items.push({ exerciseId, ...r.rest });
   }
   if (!items.length) return { workout: null, skipped };
-  return { workout: { id: crypto.randomUUID(), name: copyName(cap(name, 40) || "Workout", state.workouts.map((w) => w.name), suffixFirst), muscles: [], items }, skipped };
+  return { workout: { id: crypto.randomUUID(), name: copyName(cap(name, 40) || t("share.workoutName"), state.workouts.map((w) => w.name), suffixFirst), muscles: [], items }, skipped };
 };
 // -> { workout | null, skipped }. Does not touch state; the caller pushes cx.fresh (new customs) and the workout, then saves.
 export function copyDay(view, dayId, state, has, cx = newCopy()) {
@@ -206,9 +210,9 @@ export function copyDay(view, dayId, state, has, cx = newCopy()) {
 }
 function dayCopy(view, d, state, has, cx) {
   const rows = arr(d.items).map((it) => {
-    const repMin = clamp(it.repMin, 1, 100, 8);
+    const repMin = clamp(it.repMin, 1, MAX_SEC, 8);
     const step = num(it.step) && it.step > 0 ? Math.min(LIMITS.step[1], Math.max(LIMITS.step[0], Math.round(it.step * 100) / 100)) : DEFAULT_STEP;
-    return { exerciseId: it.exerciseId, rest: { sets: clamp(it.sets, 1, LIMITS.sets[1], 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, 100, 12)), step } };
+    return { exerciseId: it.exerciseId, rest: { sets: clamp(it.sets, 1, LIMITS.sets[1], 3), repMin, repMax: Math.max(repMin, clamp(it.repMax, 1, MAX_SEC, 12)), step } };
   });
   const r = make(view, state, d.name, rows, cx, has, false);
   if (r.workout) r.workout.muscles = arr(d.muscles).filter((m) => MUSCLES.includes(m)).slice(0, 8);
@@ -222,7 +226,7 @@ export function dayFromSession(view, sessionId, state, has, cx = newCopy()) {
   const rows = arr(s.entries)
     .filter((e) => arr(e.sets).length)
     .map((e) => {
-      const reps = e.sets.map((t) => clamp(t.reps, 1, 100, 1));
+      const reps = e.sets.map((t) => clamp(t.reps, 1, MAX_SEC, 1));
       return { exerciseId: e.exerciseId, rest: { sets: clamp(e.sets.length, 1, LIMITS.sets[1], 1), repMin: Math.min(...reps), repMax: Math.max(...reps), step: DEFAULT_STEP } };
     });
   return make(view, state, s.workoutName, rows, cx, has, true);
@@ -248,16 +252,9 @@ export const variantOf = (v, weightOn) =>
   (v.role === "coach" ? (weightOn ? "hpw" : "hp") : v.ticks?.plan ? "hp" : "h") + (v.ticks?.copy ? "c" : "");
 const pairKind = (sharer, viewer) => `share ${sharer}>${viewer}`;
 
-export const MSG = {
-  404: "That code is not valid, or it has expired.",
-  409: "That code was already used.",
-  413: "Too many people or open invites.",
-  429: "Too many tries. Wait a while and try again.",
-};
-const NEED_NAME = "Set your name for others first.";
 const fail = (r) => {
   throw new Error(
-    MSG[r.status] ?? "Could not reach the server. Try again later.",
+    r.status === 404 ? t("share.err404") : r.status === 409 ? t("share.err409") : r.status === 413 ? t("share.err413") : r.status === 429 ? t("share.err429") : t("share.errServer"),
   );
 };
 
@@ -356,7 +353,7 @@ export function createShare(h) {
   }
 
   async function invite(role, ticks = {}) {
-    if (!nameOf()) throw new Error(NEED_NAME);
+    if (!nameOf()) throw new Error(t("share.needName"));
     const k = await ensureKeys();
     const dk = await h.link.key();
     const code = makeInviteCode();
@@ -391,7 +388,7 @@ export function createShare(h) {
   // Look at an invite before accepting: who it is from and as what.
   async function peek(text) {
     const code = parseInviteCode(text);
-    if (!code) throw new Error("Typo in the code. Check it and try again.");
+    if (!code) throw new Error(t("share.errTypo"));
     const { lookup, secret } = await codeKeys(code);
     const r = await must("/invite/peek", { lookup });
     try {
@@ -403,7 +400,7 @@ export function createShare(h) {
   }
 
   async function accept(p, wantsBack) {
-    if (!nameOf()) throw new Error(NEED_NAME);
+    if (!nameOf()) throw new Error(t("share.needName"));
     const k = await ensureKeys();
     const dk = await h.link.key();
     const { id, name, pub, role } = p.from;

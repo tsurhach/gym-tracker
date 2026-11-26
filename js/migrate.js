@@ -1,5 +1,27 @@
 import { looseMatch } from "./planfile.js";
 
+// Old plank plans hold rep ranges like 8-12; now that a plank counts seconds that would mean an 8 s hold.
+// Once (settings.timedFixed): plan items and the open workout's targets of built-in timed exercises
+// whose top is 20 or less get the default timed range. Returns how many were changed.
+export function fixTimedPlans(state, library) {
+  if (state.settings.timedFixed) return 0;
+  const timed = new Set(library.filter((e) => e.timed === true).map((e) => e.id));
+  let n = 0;
+  const fix = (o) => {
+    if (o && timed.has(o.exerciseId ?? o.id) && o.repMax <= 20) {
+      Object.assign(o, { repMin: 30, repMax: 45 });
+      n++;
+    }
+  };
+  for (const w of state.workouts) w.items.forEach(fix);
+  for (const e of state.active?.entries ?? []) if (e.target && timed.has(e.exerciseId) && e.target.repMax <= 20) {
+    Object.assign(e.target, { repMin: 30, repMax: 45 });
+    n++;
+  }
+  state.settings.timedFixed = true;
+  return n;
+}
+
 // One-time, repeat-safe clean-up: a custom exercise that an import made only because the name was spelled a
 // little differently ("Dumbbell Bicep Curls") is replaced by the library exercise, so it gets its drawing.
 // Customs that have photos or video (mediaKeys) or whose name is not a near-miss are left alone. Every plan

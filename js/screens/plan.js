@@ -1,7 +1,7 @@
-import { GOALS, MUSCLES, WEEKDAYS } from "../constants.js";
+import { GOALS, MUSCLES } from "../constants.js";
 import { PLATE_SIZES, gymPlates, parseNum, plateRule } from "../logic.js";
 import { blankWorkouts } from "../proposal.js";
-import { applyGoal, deleteCustomExercise } from "../session.js";
+import { applyGoal, deleteCustomExercise, setCustomTimed } from "../session.js";
 import { exportCsv, exportJson } from "../store.js";
 import { addBackup } from "../sync.js";
 import { buildFullBackup, fmtSize, readBackup } from "../backup.js";
@@ -29,6 +29,7 @@ import {
 } from "../rest.js";
 import * as push from "../push.js";
 import { confirmSheet, esc, fmtKg, showBanner } from "../ui.js";
+import { applyLang, heEnabled, lang, ltr, ltrText, t as tr, tk, weekday, exTwo } from "../i18n/index.js";
 import { runningVersion } from "../update.js";
 
 const isoDay = (d = new Date()) =>
@@ -50,46 +51,46 @@ let openX = null;
 
 function itemHtml(it, ctx, i, n, wid) {
   const ex = ctx.lookup(it.exerciseId);
-  const name = ex ? ex.name : "Unknown exercise";
+  const name = ex ? ex.name : tr("plan.unknown");
   const open = openX === `${wid}|${it.exerciseId}`;
   const rule = plateRule(it, ex);
   const w = ctx.state.workouts.find((x) => x.id === wid);
   const L = w ? ssLetter(w, it.exerciseId) : "";
   return `<li class="item${L ? " ss" : ""}" data-x="${esc(it.exerciseId)}">
     <div class="xline">
-      <button class="handle" data-handle aria-label="Move ${esc(name)}: drag, or use the up and down arrow keys">≡</button>
+      <button class="handle" data-handle aria-label="${tr("plan.handle.aria", { name: esc(name) })}">≡</button>
       <button class="xmain" data-act="x-toggle" aria-expanded="${open}">
-        <span class="ex-name">${esc(name)}</span>
-        <span class="xsum muted">${esc(summaryText(it))}</span><span class="xchev" aria-hidden="true">›</span>
+        <span class="ex-name" dir="auto">${ex ? exTwo(it.exerciseId, name) : esc(name)}</span>
+        <span class="xsum muted">${ltr(esc(summaryText(it, ex)))}</span><span class="xchev" aria-hidden="true">›</span>
       </button>
-      ${L ? `<button class="tag ss-tag" data-act="ss-edit" aria-label="Edit Superset ${L}">${L}</button>` : ""}
+      ${L ? `<button class="tag ss-tag" data-act="ss-edit" aria-label="${tr("plan.ss.edit.aria", { letter: L })}">${L}</button>` : ""}
     </div>
     ${
       open
         ? `<div class="xbody">
     <div class="xbtns">
-      <button class="icon-btn" data-act="x-up" aria-label="Move exercise up"${i === 0 ? " disabled" : ""}>↑</button>
-      <button class="icon-btn" data-act="x-down" aria-label="Move exercise down"${i === n - 1 ? " disabled" : ""}>↓</button>
-      <button class="btn" data-act="x-swap">Swap</button>
-      <button class="icon-btn warn" data-act="x-del" aria-label="Remove exercise">✕</button>
+      <button class="icon-btn" data-act="x-up" aria-label="${tr("plan.x.up.aria")}"${i === 0 ? " disabled" : ""}>↑</button>
+      <button class="icon-btn" data-act="x-down" aria-label="${tr("plan.x.down.aria")}"${i === n - 1 ? " disabled" : ""}>↓</button>
+      <button class="btn" data-act="x-swap">${tr("plan.x.swap")}</button>
+      <button class="icon-btn warn" data-act="x-del" aria-label="${tr("plan.x.del.aria")}">✕</button>
     </div>
     <div class="fields">
-      <label>Sets<input data-field="sets" inputmode="numeric" value="${esc(it.sets)}" /></label>
-      <label>Min reps<input data-field="repMin" inputmode="numeric" value="${esc(it.repMin)}" /></label>
-      <label>Max reps<input data-field="repMax" inputmode="numeric" value="${esc(it.repMax)}" /></label>
-      <label>Step kg<input data-field="step" inputmode="decimal" value="${esc(fmtKg(it.step))}" /></label>
+      <label>${tr("plan.f.sets")}<input data-field="sets" inputmode="numeric" value="${esc(it.sets)}" /></label>
+      <label>${tr(ex?.timed === true ? "plan.f.secmin" : "plan.f.repmin")}<input data-field="repMin" inputmode="numeric" value="${esc(it.repMin)}" /></label>
+      <label>${tr(ex?.timed === true ? "plan.f.secmax" : "plan.f.repmax")}<input data-field="repMax" inputmode="numeric" value="${esc(it.repMax)}" /></label>
+      <label>${tr("plan.f.step")}<input data-field="step" inputmode="decimal" value="${esc(fmtKg(it.step))}" /></label>
     </div>
-    <div class="setting">Rest after a set (blank = normal rest)
+    <div class="setting">${tr("plan.x.rest")}
       <span class="rest-in">
-        <input data-field="xRestMin" inputmode="numeric" aria-label="Rest minutes for this exercise" value="${it.restSec == null ? "" : Math.floor(it.restSec / 60)}" /> min
-        <input data-field="xRestSec" inputmode="numeric" aria-label="Rest seconds for this exercise" value="${it.restSec == null ? "" : it.restSec % 60}" /> sec
+        <input data-field="xRestMin" inputmode="numeric" aria-label="${tr("plan.x.restmin.aria")}" value="${it.restSec == null ? "" : Math.floor(it.restSec / 60)}" /> ${tr("plan.unit.min")}
+        <input data-field="xRestSec" inputmode="numeric" aria-label="${tr("plan.x.restsec.aria")}" value="${it.restSec == null ? "" : it.restSec % 60}" /> ${tr("plan.unit.sec")}
       </span>
     </div>
-    <label class="setting">Uses plates
+    <label class="setting">${tr("plan.x.plates")}
       <input type="checkbox" data-field="uses"${rule.on ? " checked" : ""} />
     </label>
-    ${rule.on ? `<div class="setting">Empty weight (bar or sled, before plates)
-      <span class="rest-in"><input data-field="emptyKg" inputmode="decimal" aria-label="Empty weight in kg" value="${esc(fmtKg(rule.empty))}" /> kg</span>
+    ${rule.on ? `<div class="setting">${tr("plan.x.empty")}
+      <span class="rest-in"><input data-field="emptyKg" inputmode="decimal" aria-label="${tr("plan.x.empty.aria")}" value="${esc(fmtKg(rule.empty))}" /> kg</span>
     </div>` : ""}
   </div>`
         : ""
@@ -99,10 +100,10 @@ function itemHtml(it, ctx, i, n, wid) {
 
 const itemsHtml = (w, ctx) =>
   w.items.map((it, j) => itemHtml(it, ctx, j, w.items.length, w.id)).join("") ||
-  `<li class="empty muted">No exercises yet. Add some below.</li>`;
+  `<li class="empty muted">${tr("plan.noex")}</li>`;
 
-const countText = (k) => `· ${k ? `${k} ${k === 1 ? "exercise" : "exercises"}` : "no exercises"}`;
-const musclesText = (w) => `Muscles: ${w.muscles.join(", ") || "any (tap to choose)"}`;
+const countText = (k) => `· ${k ? tr("plan.count", { n: k, num: ltrText(k) }) : tr("plan.count.none")}`;
+const musclesText = (w) => tr("plan.muscles", { list: w.muscles.map((m) => tk("muscle", m)).join(", ") || tr("plan.muscles.any") });
 const dayEl = (root, wid) => root.querySelector(`[data-w="${CSS.escape(wid)}"]`);
 const itemEl = (day, id) => day?.querySelector(`[data-x="${CSS.escape(id)}"]`);
 
@@ -218,9 +219,9 @@ function rememberOpen(key, on) {
     localStorage.setItem(OPEN_KEY, JSON.stringify([...openSet]));
   } catch {}
 }
-const section = (key, title, body, { count = "", attrs = "", force = false } = {}) =>
+const section = (key, title, body, { count = "", attrs = "", force = false, auto = false } = {}) =>
   `<details class="card sec" data-sec="${esc(key)}"${attrs}${force || openSet.has(key) ? " open" : ""}>
-    <summary><span class="sec-title">${esc(title)}</span>${count ? `<span class="sec-count muted">· ${esc(count)}</span>` : ""}</summary>
+    <summary><span class="sec-title"${auto ? ' dir="auto"' : ""}>${esc(title)}</span>${count ? `<span class="sec-count muted">· ${esc(count)}</span>` : ""}</summary>
     <div class="sec-body">${body}</div>
   </details>`;
 
@@ -229,27 +230,28 @@ function workoutHtml(w, ctx, i, n) {
   return section(
     `w:${w.id}`,
     w.name,
-    `<input class="name-input" data-field="wname" value="${esc(w.name)}" aria-label="Workout name" maxlength="40" />
+    `<input class="name-input" dir="auto" data-field="wname" value="${esc(w.name)}" aria-label="${tr("plan.w.name.aria")}" maxlength="40" />
     <div class="row" style="margin-top:8px">
-      <button class="icon-btn" data-act="w-up" aria-label="Move workout up"${i === 0 ? " disabled" : ""}>↑</button>
-      <button class="icon-btn" data-act="w-down" aria-label="Move workout down"${i === n - 1 ? " disabled" : ""}>↓</button>
-      <button class="btn grow" style="min-height:44px;margin:0" data-act="w-copy">Duplicate day</button>
-      <button class="icon-btn warn" data-act="w-del" aria-label="Delete workout">✕</button>
+      <button class="icon-btn" data-act="w-up" aria-label="${tr("plan.w.up.aria")}"${i === 0 ? " disabled" : ""}>↑</button>
+      <button class="icon-btn" data-act="w-down" aria-label="${tr("plan.w.down.aria")}"${i === n - 1 ? " disabled" : ""}>↓</button>
+      <button class="btn grow" style="min-height:44px;margin:0" data-act="w-copy">${tr("plan.w.copy")}</button>
+      <button class="icon-btn warn" data-act="w-del" aria-label="${tr("plan.w.del.aria")}">✕</button>
     </div>
     <details class="muscles-line">
       <summary data-muscles>${esc(musclesText(w))}</summary>
       <div class="chips">${MUSCLES.map(
         (m) =>
-          `<button class="chip" data-act="w-muscle" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(m)}</button>`,
+          `<button class="chip" data-act="w-muscle" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(tk("muscle", m))}</button>`,
       ).join("")}</div>
     </details>
     <ul class="items xlist">${itemsHtml(w, ctx)}</ul>
-    ${k > 1 ? `<p class="muted small" style="margin-bottom:var(--gap)">Drag ≡ to change the order. Tap a line to edit its sets and reps.</p>` : ""}
-    <button class="btn" data-act="add-ex">+ Add exercises</button>
-    ${k > 1 ? `<button class="btn" data-act="ss-new">Superset…</button>` : ""}`,
+    ${k > 1 ? `<p class="muted small" style="margin-bottom:var(--gap)">${tr("plan.drag.hint")}</p>` : ""}
+    <button class="btn" data-act="add-ex">${tr("plan.add.ex")}</button>
+    ${k > 1 ? `<button class="btn" data-act="ss-new">${tr("plan.ss.new")}</button>` : ""}`,
     {
       count: countText(k).slice(2),
       attrs: ` data-w="${esc(w.id)}"`,
+      auto: true,
     },
   );
 }
@@ -258,19 +260,20 @@ function workoutHtml(w, ctx, i, n) {
 function scheduleHtml(state) {
   const raw = state.settings.schedule?.days;
   const days = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
-  const on = WEEKDAYS.map((_, d) => d).filter((d) => Object.hasOwn(days, d));
-  return `<p class="muted small" style="margin-top:0">Pick your training days. Today will show that day's workout.</p>
-    <div class="seg" role="group" aria-label="Training days">${WEEKDAYS.map((n, d) => `<button class="chip" data-sch="day" data-d="${d}" aria-pressed="${on.includes(d)}">${n}</button>`).join("")}</div>
+  const wd = [0, 1, 2, 3, 4, 5, 6];
+  const on = wd.filter((d) => Object.hasOwn(days, d));
+  return `<p class="muted small" style="margin-top:0">${tr("plan.sch.hint")}</p>
+    <div class="seg" role="group" aria-label="${tr("plan.sch.days.aria")}">${wd.map((d) => `<button class="chip" data-sch="day" data-d="${d}" aria-pressed="${on.includes(d)}">${weekday(d)}</button>`).join("")}</div>
     ${on
       .map(
-        (d) => `<label class="setting">${WEEKDAYS[d]}
-        <select data-sch="sel" data-d="${d}" aria-label="Workout on ${WEEKDAYS[d]}">
-          <option value="next">Next in rotation</option>
+        (d) => `<label class="setting">${weekday(d)}
+        <select data-sch="sel" data-d="${d}" aria-label="${tr("plan.sch.on.aria", { day: weekday(d) })}">
+          <option value="next">${tr("plan.sch.next")}</option>
           ${state.workouts.map((w) => `<option value="${esc(w.id)}"${days[d] === w.id ? " selected" : ""}>${esc(w.name)}</option>`).join("")}
         </select></label>`,
       )
       .join("")}
-    ${on.length ? `<button class="btn" data-sch="clear" style="margin-top:8px">Clear schedule</button>` : ""}
+    ${on.length ? `<button class="btn" data-sch="clear" style="margin-top:8px">${tr("plan.sch.clear")}</button>` : ""}
     <div data-calbox>${calHtml(state)}</div>`;
 }
 
@@ -282,107 +285,109 @@ export function render(root, ctx) {
 
   const none = !state.workouts.length;
   // With no plan yet, the way to get one starts open; otherwise everything starts closed.
-  const goalHtml = `<div class="seg" role="group" aria-label="Training goal">${Object.entries(
+  const goalHtml = `<div class="seg" role="group" aria-label="${tr("plan.goal.aria")}">${Object.keys(
     GOALS,
   )
     .map(
-      ([key, g]) =>
-        `<button class="chip" data-act="goal" data-goal="${key}" aria-pressed="${settings.goal === key}">${esc(g.label)}</button>`,
+      (key) =>
+        `<button class="chip" data-act="goal" data-goal="${key}" aria-pressed="${settings.goal === key}">${esc(tk("goal", key))}</button>`,
     )
     .join("")}</div>
-      <p class="muted small" style="margin-top:8px">New exercises start at ${GOALS[settings.goal].sets} sets of ${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax} reps. To change one exercise, tap it in a workout.</p>`;
-  root.innerHTML = `<h1 class="title">Plan</h1>
-    ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>No workouts yet.</b><p class="muted">Add a workout below, or redo the setup to get a proposed plan.</p></section>`}
-    <button class="btn" data-act="add-workout">+ Add workout</button>
-    <a class="card weight-card" href="#/help"><span>How to use this app</span><span class="muted small">Short guide</span></a>
-    ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>Sync and sign-in</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}
-    ${ctx.share ? `<a class="card weight-card" href="#/people"><span>People: coach and friends</span><span class="muted small">View only</span></a>` : ""}
-    ${section("g:goal", "Default sets and reps", goalHtml)}
-    ${section("g:schedule", "Weekly schedule", `<div data-schedule>${scheduleHtml(state)}</div>`)}
+      <p class="muted small" style="margin-top:8px">${tr("plan.goal.note", { sets: ltr(GOALS[settings.goal].sets), range: ltr(`${GOALS[settings.goal].repMin}–${GOALS[settings.goal].repMax}`) })}</p>`;
+  root.innerHTML = `<h1 class="title">${tr("plan.title")}</h1>
+    ${state.workouts.map((w, i) => workoutHtml(w, ctx, i, state.workouts.length)).join("") || `<section class="card empty"><b>${tr("plan.none.title")}</b><p class="muted">${tr("plan.none.sub")}</p></section>`}
+    <button class="btn" data-act="add-workout">${tr("plan.add.workout")}</button>
+    <a class="card weight-card" href="#/help"><span>${tr("plan.help.title")}</span><span class="muted small">${tr("plan.help.sub")}</span></a>
+    ${ctx.sync ? `<a class="card weight-card" href="#/sync"><span>${tr("plan.sync.title")}</span><span class="muted small">${esc(ctx.sync.status())}</span></a>` : ""}
+    ${ctx.share ? `<a class="card weight-card" href="#/people"><span>${tr("plan.people.title")}</span><span class="muted small">${tr("plan.people.sub")}</span></a>` : ""}
+    ${section("g:goal", tr("plan.sec.goal"), goalHtml)}
+    ${section("g:schedule", tr("plan.sec.schedule"), `<div data-schedule>${scheduleHtml(state)}</div>`)}
     ${section(
       "g:change",
-      "Change the whole plan",
-      `<button class="btn" data-act="redo">Redo setup</button>
-      <a class="btn" href="#/import/programs">Ready-made programs</a>
-      <a class="btn" href="#/import/file">Load a plan from a file</a>
-      <a class="btn" href="#/import/ai">Build a plan with AI</a>`,
+      tr("plan.sec.change"),
+      `<button class="btn" data-act="redo">${tr("plan.redo")}</button>
+      <a class="btn" href="#/import/programs">${tr("plan.programs")}</a>
+      <a class="btn" href="#/import/file">${tr("plan.file")}</a>
+      <a class="btn" href="#/import/ai">${tr("plan.ai")}</a>`,
       { force: none },
     )}
     ${
       state.customExercises.length
         ? section(
             "g:own",
-            "Your exercises",
+            tr("plan.sec.own"),
             `<ul class="items">${state.customExercises
               .map(
                 (c) => `<li class="item"><div class="row">
-        <div class="grow"><div class="ex-name">${esc(c.name)}</div><span class="tag">${esc(c.primary)}</span></div>
-        <button class="btn" data-act="cx-del" data-id="${esc(c.id)}" aria-label="Delete ${esc(c.name)}">Delete</button>
+        <div class="grow"><div class="ex-name" dir="auto">${esc(c.name)}</div><span class="tag">${esc(MUSCLES.includes(c.primary) ? tk("muscle", c.primary) : c.primary)}</span></div>
+        <button class="btn" data-act="cx-timed" data-id="${esc(c.id)}" aria-pressed="${c.timed === true}" aria-label="${tr("plan.cx.timed.aria", { name: esc(c.name) })}">${tr(c.timed === true ? "plan.cx.byTime" : "plan.cx.byReps")}</button>
+        <button class="btn" data-act="cx-del" data-id="${esc(c.id)}" aria-label="${tr("plan.cx.del.aria", { name: esc(c.name) })}">${tr("plan.cx.del")}</button>
       </div></li>`,
               )
               .join("")}</ul>`,
-            { count: String(state.customExercises.length) },
+            { count: ltrText(String(state.customExercises.length)) },
           )
         : ""
     }
     ${section(
       "g:settings",
-      "Settings",
-      `<div class="setting-group" role="group" aria-label="Appearance">
-        <div>Appearance</div>
-        <div class="seg">${[["dark", "Dark"], ["light", "Light"], ["auto", "Match phone"]]
+      tr("plan.sec.settings"),
+      `<div class="setting-group" role="group" aria-label="${tr("plan.set.appearance")}">
+        <div>${tr("plan.set.appearance")}</div>
+        <div class="seg">${[["dark", tr("plan.theme.dark")], ["light", tr("plan.theme.light")], ["auto", tr("plan.theme.auto")]]
           .map(([m, l]) => `<button class="chip" data-act="theme" data-mode="${m}" aria-pressed="${(settings.theme ?? "dark") === m}">${l}</button>`)
           .join("")}</div>
       </div>
-      <label class="setting">Show exercise photos
+      ${languageHtml(settings)}
+      <label class="setting">${tr("plan.set.photos")}
         <input type="checkbox" data-field="showPhotos"${settings.showPhotos ? " checked" : ""} />
       </label>
-      <label class="setting">Body-weight suggestions
+      <label class="setting">${tr("plan.set.bodyadvice")}
         <input type="checkbox" data-field="bodyAdvice"${settings.bodyAdvice === false ? "" : " checked"} />
       </label>
-      <p class="muted small">Tips like "add a rep or two" on push-ups and other body-weight moves.</p>
-      <label class="setting">Stuck reminder
+      <p class="muted small">${tr("plan.set.bodyadvice.sub")}</p>
+      <label class="setting">${tr("plan.set.stuck")}
         <input type="checkbox" data-field="stuckNote"${settings.stuckNote === false ? "" : " checked"} />
       </label>
-      <p class="muted small">A gentle note when your numbers have stayed the same for 3 workouts.</p>
-      <div class="setting" role="group" aria-label="Rest between sets">Rest between sets
+      <p class="muted small">${tr("plan.set.stuck.sub", { n: ltr(3) })}</p>
+      <div class="setting" role="group" aria-label="${tr("plan.set.rest")}">${tr("plan.set.rest")}
         <span class="rest-in">
-          <input data-field="restMin" inputmode="numeric" aria-label="Rest minutes" value="${Math.floor(restLength(settings) / 60)}" /> min
-          <input data-field="restSec" inputmode="numeric" aria-label="Rest seconds" value="${restLength(settings) % 60}" /> sec
+          <input data-field="restMin" inputmode="numeric" aria-label="${tr("plan.set.restmin.aria")}" value="${Math.floor(restLength(settings) / 60)}" /> ${tr("plan.unit.min")}
+          <input data-field="restSec" inputmode="numeric" aria-label="${tr("plan.set.restsec.aria")}" value="${restLength(settings) % 60}" /> ${tr("plan.unit.sec")}
         </span>
       </div>
-      <p class="muted small">0:00 turns the timer off</p>
-      <label class="setting">Notify me when rest is over
+      <p class="muted small">${tr("plan.set.rest.off", { time: ltr("0:00") })}</p>
+      <label class="setting">${tr("plan.set.notify")}
         <input type="checkbox" data-field="notifyRest"${settings.notifyRest ? " checked" : ""}${push.supported() ? "" : " disabled"} />
       </label>
-      ${push.supported() ? "" : `<p class="muted small">Works when the app is installed on your home screen.</p>`}
-      <div class="setting-group" id="rest-sound" role="group" aria-label="Rest-over sound">${soundHtml()}</div>
+      ${push.supported() ? "" : `<p class="muted small">${tr("plan.set.notify.sub")}</p>`}
+      <div class="setting-group" id="rest-sound" role="group" aria-label="${tr("plan.snd.title")}">${soundHtml()}</div>
 `,
     )}
     ${section(
       "g:plates",
-      "Plate sizes",
-      `<div class="setting-group" role="group" aria-label="Plates the gym has">
-        <div class="muted small">Plates the gym has (kg, pairs)</div>
-        <div class="plate-pick">${PLATE_SIZES.map((k) => `<label><input type="checkbox" data-field="plate" data-kg="${k}"${gymPlates(settings).includes(k) ? " checked" : ""} /> ${k}</label>`).join("")}</div>
+      tr("plan.sec.plates"),
+      `<div class="setting-group" role="group" aria-label="${tr("plan.plates.aria")}">
+        <div class="muted small">${tr("plan.plates.label")}</div>
+        <div class="plate-pick">${PLATE_SIZES.map((k) => `<label><input type="checkbox" data-field="plate" data-kg="${k}"${gymPlates(settings).includes(k) ? " checked" : ""} /> ${ltr(k)}</label>`).join("")}</div>
       </div>`,
     )}
     ${section(
       "g:backup",
-      "Backup and export",
-      `<button class="btn" data-act="export">Export backup</button>
-      <button class="btn" data-act="export-full">Full backup (with your photos and sound)</button>
-      <p class="muted small">The full backup also holds the photos, videos and sound you added. Videos can make the file large.</p>
-      <button class="btn" data-act="export-csv">Export to spreadsheet (CSV)</button>
-      <p class="muted small">The plain backup leaves out the photos, videos and sound you added.</p>
-      <label class="btn file-btn">Import backup
+      tr("plan.sec.backup"),
+      `<button class="btn" data-act="export">${tr("plan.export")}</button>
+      <button class="btn" data-act="export-full">${tr("plan.export.full")}</button>
+      <p class="muted small">${tr("plan.export.full.note")}</p>
+      <button class="btn" data-act="export-csv">${tr("plan.export.csv")}</button>
+      <p class="muted small">${tr("plan.export.plain.note")}</p>
+      <label class="btn file-btn">${tr("plan.import")}
         <input type="file" data-field="import" accept="application/json,.json" />
       </label>
       <p class="muted small" id="app-version">${versionText}</p>
-      <p class="muted small" id="credits"><b>Credits.</b> Exercise illustrations: <a href="https://everkinetic.com" target="_blank" rel="noopener">Everkinetic</a> (everkinetic.com) by Greg Priday, <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener">github.com/everkinetic/data</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Some drawings modified or newly drawn in the same style; these are CC BY-SA 4.0 too.</p>`,
+      <p class="muted small" id="credits">${tr("plan.credits")}</p>`,
     )}`;
   runningVersion().then((v) => {
-    versionText = v ? `Version ${v}` : "Version: not installed";
+    versionText = v ? tr("plan.version", { v: ltrText(v) }) : tr("plan.version.none");
     const el = root.querySelector("#app-version");
     if (el) el.textContent = versionText; // no redraw: typed values stay put
   });
@@ -417,6 +422,13 @@ export function render(root, ctx) {
         await ctx.save({ render: false }); // no redraw: the owner may be typing in a field
         return;
       }
+      case "lang":
+      case "gender": {
+        settings[t.dataset.act] = t.dataset.mode;
+        applyLang(settings); // page language, direction and wording now; the screen redraws below
+        await ctx.save();
+        return;
+      }
       case "goal": {
         const g = t.dataset.goal;
         if (g === settings.goal) return;
@@ -424,9 +436,9 @@ export function render(root, ctx) {
         const all =
           hasItems &&
           (await confirmSheet(
-            `Apply ${GOALS[g].repMin}–${GOALS[g].repMax} reps × ${GOALS[g].sets} sets to every exercise in your plan?`,
-            "Apply to all",
-            "Only new exercises",
+            tr("plan.goal.apply", { range: ltrText(`${GOALS[g].repMin}–${GOALS[g].repMax}`), sets: ltrText(GOALS[g].sets) }),
+            tr("plan.goal.apply.all"),
+            tr("plan.goal.apply.new"),
           ));
         applyGoal(state, g, all);
         break;
@@ -449,9 +461,9 @@ export function render(root, ctx) {
       case "w-del":
         if (
           !(await confirmSheet(
-            `Delete workout "${w.name}"? Your history is kept.`,
-            "Delete",
-            "Cancel",
+            tr("plan.w.del.confirm", { name: w.name }),
+            tr("plan.cx.del"),
+            tr("plan.cancel"),
             { danger: true },
           ))
         )
@@ -470,13 +482,13 @@ export function render(root, ctx) {
         openPicker(
           ctx,
           (ids) => {
-            if (addMany(w, ids, settings.goal)) ctx.save();
+            if (addMany(w, ids, settings.goal, ctx.lookup)) ctx.save();
           },
           {
             exclude: new Set(w.items.map((it) => it.exerciseId)),
             muscles: w.muscles,
             multi: true,
-            title: `Add to ${w.name}`,
+            title: tr("plan.add.to", { name: w.name }),
           },
         );
         return;
@@ -524,7 +536,7 @@ export function render(root, ctx) {
         const ex = ctx.lookup(it.exerciseId);
         openSwap(
           ctx,
-          { exerciseId: it.exerciseId, name: ex?.name ?? "this exercise", primary: ex?.primary },
+          { exerciseId: it.exerciseId, name: ex?.name ?? tr("plan.swap.this"), primary: ex?.primary },
           {
             taken: new Set(w.items.map((x) => x.exerciseId)),
             onSwap: (id) => {
@@ -540,6 +552,14 @@ export function render(root, ctx) {
         );
         return;
       }
+      case "cx-timed": {
+        const c = state.customExercises.find((x) => x.id === t.dataset.id);
+        if (!c) return;
+        if (!(await confirmSheet(tr("plan.cx.timed.confirm", { name: c.name }), tr("plan.cx.timed.go")))) return;
+        setCustomTimed(state, c, c.timed !== true);
+        await ctx.save();
+        return;
+      }
       case "cx-del": {
         const id = t.dataset.id;
         const c = state.customExercises.find((x) => x.id === id);
@@ -549,8 +569,8 @@ export function render(root, ctx) {
         ).length;
         if (
           !(await confirmSheet(
-            `Delete "${c.name}"? It will be removed from ${n ? `${n} ${n === 1 ? "workout" : "workouts"} in your plan` : "your exercises"}, and any photo or video you added will be deleted. Past workouts keep their records. This cannot be undone.`,
-            "Delete",
+            n ? tr("plan.cx.confirm.some", { n, num: ltrText(n), name: c.name }) : tr("plan.cx.confirm.none", { name: c.name }),
+            tr("plan.cx.del"),
           ))
         )
           return;
@@ -569,8 +589,8 @@ export function render(root, ctx) {
       case "redo":
         if (
           await confirmSheet(
-            "Redo setup replaces your current plan. Your history is kept.",
-            "Redo setup",
+            tr("plan.redo.confirm"),
+            tr("plan.redo"),
           )
         )
           ctx.go("#/setup");
@@ -594,12 +614,12 @@ export function render(root, ctx) {
         } catch {
           settings.lastExportAt = before;
           t.disabled = false;
-          showBanner("Could not read your photos and sound. Try the plain backup instead.");
+          showBanner(tr("plan.export.fail"));
           return;
         }
         await ctx.save({ render: false }); // no redraw: the owner may have started typing meanwhile
         t.disabled = false;
-        showBanner(`Full backup created (${fmtSize(size)}).`, { kind: "ok" });
+        showBanner(tr("plan.export.full.done", { size: ltrText(fmtSize(size)) }), { kind: "ok" });
         return;
       }
       case "export-csv":
@@ -610,7 +630,7 @@ export function render(root, ctx) {
     }
     const saved = await ctx.save();
     if (saved && t.dataset.act === "export")
-      showBanner("Backup file created.", { kind: "ok" });
+      showBanner(tr("plan.export.done"), { kind: "ok" });
   });
 
   root.addEventListener("pointerdown", (e) => startDrag(e, root, ctx));
@@ -682,9 +702,7 @@ export function render(root, ctx) {
       if (t.checked) {
         settings.notifyRest = await push.enable();
         if (!settings.notifyRest)
-          showBanner(
-            "Notifications are blocked for this app. Allow them in iPhone Settings → Notifications.",
-          );
+          showBanner(tr("plan.notify.blocked"));
       } else {
         settings.notifyRest = false;
         push.disable();
@@ -731,7 +749,7 @@ function paintSums() {
   for (const li of current.root.querySelectorAll(".xlist [data-x]")) {
     const { w, xi } = findIn(current.ctx.state, li);
     const sum = li.querySelector(".xsum");
-    if (sum && w?.items[xi]) sum.textContent = summaryText(w.items[xi]);
+    if (sum && w?.items[xi]) sum.textContent = ltrText(summaryText(w.items[xi], current.ctx.lookup(w.items[xi].exerciseId)));
   }
 }
 
@@ -781,12 +799,30 @@ function applyField(ctx, t) {
   else ok = false;
   if (ok) return null;
   return field === "emptyKg"
-    ? "Empty weight must be a number, 0 or more, like 20 or 0."
+    ? tr("plan.err.empty")
     : field === "step"
-    ? "Step must be a number above 0, like 2.5 or 1,25."
+    ? tr("plan.err.step")
     : field === "sets"
-      ? "Sets must be a whole number, 1 or more."
-      : "Reps must be whole numbers, 1 or more, with min no higher than max.";
+      ? tr("plan.err.sets")
+      : ctx.lookup(it.exerciseId)?.timed === true
+        ? tr("plan.err.secs")
+        : tr("plan.err.reps");
+}
+
+// Language (always bilingual, so a wrong language can be undone) and, in Hebrew, the wording choice. Hidden until Hebrew is enabled.
+function languageHtml(settings) {
+  if (!heEnabled()) return "";
+  const seg = (act, cur, opts) =>
+    `<div class="seg">${opts.map(([m, l]) => `<button class="chip" data-act="${act}" data-mode="${m}" aria-pressed="${cur === m}">${l}</button>`).join("")}</div>`;
+  const langRow = `<div class="setting-group" role="group" aria-label="Language / שפה">
+    <div>Language / שפה</div>
+    ${seg("lang", settings.lang ?? "auto", [["auto", tr("settings.lang.auto")], ["en", "English"], ["he", "עברית"]])}
+  </div>`;
+  if (lang() !== "he") return langRow;
+  return `${langRow}<div class="setting-group" role="group" aria-label="${esc(tr("settings.wording"))}">
+    <div>${esc(tr("settings.wording"))}</div>
+    ${seg("gender", settings.gender ?? "neutral", [["neutral", tr("settings.gender.neutral")], ["male", tr("settings.gender.male")], ["female", tr("settings.gender.female")]])}
+  </div>`;
 }
 
 const EDITABLE = new Set(["wname", "sets", "repMin", "repMax", "step", "emptyKg", "xRestMin", "xRestSec"]);
@@ -831,21 +867,20 @@ const snd = {
   tick: 0,
   cap: 0,
 };
-const MIC_MSG =
-  "Recording is not available. Allow the microphone for this app, or choose a saved audio file.";
+const micMsg = () => tr("plan.mic");
 const canRecord = () =>
   typeof MediaRecorder !== "undefined" &&
   !!navigator.mediaDevices?.getUserMedia;
 
 function soundHtml() {
-  return `<div class="row"><b class="grow">Rest-over sound</b><span class="muted small">${snd.custom ? "Your sound" : "Default chime"}</span></div>
+  return `<div class="row"><b class="grow">${tr("plan.snd.title")}</b><span class="muted small">${snd.custom ? tr("plan.snd.yours") : tr("plan.snd.chime")}</span></div>
     <div class="row">
-      <button type="button" class="btn" data-snd="test">Test</button>
-      <label class="btn file-btn">Choose audio<input type="file" accept="audio/*" data-snd="file" /></label>
-      ${canRecord() ? `<button type="button" class="btn" data-snd="rec">${snd.rec ? `Stop ${snd.secs}s` : "Record"}</button>` : ""}
+      <button type="button" class="btn" data-snd="test">${tr("plan.snd.test")}</button>
+      <label class="btn file-btn">${tr("plan.snd.choose")}<input type="file" accept="audio/*" data-snd="file" /></label>
+      ${canRecord() ? `<button type="button" class="btn" data-snd="rec">${snd.rec ? tr("plan.snd.stop", { n: ltr(snd.secs) }) : tr("plan.snd.record")}</button>` : ""}
     </div>
-    ${snd.custom ? `<button type="button" class="btn" data-snd="default">Use default chime</button>` : ""}
-    <p class="muted small">Your sound plays while the app is open. Notifications use the iPhone's own sound. It is saved in the full backup, and synced if sync is on.</p>`;
+    ${snd.custom ? `<button type="button" class="btn" data-snd="default">${tr("plan.snd.default")}</button>` : ""}
+    <p class="muted small">${tr("plan.snd.note")}</p>`;
 }
 
 function paintSound() {
@@ -855,7 +890,7 @@ function paintSound() {
 
 async function useSound(blob) {
   if (!(await setCustomSound(blob)))
-    showBanner("Could not use that audio. Choose another file.");
+    showBanner(tr("plan.snd.bad"));
   snd.custom = !!(await getBlob(SOUND_KEY));
   paintSound();
 }
@@ -872,8 +907,8 @@ function chooseSound(input) {
 async function removeSound() {
   if (
     await confirmSheet(
-      "Go back to the default chime? Your sound will be deleted.",
-      "Use default chime",
+      tr("plan.snd.reset"),
+      tr("plan.snd.default"),
     )
   )
     useSound(null);
@@ -911,7 +946,7 @@ async function toggleRec() {
     rec.onerror = () => {
       release();
       endRec();
-      showBanner(MIC_MSG);
+      showBanner(micMsg());
     };
     rec.onstop = () => {
       release();
@@ -937,7 +972,7 @@ async function toggleRec() {
   } catch {
     stream?.getTracks().forEach((t) => t.stop());
     snd.rec = null;
-    showBanner(MIC_MSG);
+    showBanner(micMsg());
   }
 }
 
@@ -951,8 +986,8 @@ async function importFile(input, ctx) {
   if (
     file.size > BIG_FILE &&
     !(await confirmSheet(
-      `This backup file is very large (${fmtSize(file.size)}). Your phone may not manage to open it.`,
-      "Try anyway",
+      tr("plan.imp.big", { size: ltrText(fmtSize(file.size)) }),
+      tr("plan.imp.try"),
     ))
   )
     return;
@@ -968,10 +1003,9 @@ async function importFile(input, ctx) {
   if (
     !(await confirmSheet(
       adding
-        ? "Add this backup to your data? Nothing you have now is removed."
-        : "Replace all your data with this backup? This cannot be undone." +
-            (ctx.state.active ? " The workout in progress will be lost." : ""),
-      adding ? "Add this backup to your data" : "Replace everything",
+        ? tr("plan.imp.add")
+        : ctx.state.active ? tr("plan.imp.replace.active") : tr("plan.imp.replace"),
+      adding ? tr("plan.imp.add.label") : tr("plan.imp.replace.label"),
     ))
   )
     return;
@@ -982,7 +1016,7 @@ async function importFile(input, ctx) {
   if (!(await ctx.save({ render: false, resetSnapshot: true }))) {
     ctx.state = previous; // not saved: put the old data back so nothing later persists the import
     window.dispatchEvent(new HashChangeEvent("hashchange"));
-    showBanner("Backup was not restored. Nothing was changed.");
+    showBanner(tr("plan.imp.fail"));
     return;
   }
   let mediaOk = true;
@@ -993,9 +1027,9 @@ async function importFile(input, ctx) {
   }
   loadCustom(); // pick up a restored rest-over sound
   window.dispatchEvent(new HashChangeEvent("hashchange")); // app.js re-renders on this
-  if (mediaOk) showBanner("Backup restored.", { kind: "ok" });
+  if (mediaOk) showBanner(tr("plan.imp.ok"), { kind: "ok" });
   else
     showBanner(
-      "Your data was restored, but the photos and sound from the backup could not be. Your earlier photos and sound were kept.",
+      tr("plan.imp.partial"),
     );
 }

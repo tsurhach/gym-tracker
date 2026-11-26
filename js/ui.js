@@ -1,20 +1,6 @@
 import { round2 } from "./logic.js";
+import { fmtDate as fmtDateLang, t } from "./i18n/index.js";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
 const ENT = {
   "&": "&amp;",
   "<": "&lt;",
@@ -37,7 +23,7 @@ export const exImageUrls = (ex) =>
 // The written how-to, a compact block under the picture. Only when the setting is on (missing = off).
 export const howtoHtml = (ex, settings) =>
   settings?.showHowTo === true && ex?.howto
-    ? `<div class="howto muted small"><b>How to do it</b><br />${esc(ex.howto)}</div>`
+    ? `<div class="howto muted small"><b>${t("ui.howto")}</b><br />${esc(ex.howto)}</div>`
     : "";
 
 // 2 pictures cross-fade, 1 stays still, 0 gives "". The optional hint sits under the picture.
@@ -45,20 +31,27 @@ export function photoHtml(ex) {
   const urls = exImageUrls(ex);
   if (!urls.length) return "";
   const imgs = urls
-    .map((u, i) => `<img class="${i ? "b" : "a"}" src="${u}" alt="" />`)
+    .map((u, i) => `<img class="${i ? "b" : "a"}" src="${u}" alt="" width="4" height="3" decoding="async" />`)
     .join("");
   const hint = ex.hint ? `<p class="muted small photo-hint">${esc(ex.hint)}</p>` : "";
   return `<div class="photo${urls.length === 1 ? " still" : ""}">${imgs}</div>${hint}`;
+}
+
+// The cross-fade starts only once every frame is decoded: before, the second drawing was still
+// loading (first view, nothing cached yet), so the fade showed a blank frame and stuttered.
+export function armPhotos(root) {
+  for (const box of root.querySelectorAll(".photo:not(.still)")) {
+    const go = () => box.classList.add("ready");
+    const imgs = [...box.querySelectorAll("img")];
+    Promise.all(imgs.map((i) => i.decode().catch(() => {}))).then(go, go);
+  }
 }
 
 // 57.5 -> "57.5", 50 -> "50", 1.25 -> "1.25"
 export const fmtKg = (n) => String(round2(Number(n)));
 
 // "Thu 12 Nov" (local time)
-export function fmtDate(ms) {
-  const d = new Date(ms);
-  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
-}
+export const fmtDate = fmtDateLang;
 
 // The DOM is only touched inside functions below, so this file imports cleanly in Node.
 
@@ -74,7 +67,7 @@ export function showBanner(text, { sticky = false, kind = "error" } = {}) {
   msg.textContent = text;
   const close = document.createElement("button");
   close.className = "icon-btn";
-  close.setAttribute("aria-label", "Dismiss");
+  close.setAttribute("aria-label", t("ui.dismiss"));
   close.textContent = "✕";
   close.onclick = () => (el.hidden = true);
   el.append(msg, close);
@@ -98,7 +91,7 @@ export function infoSheet(lines) {
     }
     const ok = document.createElement("button");
     ok.className = "btn btn-primary";
-    ok.textContent = "OK";
+    ok.textContent = t("ui.ok");
     const done = () => (scrim.remove(), resolve());
     ok.onclick = done;
     scrim.onclick = (e) => e.target === scrim && done();
@@ -112,8 +105,8 @@ export function infoSheet(lines) {
 // In-page replacement for window.confirm. Resolves true on confirm, false otherwise.
 export function confirmSheet(
   message,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel = t("ui.confirm"),
+  cancelLabel = t("ui.cancel"),
   { danger = false } = {},
 ) {
   return new Promise((resolve) => {

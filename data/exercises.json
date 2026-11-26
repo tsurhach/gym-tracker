@@ -754,6 +754,7 @@
     "secondary": [],
     "equipment": "body only",
     "images": 1,
+    "timed": true,
     "hint": "Hold this position.",
     "howto": "Rest on your forearms and toes with your elbows under your shoulders. Keep your body in one straight line from head to heels. Squeeze your stomach and breathe steadily."
   },

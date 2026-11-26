@@ -2,9 +2,23 @@ import { GOALS, DEFAULT_STEP } from "./constants.js";
 import { prefill, exerciseHistory, pairKey } from "./logic.js";
 import { supersetsOf, renameInSupersets } from "./planbuild.js";
 
-export function newItem(exerciseId, goalKey) {
+export function newItem(exerciseId, goalKey, ex) {
+  if (ex?.timed === true) return { exerciseId, sets: 3, repMin: 30, repMax: 45, step: DEFAULT_STEP }; // seconds
   const { sets, repMin, repMax } = GOALS[goalKey];
   return { exerciseId, sets, repMin, repMax, step: DEFAULT_STEP };
+}
+
+// Flip a custom exercise between reps and seconds. Its plan items get the default range for the new type
+// (past sets keep their numbers, which is why the screen asks first).
+export function setCustomTimed(state, c, timed) {
+  if (timed) c.timed = true;
+  else delete c.timed;
+  for (const w of state.workouts)
+    for (const it of w.items)
+      if (it.exerciseId === c.id) {
+        const n = newItem(c.id, state.settings.goal, c);
+        Object.assign(it, { sets: n.sets, repMin: n.repMin, repMax: n.repMax });
+      }
 }
 
 // Set the goal; with applyToAll, also give every plan item the goal's sets and reps (step is kept).
@@ -82,7 +96,7 @@ export function addEntry(state, exerciseId, lookup) {
   if (!a || a.entries.some((e) => e.exerciseId === exerciseId)) return state;
   const entry = makeEntry(
     state,
-    newItem(exerciseId, state.settings.goal),
+    newItem(exerciseId, state.settings.goal, lookup(exerciseId)),
     lookup,
   );
   if (entry) a.entries.push(entry);
@@ -99,7 +113,10 @@ export function swapEntry(state, oldId, newId, lookup, { inPlan = false } = {}) 
   const old = a.entries[i];
   const w = state.workouts.find((x) => x.id === a.workoutId);
   const pi = w?.items.find((it) => it.exerciseId === oldId);
-  const { sets, repMin, repMax, step } = old.target ?? pi ?? newItem(oldId, state.settings.goal);
+  let { sets, repMin, repMax, step } = old.target ?? pi ?? newItem(oldId, state.settings.goal, lookup(oldId));
+  // Reps to seconds or back: the old range means nothing, take the new exercise's own.
+  if ((lookup(oldId)?.timed === true) !== (lookup(newId)?.timed === true))
+    ({ repMin, repMax } = newItem(newId, state.settings.goal, lookup(newId)));
   const done = old.sets.filter((s) => s.done);
   const left = done.length ? Math.max(1, sets - done.length) : sets;
   const entry = makeEntry(state, { exerciseId: newId, sets: left, repMin, repMax, step }, lookup);
@@ -141,6 +158,7 @@ export function finishSession(state, now) {
   const a = state.active;
   if (!a) return state;
   delete a.rest; // the rest timer is not part of a saved session
+  delete a.hold; // nor a running hold timer
   a.entries = a.entries
     .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))
     .filter((e) => e.sets.length > 0);

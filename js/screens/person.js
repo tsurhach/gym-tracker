@@ -1,8 +1,9 @@
 // #/person/<id>: someone else's shared workouts, read only. Only reachable when SYNC_ENABLED (js/sync.js).
 // Their data is cached apart from yours (gymtracker.shared) and never touches your own history or backups.
-import { esc, fmtDate, fmtKg, confirmSheet, showBanner } from "../ui.js";
+import { esc, fmtKg, confirmSheet, showBanner } from "../ui.js";
+import { t, ltr, fmtDate } from "../i18n/index.js";
 import { dateMs } from "../weight.js";
-import { ago, plural, friendlyError } from "../friendly.js";
+import { ago, friendlyError } from "../friendly.js";
 import { copyDay, copyPlan, dayFromSession, newCopy } from "../share.js";
 import { exerciseHistory } from "../logic.js";
 import {
@@ -18,17 +19,17 @@ let tab = "history";
 function historyHtml(view, ctx) {
   const sessions = [...view.sessions].sort((a, b) => b.startedAt - a.startedAt);
   if (!sessions.length)
-    return `<section class="card"><p class="muted">No workouts yet.</p></section>`;
+    return `<section class="card"><p class="muted">${t("person.noWorkouts")}</p></section>`;
   const rows = exerciseRows(view.sessions);
   return `${sessions
     .map(
       (
         s,
-      ) => `<details class="card"><summary><span class="grow"><b class="ex-name">${esc(s.workoutName)}</b><br /><span class="muted small">${esc(fmtDate(s.startedAt))} · ${plural(s.entries.length, "exercise", "exercises")} · ${durationMin(s)} min</span></span></summary>
-      ${s.entries.map((e) => `<p><b class="ex-name">${esc(e.name)}</b><br /><span class="muted small">${esc(setsText(e.sets))}</span></p>`).join("")}${ctx.save && view.canCopy ? `<button class="btn" data-copy-session="${esc(s.id)}">Make a day from this workout</button>` : ""}</details>`,
+      ) => `<details class="card"><summary><span class="grow"><b class="ex-name">${esc(s.workoutName)}</b><br /><span class="muted small">${t("person.sessionLine", { date: ltr(esc(fmtDate(s.startedAt))), exercises: t("person.exercises", { n: s.entries.length }), mins: ltr(String(durationMin(s))) })}</span></span></summary>
+      ${s.entries.map((e) => `<p><b class="ex-name">${esc(e.name)}</b><br /><span class="muted small">${esc(setsText(e.sets))}</span></p>`).join("")}${ctx.save && view.canCopy ? `<button class="btn" data-copy-session="${esc(s.id)}">${t("person.makeDay")}</button>` : ""}</details>`,
     )
     .join("")}
-    ${rows.length ? "<h3>Progress</h3>" : ""}
+    ${rows.length ? `<h3>${t("person.progress")}</h3>` : ""}
     ${rows
       .map((r) => {
         const hist = exerciseHistory(view.sessions, r.exerciseId).filter(
@@ -47,10 +48,10 @@ export function planHtml(view, ctx) {
     ]),
   );
   const copy = (a, label) => (ctx.save && view.canCopy ? `<button class="btn" data-copy="${a}">${label}</button>` : "");
-  return copy("", "Copy all days to my plan") + view.workouts
+  return copy("", t("person.copyAll")) + view.workouts
     .map(
       (w) => `<section class="card"><b>${esc(w.name)}</b>
-      ${w.items.map((it) => `<div class="row"><span class="grow ex-name">${esc(names.get(it.exerciseId) ?? "Exercise")}</span><span class="muted small">${esc(it.sets)} × ${esc(it.repMin)}–${esc(it.repMax)}</span></div>`).join("")}${copy(esc(w.id), "Copy this day to my plan")}</section>`,
+      ${w.items.map((it) => `<div class="row"><span class="grow ex-name">${esc(names.get(it.exerciseId) ?? t("person.exercise"))}</span><span class="muted small">${ltr(`${esc(it.sets)} × ${esc(it.repMin)}–${esc(it.repMax)}`)}</span></div>`).join("")}${copy(esc(w.id), t("person.copyDay"))}</section>`,
     )
     .join("");
 }
@@ -61,9 +62,9 @@ const weightHtml = (view) =>
       .reverse()
       .map(
         (w) =>
-          `<div class="li"><span class="grow">${esc(fmtDate(dateMs(w.date)))}</span><b>${esc(fmtKg(w.kg))} kg</b></div>`,
+          `<div class="li"><span class="grow">${esc(fmtDate(dateMs(w.date)))}</span><b>${ltr(`${esc(fmtKg(w.kg))} kg`)}</b></div>`,
       )
-      .join("") || `<p class="muted">Nothing logged.</p>`
+      .join("") || `<p class="muted">${t("person.nothingLogged")}</p>`
   }</section>`;
 
 export function render(root, ctx) {
@@ -78,20 +79,20 @@ export function render(root, ctx) {
     if (!root.isConnected) return;
     const name = person?.name ?? view?.name ?? "";
     const tabs = [
-      ["history", "History"],
-      ...(view?.workouts ? [["plan", "Plan"]] : []),
-      ...(view?.bodyWeights ? [["weight", "Body weight"]] : []),
+      ["history", t("person.tabHistory")],
+      ...(view?.workouts ? [["plan", t("person.tabPlan")]] : []),
+      ...(view?.bodyWeights ? [["weight", t("person.tabWeight")]] : []),
     ];
     if (!tabs.some(([k]) => k === tab)) tab = "history";
-    root.innerHTML = `<div class="row topbar"><a class="back" href="#/people">‹ People</a></div>
-      <h1 class="title">${esc(name)}</h1>
-      <p class="muted small">${name ? `${esc(name)}'s workouts · ` : ""}view only${at ? ` · updated ${esc(ago(at))}` : ""}</p>
-      ${gone ? `<section class="card"><p>Nothing to see yet. ${name ? esc(name) : "They"} may not have tapped Allow yet, or stopped sharing.</p><button class="btn" data-leave>Remove from my list</button></section>` : ""}
+    root.innerHTML = `<div class="row topbar"><a class="back" href="#/people"><span class="flip">‹</span> ${t("person.back")}</a></div>
+      <h1 class="title" dir="auto">${esc(name)}</h1>
+      <p class="muted small">${[name && t("person.workoutsOf", { name: esc(name) }), t("person.viewOnly"), at && t("person.updated", { ago: esc(ago(at)) })].filter(Boolean).join(" · ")}</p>
+      ${gone ? `<section class="card"><p>${name ? t("person.goneNamed", { name: esc(name) }) : t("person.goneThey")}</p><button class="btn" data-leave>${t("person.leave")}</button></section>` : ""}
       ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
-      ${!gone && !view ? `<p class="muted">Loading…</p>` : ""}
+      ${!gone && !view ? `<p class="muted">${t("person.loading")}</p>` : ""}
       ${
         !gone && view
-          ? `${tabs.length > 1 ? `<div class="seg" role="group" aria-label="Show">${tabs.map(([k, l]) => `<button class="chip" data-tab="${k}" aria-pressed="${k === tab}">${l}</button>`).join("")}</div>` : ""}
+          ? `${tabs.length > 1 ? `<div class="seg" role="group" aria-label="${esc(t("person.show"))}">${tabs.map(([k, l]) => `<button class="chip" data-tab="${k}" aria-pressed="${k === tab}">${l}</button>`).join("")}</div>` : ""}
         ${tab === "plan" ? planHtml(view, ctx) : tab === "weight" ? weightHtml(view) : historyHtml(view, ctx)}`
           : ""
       }`;
@@ -107,13 +108,14 @@ export function render(root, ctx) {
         const r = b.dataset.copySession !== undefined
           ? one(dayFromSession(view, b.dataset.copySession, ctx.state, has, cx))
           : all ? copyPlan(view, ctx.state, has, cx) : one(copyDay(view, b.dataset.copy, ctx.state, has, cx));
-        if (!r.added.length) return showBanner("Nothing to copy: you do not have these exercises, or copying is not allowed.");
-        const what = all ? plural(r.added.length, "day", "days") : `"${r.added[0].name}"`;
-        const extra = cx.fresh.length ? ` ${plural(cx.fresh.length, "exercise", "exercises")} of theirs will be added to your exercises (no photos).` : "";
-        if (!(await confirmSheet(`Add ${what} to your plan? They are added after your own days. Nothing of yours is removed.${r.skipped ? ` ${plural(r.skipped, "exercise", "exercises")} not available and will be left out.` : ""}${extra}`, "Add"))) return;
+        if (!r.added.length) return showBanner(t("person.nothingToCopy"));
+        const what = all ? t("person.days", { n: r.added.length }) : `"${r.added[0].name}"`;
+        const skipped = r.skipped ? ` ${t("person.skippedMsg", { exercises: t("person.exercises", { n: r.skipped }) })}` : "";
+        const extra = cx.fresh.length ? ` ${t("person.freshMsg", { exercises: t("person.exercises", { n: cx.fresh.length }) })}` : "";
+        if (!(await confirmSheet(`${t("person.addAsk", { what })}${skipped}${extra}`, t("person.addOk")))) return;
         ctx.state.customExercises.push(...cx.fresh);
         ctx.state.workouts.push(...r.added);
-        if (await ctx.save({ render: false })) showBanner(`Added ${what} to your plan.`, { kind: "ok" });
+        if (await ctx.save({ render: false })) showBanner(t("person.added", { what }), { kind: "ok" });
       };
     const l = root.querySelector("[data-leave]");
     if (l)

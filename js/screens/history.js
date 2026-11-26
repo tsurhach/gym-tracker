@@ -1,7 +1,10 @@
-import { exerciseHistory, isPersonalBest, isStuck, validSet } from "../logic.js";
+import { exerciseHistory, fmtTime, isPersonalBest, isStuck, kgHtml, kgText, minHtml, muscleName, validSet } from "../logic.js";
 import { deleteSession, removeSet } from "../session.js";
-import { confirmSheet, esc, fmtDate, fmtKg } from "../ui.js";
+import { confirmSheet, esc, fmtKg } from "../ui.js";
+import { fmtDate, ltr, ltrText, t, exTwo, exName } from "../i18n/index.js";
 import { applyInputs, pbHtml } from "./exercise.js";
+import { afterOpen, anyRated, clean, recent, weakCause, weekly } from "../rating.js";
+import { badgesHtml, openRating, takeRating } from "../ratesheet.js";
 
 // Whole minutes, at least 1.
 export const durationMin = (ses) =>
@@ -11,37 +14,42 @@ export const durationMin = (ses) =>
   );
 
 // Totals for the summary card, all computed from saved sets. One best per exercise: heaviest, then most reps.
-export function summary(ses, sessions) {
+// timedOf(id) -> true for a timed exercise: its sets hold seconds, so they add no lifted volume and show as times.
+export function summary(ses, sessions, timedOf = () => false) {
   let sets = 0;
   let volume = 0;
   const bests = [];
   for (const en of ses.entries) {
     sets += en.sets.length;
-    volume += en.sets.reduce((n, s) => n + s.weight * s.reps, 0);
+    if (!timedOf(en.exerciseId)) volume += en.sets.reduce((n, s) => n + s.weight * s.reps, 0);
     const past = earlier(sessions, ses, en.exerciseId);
     const top = en.sets
       .filter((s) => isPersonalBest(past, s))
       .sort((a, b) => b.weight - a.weight || b.reps - a.reps)[0];
-    if (top) bests.push({ name: en.name, weight: top.weight, reps: top.reps });
+    if (top) bests.push({ name: exName(en.exerciseId, en.name), weight: top.weight, reps: timedOf(en.exerciseId) ? fmtTime(top.reps) : top.reps });
   }
   return { minutes: durationMin(ses), sets, volume, bests };
 }
 
-function summaryHtml(ses, sessions) {
-  const m = summary(ses, sessions);
-  const lifted = m.volume > 0 ? ` · ${Math.round(m.volume).toLocaleString("en-US")} kg lifted` : "";
-  return `<section class="card" aria-label="Workout summary">
-      <p class="stat" style="margin:0"><b>${m.minutes} min</b> · ${plural(m.sets, "set", "sets")}${lifted}</p>
-      ${m.bests.length ? `<p style="margin:8px 0 0">🏆 ${plural(m.bests.length, "new best", "new bests")}: ${m.bests.map((b) => `${esc(b.name)} ${fmtKg(b.weight)} × ${b.reps}`).join(" · ")}</p>` : ""}
+function summaryHtml(ses, sessions, timedOf) {
+  const m = summary(ses, sessions, timedOf);
+  const min = `<b>${minHtml(m.minutes)}</b>`;
+  const line = m.volume > 0
+    ? t("history.summaryLifted", { n: m.sets, min, kg: kgHtml(Math.round(m.volume).toLocaleString("en-US")) })
+    : t("history.summary", { n: m.sets, min });
+  return `<section class="card" aria-label="${t("history.summaryAria")}">
+      <p class="stat" style="margin:0">${line}</p>
+      ${m.bests.length ? `<p style="margin:8px 0 0">🏆 ${t("history.bests", { n: m.bests.length, list: m.bests.map((b) => `${esc(b.name)} ${ltr(`${fmtKg(b.weight)} × ${b.reps}`)}`).join(" · ") })}</p>` : ""}
     </section>`;
 }
 
 const heaviest = (sets) => Math.max(...sets.map((s) => s.weight));
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const longest = (sets) => Math.max(...sets.map((s) => s.reps));
+const timedOf = (ctx) => (id) => ctx.lookup(id)?.timed === true;
 
 // One row per exercise ever logged, most recently trained first. Names come from the
 // newest session's own snapshot, never from the plan or library.
-export function exerciseRows(sessions) {
+export function exerciseRows(sessions, timedOf = () => false) {
   const newestFirst = [...sessions].sort((a, b) => b.startedAt - a.startedAt);
   const rows = [];
   const seen = new Set();
@@ -57,8 +65,9 @@ export function exerciseRows(sessions) {
         exerciseId: e.exerciseId,
         name: e.name,
         sessions: hist.length,
-        first: heaviest(hist[0].sets),
-        latest: heaviest(hist[hist.length - 1].sets),
+        timed: timedOf(e.exerciseId),
+        first: timedOf(e.exerciseId) ? longest(hist[0].sets) : heaviest(hist[0].sets),
+        latest: timedOf(e.exerciseId) ? longest(hist[hist.length - 1].sets) : heaviest(hist[hist.length - 1].sets),
         stuck: isStuck(hist.map((h) => h.sets)),
       });
     }
@@ -68,13 +77,14 @@ export function exerciseRows(sessions) {
 
 // "50 → 60 kg", "30 kg", "30 kg · stuck"
 export function progressText(r) {
-  if (r.stuck) return `${fmtKg(r.latest)} kg · stuck`;
-  if (r.sessions === 1) return `${fmtKg(r.latest)} kg`;
-  return `${fmtKg(r.first)} → ${fmtKg(r.latest)} kg`;
+  if (r.timed) return r.sessions === 1 ? ltrText(fmtTime(r.latest)) : ltrText(`${fmtTime(r.first)} → ${fmtTime(r.latest)}`);
+  if (r.stuck) return t("history.progStuck", { kg: kgText(fmtKg(r.latest)) });
+  if (r.sessions === 1) return kgText(fmtKg(r.latest));
+  return ltrText(t("history.progRange", { a: fmtKg(r.first), b: fmtKg(r.latest) }));
 }
 
-export const setsText = (sets) =>
-  sets.map((s) => `${fmtKg(s.weight)} × ${s.reps}`).join(", ");
+export const setsText = (sets, timed = false) =>
+  ltrText(sets.map((s) => `${fmtKg(s.weight)} × ${timed ? fmtTime(s.reps) : s.reps}`).join(", "));
 
 const CW = 320;
 const CH = 120;
@@ -92,49 +102,84 @@ export function chartPoints(values, w = CW, h = CH, pad = CPAD) {
 }
 
 // Inline SVG of the heaviest weight per session, for looking back only.
-export function chartHtml(values) {
+export function chartHtml(values, timed = false) {
   const pts = chartPoints(values);
   const n = values.length;
   const first = pts[0];
   const last = pts[n - 1];
   // Label sits on the side away from the line, so it never covers it.
   const label = (p, v, anchor, other) =>
-    `<text x="${p.x}" y="${other && other.y < p.y ? p.y + 18 : p.y - 9}" text-anchor="${anchor}" fill="var(--muted)" font-size="12">${esc(fmtKg(v))} kg</text>`;
-  const desc =
-    n === 1
-      ? `Heaviest weight: ${fmtKg(values[0])} kg in 1 session.`
-      : `Heaviest weight per session: ${fmtKg(values[0])} kg first, ${fmtKg(values[n - 1])} kg latest, over ${n} sessions.`;
+    `<text x="${p.x}" y="${other && other.y < p.y ? p.y + 18 : p.y - 9}" text-anchor="${anchor}" fill="var(--muted)" font-size="12">${timed ? esc(fmtTime(v)) : t("logic.kg", { n: esc(fmtKg(v)) })}</text>`;
+  const desc = timed
+    ? n === 1
+      ? t("history.chartTimeOne", { t: fmtTime(values[0]) })
+      : t("history.chartTimeMany", { first: fmtTime(values[0]), last: fmtTime(values[n - 1]), n })
+    : n === 1
+      ? t("history.chartOne", { kg: kgText(fmtKg(values[0])) })
+      : t("history.chartMany", { first: kgText(fmtKg(values[0])), last: kgText(fmtKg(values[n - 1])), n });
   return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="${esc(desc)}">
     ${n > 1 ? `<polyline points="${pts.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />` : ""}
     ${n <= 30 ? pts.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--accent)" />`).join("") : ""}
     ${label(first, values[0], n === 1 ? "middle" : "start", pts[1])}${n > 1 ? label(last, values[n - 1], "end", pts[n - 2]) : ""}
-  </svg>${n === 1 ? `<p class="muted small">Needs two sessions to draw a line.</p>` : ""}`;
+  </svg>${n === 1 ? `<p class="muted small">${t("history.needTwo")}</p>` : ""}`;
 }
 
-function listHtml(state) {
+// Badges and the note under a workout in the list; "" when not rated.
+const rateLine = (r) => {
+  const b = badgesHtml(r);
+  return b ? `<div class="rate-line">${b}</div>${clean(r)?.note ? `<div class="muted small rate-note" dir="auto">${esc(clean(r).note)}</div>` : ""}` : "";
+};
+
+const avgText = (n) => ltrText(n.toFixed(1));
+// "How workouts felt": weekly bars for effort and lifts felt, last 7 days against the 28-day average, the most common cause of weak days.
+export function trendHtml(sessions, now = Date.now()) {
+  if (!anyRated(sessions)) return "";
+  const row = (field, name) => {
+    const w = weekly(sessions, field, now);
+    const desc = t("rate.trend.aria", { name, list: w.map((v) => (v === null ? "-" : v.toFixed(1))).join(", ") });
+    return `<div class="trend-row"><span class="small">${esc(name)}</span><span class="bars" dir="ltr" role="img" aria-label="${esc(desc)}">${w
+      .map((v) => (v === null ? '<i class="none"></i>' : `<i style="height:${Math.round((v / 5) * 100)}%"></i>`))
+      .join("")}</span></div>`;
+  };
+  const names = { effort: t("rate.trend.effort"), lifts: t("rate.trend.lifts") };
+  const parts = ["effort", "lifts"]
+    .map((f) => [f, recent(sessions, f, now)])
+    .filter(([, r]) => r)
+    .map(([f, r]) => t("rate.trend.part", { name: names[f], a: avgText(r.last), b: avgText(r.avg28) }));
+  const cause = weakCause(sessions, now);
+  return `<section class="card" aria-label="${t("rate.trend.title")}">
+    <b>${t("rate.trend.title")}</b>
+    ${row("effort", names.effort)}${row("lifts", names.lifts)}
+    <p class="muted small" style="margin:8px 0 0">${t("rate.trend.note")}</p>
+    ${parts.length ? `<p style="margin:8px 0 0">${t("rate.trend.vs", { parts: parts.join(" · ") })}</p>` : ""}
+    ${cause ? `<p style="margin:8px 0 0">${t("rate.trend.cause", { reason: t(`rate.why.${cause.reason}`), n: cause.n, total: cause.total })}</p>` : ""}
+  </section>`;
+}
+
+function listHtml(state, ctx) {
   const sessions = [...state.sessions].sort(
     (a, b) => b.startedAt - a.startedAt,
   );
   if (!sessions.length) {
-    return `<section class="card"><p><b>No workouts yet.</b></p><p class="muted">Finish a workout and it shows up here.</p></section>`;
+    return `<section class="card"><p><b>${t("history.none")}</b></p><p class="muted">${t("history.noneHint")}</p></section>`;
   }
-  const rows = exerciseRows(state.sessions);
-  return `${sessions
+  const rows = exerciseRows(state.sessions, timedOf(ctx));
+  return `${trendHtml(state.sessions)}${sessions
     .map((s) => {
       const sets = s.entries.reduce((n, e) => n + e.sets.length, 0);
       return `<a class="card block" href="#/history/${encodeURIComponent(s.id)}">
         <div class="row"><b class="grow ex-name">${esc(s.workoutName)}</b><span class="muted nowrap">${esc(fmtDate(s.startedAt))}</span></div>
-        <div class="muted small">${plural(s.entries.length, "exercise", "exercises")} · ${plural(sets, "set", "sets")} · ${durationMin(s)} min</div>
+        <div class="muted small">${t("history.rowLine", { ex: t("history.exercises", { n: s.entries.length }), sets: t("history.sets", { n: sets }), min: minHtml(durationMin(s)) })}</div>${rateLine(s.rating)}
       </a>`;
     })
     .join("")}
-    <h3>Tap an exercise to see its progress</h3>
+    <h3>${t("history.tapExercise")}</h3>
     <section class="card list">${rows
       .map(
         (
           r,
         ) => `<a class="li" href="#/progress/${encodeURIComponent(r.exerciseId)}">
-        <span class="grow ex-name">${esc(r.name)}</span>
+        <span class="grow ex-name">${exTwo(r.exerciseId, r.name)}</span>
         <span class="${r.stuck ? "stuck" : "up"}">${esc(progressText(r))}</span>
       </a>`,
       )
@@ -144,8 +189,7 @@ function listHtml(state) {
 // The session screen showing now; the page-hide listeners below read it.
 let current = null;
 
-const BAD_MSG =
-  "Weight needs a number and reps a whole number. That set was not changed.";
+const badMsg = () => t("history.badSet");
 
 // Rows showing a rejected edit when a set is deleted, so the redraw can put their
 // typed text and error state back at their new positions.
@@ -169,6 +213,7 @@ function syncAll() {
       s,
       row.querySelector('[data-f="weight"]').value,
       row.querySelector('[data-f="reps"]').value,
+      row.dataset.timed === "1",
     );
     const ok = validSet(next.weight, next.reps);
     if (ok) Object.assign(s, next);
@@ -176,7 +221,7 @@ function syncAll() {
     bad ||= !ok;
   }
   current.root.querySelector("[data-err]").textContent = bad
-    ? BAD_MSG
+    ? badMsg()
     : "";
   paintBadges(ses);
   return true;
@@ -192,7 +237,7 @@ function paintBadges(ses) {
       ? row.nextElementSibling
       : null;
     const want = isPersonalBest(earlier(current.ctx.state.sessions, ses, en.exerciseId), s);
-    if (want && !badge) row.insertAdjacentHTML("afterend", pbHtml);
+    if (want && !badge) row.insertAdjacentHTML("afterend", pbHtml());
     else if (!want && badge) badge.remove();
   }
 }
@@ -210,18 +255,29 @@ if (typeof window !== "undefined") {
   });
 }
 
-function setRow(s, e, i, past) {
-  return `<div class="set hist done" data-e="${e}" data-i="${i}">
+function setRow(s, e, i, past, timed) {
+  return `<div class="set hist done" data-e="${e}" data-i="${i}"${timed ? ' data-timed="1"' : ""}>
     <span class="set-n">${i + 1}</span>
-    <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="kg" aria-label="Set ${i + 1} weight in kg" value="${esc(fmtKg(s.weight))}" />
-    <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="reps" aria-label="Set ${i + 1} reps" value="${esc(s.reps)}" />
-    <button class="icon-btn" data-act="del-set" aria-label="Delete set ${i + 1}">✕</button>
-  </div>${isPersonalBest(past, s) ? pbHtml : ""}`;
+    <input data-f="weight" inputmode="decimal" enterkeyhint="next" placeholder="${t("exercise.kg")}" aria-label="${t("exercise.setWeight", { n: i + 1 })}" value="${esc(fmtKg(s.weight))}" />
+    <input data-f="reps" inputmode="numeric" enterkeyhint="done" placeholder="${t(timed ? "exercise.timePh" : "exercise.repsPh")}" aria-label="${t(timed ? "exercise.setTime" : "exercise.setReps", { n: i + 1 })}" value="${esc(timed ? fmtTime(s.reps) : s.reps)}" />
+    <button class="icon-btn" data-act="del-set" aria-label="${t("history.deleteSet", { n: i + 1 })}">✕</button>
+  </div>${isPersonalBest(past, s) ? pbHtml() : ""}`;
 }
 
 // Every set of this exercise logged in workouts before ses.
 const earlier = (sessions, ses, id) =>
   exerciseHistory(sessions.filter((x) => x.startedAt < ses.startedAt), id).flatMap((h) => h.sets);
+
+// Opens the rating sheet: a button when not rated, the badges (tap to change) when rated.
+function rateCard(ses) {
+  const b = badgesHtml(ses.rating);
+  if (!b) return `<button class="btn" data-act="rate">${t("rate.add")}</button>`;
+  const hint = !ses.rating.after && afterOpen(ses, Date.now()) ? t("rate.addAfter") : t("rate.edit");
+  return `<button class="card block rate-card" data-act="rate">
+      <div class="rate-line">${b}</div>${clean(ses.rating)?.note ? `<p class="rate-note-full" dir="auto">${esc(clean(ses.rating).note)}</p>` : ""}
+      <div class="muted small">${hint}</div>
+    </button>`;
+}
 
 function sessionScreen(root, ctx) {
   const id = ctx.params.id;
@@ -230,24 +286,26 @@ function sessionScreen(root, ctx) {
     location.replace("#/history");
     return;
   }
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history">‹ History</a></div>
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> ${t("history.back")}</a></div>
     <h1 class="title">${esc(ses.workoutName)}</h1>
     <p class="subtitle">${esc(fmtDate(ses.startedAt))}</p>
-    ${summaryHtml(ses, ctx.state.sessions)}
+    ${summaryHtml(ses, ctx.state.sessions, timedOf(ctx))}
+    ${rateCard(ses)}
     ${ses.entries
       .map(
         (en, e) => `<section class="card">
-      <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${esc(en.name)}</a>${en.primary ? `<span class="tag">${esc(en.primary)}</span>` : ""}</div>
+      <div class="row"><a class="grow ex-name block ex-link" href="#/progress/${encodeURIComponent(en.exerciseId)}">${exTwo(en.exerciseId, en.name)}</a>${en.primary ? `<span class="tag">${esc(muscleName(en.primary))}</span>` : ""}</div>
       ${en.note ? `<p class="muted small">${esc(en.note)}</p>` : ""}
-      <div class="set hist set-head muted small"><span></span><span>kg</span><span>Reps</span><span></span></div>
-      ${en.sets.map((s, i) => setRow(s, e, i, earlier(ctx.state.sessions, ses, en.exerciseId))).join("")}
+      <div class="set hist set-head muted small"><span></span><span>${t("exercise.kg")}</span><span>${t(timedOf(ctx)(en.exerciseId) ? "exercise.timeHead" : "exercise.repsHead")}</span><span></span></div>
+      ${en.sets.map((s, i) => setRow(s, e, i, earlier(ctx.state.sessions, ses, en.exerciseId), timedOf(ctx)(en.exerciseId))).join("")}
     </section>`,
       )
       .join("")}
     <p class="err" role="alert" data-err></p>
-    <button class="btn btn-warn" data-act="del-ses">Delete workout</button>`;
+    <button class="btn btn-warn" data-act="del-ses">${t("history.deleteWorkout")}</button>`;
 
   current = { root, id, ctx };
+  if (takeRating(id)) openRating(ctx, ses);
 
   if (restore) {
     for (const r of restore) {
@@ -258,7 +316,7 @@ function sessionScreen(root, ctx) {
       row.classList.add("bad");
     }
     if (restore.length)
-      root.querySelector("[data-err]").textContent = BAD_MSG;
+      root.querySelector("[data-err]").textContent = badMsg();
     restore = null;
   }
 
@@ -269,20 +327,21 @@ function sessionScreen(root, ctx) {
   });
 
   root.addEventListener("click", async (ev) => {
-    const t = ev.target.closest("[data-act], a");
-    if (!t) return;
+    const btn = ev.target.closest("[data-act], a");
+    if (!btn) return;
     syncAll();
-    const act = t.dataset.act;
+    const act = btn.dataset.act;
     if (!act) {
       ctx.save({ render: false }); // plain links navigate on their own
       return;
     }
     if (act === "del-set") {
-      const row = t.closest(".set");
+      const row = btn.closest(".set");
       const e = Number(row.dataset.e);
       const i = Number(row.dataset.i);
-      const name = findSession(current)?.entries[e]?.name ?? "this exercise";
-      if (!(await confirmSheet(`Delete set ${i + 1} of ${name}?`, "Delete"))) {
+      const en = findSession(current)?.entries[e];
+      const name = en ? exName(en.exerciseId, en.name) : t("history.thisExercise");
+      if (!(await confirmSheet(t("history.deleteSetAsk", { n: i + 1, name }), t("history.delete")))) {
         ctx.save({ render: false });
         return;
       }
@@ -304,11 +363,14 @@ function sessionScreen(root, ctx) {
       // a session left empty is gone; the redraw sends us back to History
       await ctx.save();
       restore = null;
+    } else if (act === "rate") {
+      const s = findSession(current);
+      if (s) openRating(ctx, s);
     } else if (act === "del-ses") {
       if (
         !(await confirmSheet(
-          "Delete this workout? It is removed from History, progress and Muscles.",
-          "Delete workout",
+          t("history.deleteWorkoutAsk"),
+          t("history.deleteWorkout"),
         ))
       ) {
         ctx.save({ render: false });
@@ -330,26 +392,27 @@ export function renderProgress(root, ctx) {
     location.replace("#/history");
     return;
   }
-  const rows = exerciseRows(ctx.state.sessions);
-  const name = rows.find((r) => r.exerciseId === id).name;
+  const isT = timedOf(ctx)(id);
+  const rows = exerciseRows(ctx.state.sessions, timedOf(ctx));
+  const name = exName(id, rows.find((r) => r.exerciseId === id).name);
   const stuck = isStuck(hist.map((h) => h.sets));
   const byStart = new Map(ctx.state.sessions.map((s) => [s.startedAt, s.id]));
   const note = stuck
-    ? "Stuck: neither of your last two sessions beat the one before it, in weight or total reps."
+    ? t("history.noteStuck")
     : hist.length < 3
-      ? "Not stuck: it takes at least 3 sessions to tell."
-      : "Not stuck: one of your last two sessions beat the one before it.";
-  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history">‹ History</a></div>
+      ? t("history.noteFew")
+      : t("history.noteOk");
+  root.innerHTML = `<div class="row topbar"><a class="back" href="#/history"><span class="flip">‹</span> ${t("history.back")}</a></div>
     <h1 class="title">${esc(name)}</h1>
     <p class="${stuck ? "stuck" : "muted"}" style="margin-bottom:var(--gap)">${esc(note)}</p>
-    <section class="card">${chartHtml(hist.map((h) => heaviest(h.sets)))}</section>
+    <section class="card">${chartHtml(hist.map((h) => (isT ? longest(h.sets) : heaviest(h.sets))), isT)}</section>
     ${[...hist]
       .reverse()
       .map((h) => {
         const sid = byStart.get(h.startedAt);
         return `<a class="card block" href="#/history/${encodeURIComponent(sid)}">
         <div class="muted small">${esc(fmtDate(h.startedAt))}</div>
-        <div class="last-sets">${esc(setsText(h.sets))}</div>
+        <div class="last-sets">${esc(setsText(h.sets, isT))}</div>
       </a>`;
       })
       .join("")}`;
@@ -357,6 +420,6 @@ export function renderProgress(root, ctx) {
 
 export function render(root, ctx) {
   if (ctx.params.id) return sessionScreen(root, ctx);
-  root.innerHTML = `<h1 class="title">History</h1>
-    <p class="subtitle">Every workout, newest first</p>${listHtml(ctx.state)}`;
+  root.innerHTML = `<h1 class="title">${t("history.title")}</h1>
+    <p class="subtitle">${t("history.subtitle")}</p>${listHtml(ctx.state, ctx)}`;
 }

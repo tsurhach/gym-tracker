@@ -16,11 +16,10 @@ export const MUSCLES = [
 export const MAJOR_MUSCLES = ["Chest", "Back", "Quads", "Hamstrings", "Shoulders"];
 
 export const GOALS = {
-  strength: { label: "Strength", repMin: 4, repMax: 6, sets: 3 },
-  muscle: { label: "Build muscle", repMin: 8, repMax: 12, sets: 3 },
-  endurance: { label: "Endurance", repMin: 12, repMax: 20, sets: 3 },
+  strength: { repMin: 4, repMax: 6, sets: 3 },
+  muscle: { repMin: 8, repMax: 12, sets: 3 },
+  endurance: { repMin: 12, repMax: 20, sets: 3 },
 };
 
-export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export const DEFAULT_STEP = 2.5;

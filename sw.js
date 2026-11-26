@@ -1,6 +1,6 @@
 // Caches static files only. Never touches localStorage or user data.
 // VERSION is stamped by `npm run stamp` (content hash of the precached files and the exercise drawings); a release is a new VERSION.
-const VERSION = "0beb721c5683";
+const VERSION = "19c757090448";
 const SHELL = `gym-tracker-shell-${VERSION}`;
 const IMG_VERSION = "c7b2d949c956";
 const IMAGES = `gym-tracker-img-${IMG_VERSION}`; // drawings are cached per IMG_VERSION (hash of img/ex), so changed drawings replace the old cache on activate
@@ -11,6 +11,7 @@ const PRECACHE = [
   "./styles.css",
   "./manifest.webmanifest",
   "./data/exercises.json",
+  "./data/exercises.he.json",
   "./data/programs.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -25,6 +26,8 @@ const PRECACHE = [
   "./js/planbuild.js",
   "./js/swapsheet.js",
   "./js/supersheet.js",
+  "./js/rating.js",
+  "./js/ratesheet.js",
   "./js/planfile.js",
   "./js/migrate.js",
   "./js/proposal.js",
@@ -34,6 +37,18 @@ const PRECACHE = [
   "./js/store.js",
   "./js/sync.js",
   "./js/friendly.js",
+  "./js/i18n/index.js",
+  "./js/i18n/en.js",
+  "./js/i18n/he.js",
+  "./js/i18n/en/common.js",
+  "./js/i18n/en/train.js",
+  "./js/i18n/en/plan.js",
+  "./js/i18n/en/social.js",
+  "./js/i18n/en/extra.js",
+  "./js/i18n/he/common.js",
+  "./js/i18n/he/train.js",
+  "./js/i18n/he/plan.js",
+  "./js/i18n/he/social.js",
   "./js/synccrypto.js",
   "./js/share.js",
   "./js/passkey.js",
@@ -130,12 +145,20 @@ self.addEventListener("fetch", (event) => {
 // The server sends an empty push when a rest ends and the app is not open.
 self.addEventListener("push", (event) => {
   event.waitUntil(
-    self.registration.showNotification("Rest over", {
-      body: "Time for your next set.",
-      tag: "rest",
-      renotify: true,
-      icon: "./icons/icon-192.png",
-    }),
+    (async () => {
+      // The page keeps its language in Cache Storage (js/i18n/index.js rememberLang); default English.
+      let he = false;
+      try {
+        const r = await (await caches.open("gym-prefs")).match("./__lang");
+        he = r ? (await r.text()) === "he" : false;
+      } catch {}
+      await self.registration.showNotification(he ? "המנוחה הסתיימה" : "Rest over", {
+        body: he ? "הזמן לסט הבא." : "Time for your next set.",
+        tag: "rest",
+        renotify: true,
+        icon: "./icons/icon-192.png",
+      });
+    })(),
   );
 });
 

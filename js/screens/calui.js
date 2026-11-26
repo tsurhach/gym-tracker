@@ -2,6 +2,7 @@
 // The box repaints only itself (never the whole screen), so a time picker or a typed value is not disturbed.
 import { esc, confirmSheet, infoSheet, showBanner } from "../ui.js";
 import { avgMins } from "../logic.js";
+import { t, ltr, ltrText } from "../i18n/index.js";
 import {
   calNew,
   calDelete,
@@ -11,16 +12,11 @@ import {
   TIP_KEY,
 } from "../calendar.js";
 
-const OFFLINE = "Couldn't reach the server. Try again when you're online.";
+const offline = () => t("cal.offline");
 const ui = { busy: false, error: "", showLink: false }; // this screen's own state, never saved
 const DEFAULT_TIME = "18:00";
 
-const TIP = [
-  "Your calendar won't remind you by default. To get alerts:",
-  "iPhone: Settings > Calendar > Default Alert Times, or tap the event > Alert.",
-  "Google Calendar: it may not let you set alerts for a linked calendar.",
-  "Outlook: the event > Reminder.",
-];
+const tip = () => [t("cal.tip1"), t("cal.tip2"), t("cal.tip3"), t("cal.tip4")];
 
 const hasDays = (state) =>
   Object.keys(state.settings.schedule?.days ?? {}).length > 0;
@@ -30,12 +26,12 @@ export function calHtml(state) {
   const days = hasDays(state);
   const off = !c && !days;
   let h = `<div class="cal-sep"></div>
-    <label class="setting">Show my training days in my calendar
+    <label class="setting">${t("cal.show")}
       <input type="checkbox" data-cal="on"${c ? " checked" : ""}${off || ui.busy ? " disabled" : ""} />
     </label>
-    ${off ? `<p class="muted small" style="margin-top:0">Pick training days first.</p>` : ""}
-    <p class="muted small" style="margin-top:0">Your workout names and training days are stored on our server without encryption, so your calendar can read them. No weights, notes or body weight.</p>
-    ${ui.busy ? `<p class="muted small" role="status">Working…</p>` : ""}
+    ${off ? `<p class="muted small" style="margin-top:0">${t("cal.pickDays")}</p>` : ""}
+    <p class="muted small" style="margin-top:0">${t("cal.stored")}</p>
+    ${ui.busy ? `<p class="muted small" role="status">${t("cal.working")}</p>` : ""}
     ${ui.error ? `<p class="small" role="alert" style="color:var(--warning)">${esc(ui.error)}</p>` : ""}`;
   if (!c) return h;
   const timed = c.time !== null;
@@ -44,39 +40,39 @@ export function calHtml(state) {
   for (let m = 15; m <= 240; m += 15) mins.push(m);
   const shown = c.autoMins && avg ? avg : c.mins;
   if (!mins.includes(shown)) mins.push(shown);
-  h += `<a class="btn btn-primary" href="${esc(webcalUrl(c.id))}" style="margin-top:8px">Add to Apple Calendar</a>
-    <a class="btn" href="${esc(googleUrl(c.id))}" target="_blank" rel="noopener">Add to Google Calendar</a>
-    <p class="muted small" style="margin-top:0">If that doesn't work: copy the link, open calendar.google.com in Chrome or Safari, switch to Desktop site (browser menu), tap Other calendars + &gt; From URL, paste, then Add calendar. It then shows in the Google Calendar app.</p>
-    <button class="btn" data-cal="copy">Copy link</button>
-    ${ui.showLink ? `<input readonly value="${esc(feedUrl(c.id))}" aria-label="Calendar link" onfocus="this.select()" />` : ""}
-    <p class="muted small"><b>Keep this link private.</b> Anyone who has it can see your workout names and days.</p>`;
-  h += `<div class="seg" role="group" aria-label="When it shows in the calendar" style="margin-top:8px">
-      <button class="chip" data-cal="allday" aria-pressed="${!timed}">All day</button>
-      <button class="chip" data-cal="timed" aria-pressed="${timed}">At a set time</button>
+  h += `<a class="btn btn-primary" href="${esc(webcalUrl(c.id))}" style="margin-top:8px">${t("cal.addApple")}</a>
+    <a class="btn" href="${esc(googleUrl(c.id))}" target="_blank" rel="noopener">${t("cal.addGoogle")}</a>
+    <p class="muted small" style="margin-top:0">${t("cal.googleHelp")}</p>
+    <button class="btn" data-cal="copy">${t("cal.copyLink")}</button>
+    ${ui.showLink ? `<input readonly value="${esc(feedUrl(c.id))}" aria-label="${esc(t("cal.linkLabel"))}" onfocus="this.select()" />` : ""}
+    <p class="muted small">${t("cal.private")}</p>`;
+  h += `<div class="seg" role="group" aria-label="${esc(t("cal.whenLabel"))}" style="margin-top:8px">
+      <button class="chip" data-cal="allday" aria-pressed="${!timed}">${t("cal.allDay")}</button>
+      <button class="chip" data-cal="timed" aria-pressed="${timed}">${t("cal.setTime")}</button>
     </div>`;
   if (timed)
-    h += `<label class="setting">Start time
-        <input type="time" data-cal="time" value="${esc(c.time)}" aria-label="Start time" style="width:auto;min-width:110px" />
+    h += `<label class="setting">${t("cal.startTime")}
+        <input type="time" data-cal="time" value="${esc(c.time)}" aria-label="${esc(t("cal.startTime"))}" style="width:auto;min-width:110px" />
       </label>
-      <label class="setting">Length
-        <select data-cal="mins" aria-label="Length in minutes"${c.autoMins ? " disabled" : ""}>
+      <label class="setting">${t("cal.length")}
+        <select data-cal="mins" aria-label="${esc(t("cal.lengthLabel"))}"${c.autoMins ? " disabled" : ""}>
           ${mins
             .sort((a, b) => a - b)
             .map(
               (m) =>
-                `<option value="${m}"${m === shown ? " selected" : ""}>${m} min</option>`,
+                `<option value="${m}"${m === shown ? " selected" : ""}>${ltrText(t("cal.optMin", { m }))}</option>`,
             )
             .join("")}
         </select>
       </label>
-      <label class="check"><input type="checkbox" data-cal="auto"${c.autoMins ? " checked" : ""} /> Match my average workout length</label>
-      ${c.autoMins ? `<p class="muted small" style="margin-top:0">${avg ? `About ${avg} min, from your last finished workouts.` : "Needs 3 finished workouts. Until then the length you picked is used."}</p>` : ""}
-      <label class="check"><input type="checkbox" data-cal="alarm"${c.alarm ? " checked" : ""} /> Remind me 30 min before</label>
-      <p class="muted small" style="margin-top:0">Reminders depend on your calendar app. To be sure, turn on alerts for this calendar in its settings.</p>`;
-  h += `    <p class="muted small" style="margin-top:0">Outlook: Outlook on the web (Desktop site on a phone) &gt; Add calendar &gt; Subscribe from web, and paste.</p>
-    <p class="muted small" style="margin-top:0">Changes show here at once, but your calendar app decides when to check: Apple Calendar usually within an hour (pull down to refresh), Outlook every 3-4 hours, Google often 12-24 hours. In Google, to see changes now, remove the calendar and add it again. This is one-way: edit your plan here, not in the calendar.</p>
-    <button class="btn" data-cal="renew">Make a new link</button>
-    <button class="btn btn-warn" data-cal="off">Turn off</button>`;
+      <label class="check"><input type="checkbox" data-cal="auto"${c.autoMins ? " checked" : ""} /> ${t("cal.matchAvg")}</label>
+      ${c.autoMins ? `<p class="muted small" style="margin-top:0">${avg ? t("cal.about", { n: ltr(String(avg)) }) : t("cal.needs3")}</p>` : ""}
+      <label class="check"><input type="checkbox" data-cal="alarm"${c.alarm ? " checked" : ""} /> ${t("cal.remind")}</label>
+      <p class="muted small" style="margin-top:0">${t("cal.remindHelp")}</p>`;
+  h += `    <p class="muted small" style="margin-top:0">${t("cal.outlook")}</p>
+    <p class="muted small" style="margin-top:0">${t("cal.refresh")}</p>
+    <button class="btn" data-cal="renew">${t("cal.renew")}</button>
+    <button class="btn btn-warn" data-cal="off">${t("cal.off")}</button>`;
   return h;
 }
 
@@ -101,7 +97,7 @@ export function bindCal(root, ctx) {
     try {
       keys = await calNew();
     } catch {
-      return fail(OFFLINE);
+      return fail(offline());
     }
     state.settings.calendar = {
       ...keys,
@@ -119,15 +115,15 @@ export function bindCal(root, ctx) {
       seen = !!localStorage.getItem(TIP_KEY);
       localStorage.setItem(TIP_KEY, "1");
     } catch {}
-    if (!seen) infoSheet(TIP);
+    if (!seen) infoSheet(tip());
   }
 
   async function turnOff() {
     if (
       !(await confirmSheet(
-        "This deletes the calendar link. Events already in your calendar may stay; remove the Gym Tracker calendar in your calendar app too.",
-        "Turn off",
-        "Cancel",
+        t("cal.offAsk"),
+        t("cal.off"),
+        t("cal.cancel"),
         { danger: true },
       ))
     )
@@ -138,9 +134,7 @@ export function bindCal(root, ctx) {
     try {
       await calDelete(state.settings.calendar);
     } catch {
-      return fail(
-        "Couldn't turn it off. Your link is still on. Try again when you're online.",
-      );
+      return fail(t("cal.offFailed"));
     }
     delete state.settings.calendar;
     ui.busy = false;
@@ -153,9 +147,9 @@ export function bindCal(root, ctx) {
   async function renew() {
     if (
       !(await confirmSheet(
-        "The old link stops working now. You'll need to add the new one to your calendar.",
-        "Make a new link",
-        "Cancel",
+        t("cal.renewAsk"),
+        t("cal.renew"),
+        t("cal.cancel"),
       ))
     )
       return;
@@ -170,9 +164,7 @@ export function bindCal(root, ctx) {
       state.settings.calendar = { ...state.settings.calendar, ...keys };
     } catch {
       return fail(
-        deleted
-          ? "Your old link is already off. Tap Make a new link again when you're online."
-          : "Couldn't make a new link. Try again when you're online.",
+        deleted ? t("cal.renewHalf") : t("cal.renewFailed"),
       );
     }
     ui.busy = false;
@@ -185,11 +177,11 @@ export function bindCal(root, ctx) {
   async function copy() {
     try {
       await navigator.clipboard.writeText(feedUrl(state.settings.calendar.id));
-      showBanner("Link copied.", { kind: "ok" });
+      showBanner(t("cal.copied"), { kind: "ok" });
     } catch {
       ui.showLink = true; // no clipboard access: show the link to press and hold
       paint();
-      showBanner("Couldn't copy. Press and hold the link below.");
+      showBanner(t("cal.copyFailed"));
     }
   }
 

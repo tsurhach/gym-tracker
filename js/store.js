@@ -1,5 +1,6 @@
 import { GOALS } from "./constants.js";
 import { localDate } from "./weight.js";
+import { t } from "./i18n/index.js";
 
 export const KEY = "gymtracker.v1";
 export const CORRUPT_KEY = "gymtracker.corrupt";
@@ -208,6 +209,9 @@ export function createStore(storage) {
         const parsed = JSON.parse(raw);
         if (isValidState(parsed)) {
           for (const w of parsed.workouts) w.id ??= crypto.randomUUID();
+          // Unknown language or wording values count as "not set" (Auto / neutral).
+          if (parsed.settings.lang !== undefined && !["auto", "en", "he"].includes(parsed.settings.lang)) delete parsed.settings.lang;
+          if (parsed.settings.gender !== undefined && !["neutral", "male", "female"].includes(parsed.settings.gender)) delete parsed.settings.gender;
           snap = snapshotOf(parsed);
           return { state: parsed, recovered: false, kept: true };
         }
@@ -273,6 +277,6 @@ export function importJson(text) {
     parsed = JSON.parse(text);
   } catch {}
   if (!isValidState(parsed))
-    throw new Error("This file is not a Gym Tracker backup.");
+    throw new Error(t("store.notBackup"));
   return parsed;
 }

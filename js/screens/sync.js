@@ -3,6 +3,7 @@
 import { esc, confirmSheet, showBanner } from "../ui.js";
 import { friendlyError, syncOutcome } from "../friendly.js";
 import { supported } from "../passkey.js";
+import { t, ltr } from "../i18n/index.js";
 
 let view = "home"; // home | code | needcode
 let recovery = "";
@@ -26,55 +27,55 @@ const err = () =>
 const dis = () => (busy ? " disabled" : "");
 
 function html(sync) {
-  const back = `<a class="btn" href="#/plan">Back to Plan</a>`;
+  const back = `<a class="btn" href="#/plan">${t("sync.backPlan")}</a>`;
   if (view === "code")
-    return `<h1 class="title">Your recovery code</h1>
+    return `<h1 class="title">${t("sync.codeTitle")}</h1>
       <section class="card">
-        <p>Keep this code safe. You need it if Face ID alone cannot open your data, for example on an Android phone or if your passkey was deleted. Nobody can reset it, not even us.</p>
-        <p style="font:600 22px/1.5 ui-monospace,monospace;word-break:break-word;letter-spacing:1px">${esc(recovery)}</p>
+        <p>${t("sync.codeKeep")}</p>
+        <p style="font:600 22px/1.5 ui-monospace,monospace;word-break:break-word;letter-spacing:1px">${ltr(esc(recovery))}</p>
         <form data-form="save">
           <span style="position:absolute;opacity:0;height:0;overflow:hidden"><input type="text" name="username" value="Gym Tracker" autocomplete="username" tabindex="-1" /><input type="password" name="code" value="${esc(recovery)}" autocomplete="new-password" tabindex="-1" /></span>
-          <button class="btn" type="submit">Save in iPhone Passwords</button>
+          <button class="btn" type="submit">${t("sync.savePasswords")}</button>
         </form>
-        <button class="btn" data-act="copy">Copy code</button>
+        <button class="btn" data-act="copy">${t("sync.copyCode")}</button>
       </section>
-      <button class="btn btn-primary" data-act="done">Done</button>
-      ${saved ? "" : `<p class="muted small">Save it in Passwords or copy it to a note first. Then tap Done.</p>`}`;
+      <button class="btn btn-primary" data-act="done">${t("sync.done")}</button>
+      ${saved ? "" : `<p class="muted small">${t("sync.saveFirst")}</p>`}`;
   if (view === "needcode")
-    return `<h1 class="title">Enter your recovery code</h1>
+    return `<h1 class="title">${t("sync.enterTitle")}</h1>
       <section class="card">
-        <p>Face ID could not unlock your data on this device. Type the recovery code once.</p>
+        <p>${t("sync.enterBody")}</p>
         <form data-form="code">
           <input type="text" name="username" value="Gym Tracker" autocomplete="username" hidden />
-          <input type="password" name="code" autocomplete="current-password" autocapitalize="characters" aria-label="Recovery code" value="${esc(typed)}" />
-          <p class="muted small">Tap the box: your iPhone can fill it in from Passwords.</p>
+          <input type="password" name="code" autocomplete="current-password" autocapitalize="characters" aria-label="${esc(t("sync.codeLabel"))}" value="${esc(typed)}" />
+          <p class="muted small">${t("sync.tapBox")}</p>
           ${err()}
-          <button class="btn btn-primary" type="submit"${dis()}>Unlock</button>
+          <button class="btn btn-primary" type="submit"${dis()}>${t("sync.unlock")}</button>
         </form>
       </section>${back}`;
   if (sync.active())
-    return `<h1 class="title">Sync</h1>
+    return `<h1 class="title">${t("sync.title")}</h1>
       <section class="card"><b>${esc(sync.status())}</b>
-        <p class="muted small">Photos and your rest sound sync too, locked like the rest. Videos stay on this phone and in your full backup file.</p>${sync.mediaNote() ? `<p class="small" role="status">${esc(sync.mediaNote())}</p>` : ""}</section>
+        <p class="muted small">${t("sync.mediaInfo")}</p>${sync.mediaNote() ? `<p class="small" role="status">${esc(sync.mediaNote())}</p>` : ""}</section>
       ${err()}
-      <button class="btn" data-act="now"${dis()}>Sync now</button>
-      <button class="btn" data-act="newcode"${dis()}>Make a new recovery code</button>
-      <p class="muted small">Lost your code? Make a new one. The old code stops working.</p>
-      <button class="btn" data-act="signout"${dis()}>Sign out on this device</button>
-      <button class="btn btn-warn" data-act="delete"${dis()}>Delete my cloud data</button>
-      <a class="btn" href="#/people">Go to People</a>
+      <button class="btn" data-act="now"${dis()}>${t("sync.now")}</button>
+      <button class="btn" data-act="newcode"${dis()}>${t("sync.newCode")}</button>
+      <p class="muted small">${t("sync.lostCode")}</p>
+      <button class="btn" data-act="signout"${dis()}>${t("sync.signOutBtn")}</button>
+      <button class="btn btn-warn" data-act="delete"${dis()}>${t("sync.deleteBtn")}</button>
+      <a class="btn" href="#/people">${t("sync.goPeople")}</a>
       ${back}`;
   if (!supported())
-    return `<h1 class="title">Sync</h1><section class="card"><p>This browser cannot use passkeys, so sync is not available here.</p></section>${back}`;
-  return `<h1 class="title">Sync</h1>
+    return `<h1 class="title">${t("sync.title")}</h1><section class="card"><p>${t("sync.noPasskeys")}</p></section>${back}`;
+  return `<h1 class="title">${t("sync.title")}</h1>
     <section class="card">
-      <p>Keep your workouts safe if you lose your phone, and use them on another device. Your data is locked on the phone before it leaves, so nobody else can read it.</p>
-      ${sync.status() !== "Sync off" ? `<p class="muted small">${esc(sync.status())}</p>` : ""}
+      <p>${t("sync.intro")}</p>
+      ${sync.status() !== t("sync.off") ? `<p class="muted small">${esc(sync.status())}</p>` : ""}
     </section>
     ${err()}
-    <button class="btn btn-primary" data-act="enable"${dis()}>Turn on sync with Face ID</button>
-    <button class="btn" data-act="signin"${dis()}>I already use sync</button>
-    <p class="muted small">Already turned it on on another phone? Tap this. Your workouts here and in the cloud are combined.</p>
+    <button class="btn btn-primary" data-act="enable"${dis()}>${t("sync.enable")}</button>
+    <button class="btn" data-act="signin"${dis()}>${t("sync.signIn")}</button>
+    <p class="muted small">${t("sync.signInHelp")}</p>
     ${back}`;
 }
 
@@ -110,12 +111,12 @@ function wire(root, sync, draw, ctx) {
       }),
     now: async () => {
       if (await run(() => sync.syncNow())) {
-        const o = syncOutcome(sync.status());
+        const o = syncOutcome(sync.status(), sync.isOk());
         showBanner(o.text, { kind: o.kind });
       }
     },
     newcode: async () => {
-      if (!(await confirmSheet("Make a new recovery code? Your old code stops working.", "Make new code"))) return;
+      if (!(await confirmSheet(t("sync.newCodeAsk"), t("sync.newCodeOk")))) return;
       run(async () => {
         recovery = await sync.newRecoveryCode();
         saved = false;
@@ -123,15 +124,15 @@ function wire(root, sync, draw, ctx) {
       });
     },
     signout: async () => {
-      if (!(await confirmSheet("Sign out on this phone? Your data stays here, but stops syncing until you sign in again.", "Sign out"))) return;
-      if (await run(() => sync.signOut())) showBanner("Signed out. Your data is still on this phone.", { kind: "ok" });
+      if (!(await confirmSheet(t("sync.signOutAsk"), t("sync.signOutOk")))) return;
+      if (await run(() => sync.signOut())) showBanner(t("sync.signedOut"), { kind: "ok" });
     },
     delete: async () => {
       if (
         !(await confirmSheet(
-          "Delete your data from the cloud? Your data on this phone stays. Other devices stop syncing. This cannot be undone. The passkey stays in iPhone Settings, Passwords; you can delete it there.",
-          "Delete cloud data",
-          "Cancel",
+          t("sync.deleteAsk"),
+          t("sync.deleteOk"),
+          t("sync.cancel"),
           { danger: true },
         ))
       )
@@ -142,12 +143,12 @@ function wire(root, sync, draw, ctx) {
       try {
         await navigator.clipboard.writeText(recovery);
         saved = true;
-        showBanner("Copied.", { kind: "ok" });
+        showBanner(t("sync.copied"), { kind: "ok" });
       } catch {}
       draw();
     },
     done: async () => {
-      if (!saved && !(await confirmSheet("Did you save the code? You cannot see it again.", "Yes, it is saved"))) return;
+      if (!saved && !(await confirmSheet(t("sync.savedAsk"), t("sync.savedOk")))) return;
       recovery = "";
       go("home");
       draw();

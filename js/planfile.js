@@ -1,6 +1,7 @@
 // Plan file format: a whole training plan as plain JSON (names only, no ids), so a person or an AI
 // can write one. Pure module: no DOM, no storage.
 import { DEFAULT_STEP, GOALS, MUSCLES } from "./constants.js";
+import { ltrText as N, t as tr } from "./i18n/index.js";
 
 export const FORMAT = "gym-tracker-plan";
 export const VERSION = 1;
@@ -9,6 +10,7 @@ export const LIMITS = {
   exercises: [1, 20],
   sets: [1, 10],
   reps: [1, 100],
+  seconds: [1, 3600], // timed exercises keep seconds in reps; only exercises flagged timed may go above reps[1]
   step: [0.25, 25],
   name: 80,
   dayName: 40, // the Plan screen's own limit for a workout name
@@ -550,39 +552,33 @@ export function validatePlanFile(obj) {
   const errors = [];
   try {
     if (!isObj(obj))
-      return { ok: false, errors: ["The plan must be a JSON object."] };
-    if (obj.format !== FORMAT) errors.push(`"format" must be "${FORMAT}".`);
-    if (obj.version !== VERSION) errors.push(`"version" must be ${VERSION}.`);
+      return { ok: false, errors: [tr("pf.err.notobject")] };
+    if (obj.format !== FORMAT) errors.push(tr("pf.err.format", { format: FORMAT }));
+    if (obj.version !== VERSION) errors.push(tr("pf.err.version", { n: N(VERSION) }));
     if (!plain(obj.name) || obj.name.trim().length > LIMITS.name)
-      errors.push(`"name" must be text, 1 to ${LIMITS.name} characters.`);
+      errors.push(tr("pf.err.name", { max: N(LIMITS.name) }));
     if (typeof obj.goal !== "string" || !Object.hasOwn(GOALS, obj.goal))
-      errors.push(`"goal" must be one of: ${Object.keys(GOALS).join(", ")}.`);
+      errors.push(tr("pf.err.goal", { list: Object.keys(GOALS).join(", ") }));
     if (
       obj.notes !== undefined &&
       (typeof obj.notes !== "string" || obj.notes.length > LIMITS.notes)
     )
-      errors.push(
-        `"notes" must be text of at most ${LIMITS.notes} characters.`,
-      );
+      errors.push(tr("pf.err.notes", { max: N(LIMITS.notes) }));
     const days = obj.days;
     if (
       !Array.isArray(days) ||
       days.length < LIMITS.days[0] ||
       days.length > LIMITS.days[1]
     )
-      errors.push(
-        `"days" must be a list of ${LIMITS.days[0]} to ${LIMITS.days[1]} workouts.`,
-      );
+      errors.push(tr("pf.err.days", { min: N(LIMITS.days[0]), max: N(LIMITS.days[1]) }));
     else
       days.forEach((d, i) => {
-        const at = `Day ${i + 1}`;
-        if (!isObj(d)) return errors.push(`${at} must be an object.`);
+        const at = tr("pf.day", { n: N(i + 1) });
+        if (!isObj(d)) return errors.push(tr("pf.err.day.object", { at }));
         if (!plain(d.name) || d.name.trim().length > LIMITS.dayName)
-          errors.push(
-            `${at}: "name" must be text, 1 to ${LIMITS.dayName} characters.`,
-          );
+          errors.push(tr("pf.err.day.name", { at, max: N(LIMITS.dayName) }));
         const label = plain(d.name)
-          ? `${at} (${clean(d.name).slice(0, 40)})`
+          ? tr("pf.label", { at, name: clean(d.name).slice(0, 40) })
           : at;
         const ex = d.exercises;
         if (
@@ -591,42 +587,42 @@ export function validatePlanFile(obj) {
           ex.length > LIMITS.exercises[1]
         )
           return errors.push(
-            `${label}: "exercises" must be a list of ${LIMITS.exercises[0]} to ${LIMITS.exercises[1]} exercises.`,
+            tr("pf.err.exercises", { label, min: N(LIMITS.exercises[0]), max: N(LIMITS.exercises[1]) }),
           );
         const seen = new Set();
         ex.forEach((x, j) => {
-          const pos = `${label}, exercise ${j + 1}`;
-          if (!isObj(x)) return errors.push(`${pos} must be an object.`);
+          const pos = tr("pf.pos", { label, n: N(j + 1) });
+          if (!isObj(x)) return errors.push(tr("pf.err.ex.object", { pos }));
           const e = plain(x.name)
-            ? `${plain(d.name) ? clean(d.name).slice(0, 40) : at}, "${clean(x.name).slice(0, 40)}"`
+            ? tr("pf.where", { day: plain(d.name) ? clean(d.name).slice(0, 40) : at, name: clean(x.name).slice(0, 40) })
             : pos;
           if (!plain(x.name) || x.name.trim().length > LIMITS.name)
-            errors.push(
-              `${pos}: "name" must be text, 1 to ${LIMITS.name} characters.`,
-            );
+            errors.push(tr("pf.err.ex.name", { pos, max: N(LIMITS.name) }));
           else {
             const key = canonicalKey(x.name);
             if (seen.has(key))
-              errors.push(`${e}: appears twice in the same workout.`);
+              errors.push(tr("pf.err.twice", { e }));
             seen.add(key);
           }
           if (!int(x.sets, LIMITS.sets))
             errors.push(
-              `${e}: sets ${x.sets === undefined ? "is missing" : show(x.sets) + " can't be used"}. Use a whole number from ${LIMITS.sets[0]} to ${LIMITS.sets[1]}.`,
+              x.sets === undefined
+                ? tr("pf.err.sets.missing", { e, min: N(LIMITS.sets[0]), max: N(LIMITS.sets[1]) })
+                : tr("pf.err.sets.bad", { e, v: show(x.sets), min: N(LIMITS.sets[0]), max: N(LIMITS.sets[1]) }),
             );
           const r = x.reps;
           if (
             !Array.isArray(r) ||
             r.length !== 2 ||
-            !r.every((n) => int(n, LIMITS.reps))
+            !r.every((n) => int(n, [LIMITS.reps[0], LIMITS.seconds[1]]))
           )
             errors.push(
-              `${e}: reps ${r === undefined ? "is missing" : show(r) + " can't be used"}. Use two numbers like [8, 12] (whole numbers from ${LIMITS.reps[0]} to ${LIMITS.reps[1]}).${typeof r === "string" && TIMED.test(r) ? " Timed exercises (seconds or minutes) are not supported; use sets and reps." : ""}`,
+              r === undefined
+                ? tr("pf.err.reps.missing", { e, min: N(LIMITS.reps[0]), max: N(LIMITS.reps[1]) })
+                : tr(typeof r === "string" && TIMED.test(r) ? "pf.err.reps.timed" : "pf.err.reps.bad", { e, v: show(r), min: N(LIMITS.reps[0]), max: N(LIMITS.reps[1]) }),
             );
           else if (r[0] > r[1])
-            errors.push(
-              `${e}: reps ${show(r)} can't be used. The first number must not be higher than the second.`,
-            );
+            errors.push(tr("pf.err.reps.order", { e, v: show(r) }));
           if (
             x.step !== undefined &&
             !(
@@ -636,19 +632,19 @@ export function validatePlanFile(obj) {
             )
           )
             errors.push(
-              `${e}: step ${show(x.step)} can't be used. Use a number from ${LIMITS.step[0]} to ${LIMITS.step[1]} (kg).`,
+              tr("pf.err.step", { e, v: show(x.step), min: N(LIMITS.step[0]), max: N(LIMITS.step[1]) }),
             );
           if (
             x.muscle !== undefined &&
             !(typeof x.muscle === "string" && muscleOf(x.muscle))
           )
             errors.push(
-              `${e}: muscle ${show(x.muscle)} can't be used. It must be one of: ${MUSCLES.join(", ")}.`,
+              tr("pf.err.muscle", { e, v: show(x.muscle), list: MUSCLES.join(", ") }),
             );
         });
       });
   } catch {
-    return { ok: false, errors: ["This plan could not be read."] };
+    return { ok: false, errors: [tr("pf.err.unreadable")] };
   }
   return { ok: errors.length === 0, errors: errors.slice(0, 20) };
 }
@@ -721,7 +717,7 @@ export function normalizePlanFile(input) {
       .map((f) =>
         f.n === 1
           ? f.specific
-          : `${f.general} (${f.n} times; first: ${f.specific})`,
+          : tr("pf.fix.many", { general: f.general, n: N(f.n), first: f.specific }),
       );
     return { obj, fixes };
   } catch {
@@ -735,7 +731,7 @@ function run(input, fix) {
     if (!input.some(hasExerciseList)) return null;
     top = { days: input };
     key = "days";
-    fix("wrap", "", "The list of workouts was wrapped into a plan.");
+    fix("wrap", "", tr("pf.fix.wrap"));
   } else if (isObj(input)) {
     top = { ...input };
     key = DAY_LISTS.find((k) => Array.isArray(top[k]));
@@ -745,7 +741,7 @@ function run(input, fix) {
         const { plan, ...rest } = top;
         top = { ...plan, ...rest };
         key = k;
-        fix("inner", "", 'The workouts were found inside "plan".');
+        fix("inner", "", tr("pf.fix.inner"));
       }
     }
   } else return null;
@@ -753,7 +749,7 @@ function run(input, fix) {
   if (key !== "days") {
     top.days = top[key];
     delete top[key];
-    fix("days", "", `Used "${key}" as the list of days.`);
+    fix("days", "", tr("pf.fix.days", { key }));
   }
   top.days = top.days.flatMap((d, i) => {
     const r = day(d, i, fix);
@@ -764,7 +760,7 @@ function run(input, fix) {
       if (plain(top[k])) {
         top.name = top[k];
         delete top[k];
-        fix("pname", "", `Used "${k}" as the plan name.`);
+        fix("pname", "", tr("pf.fix.pname", { key: k }));
         break;
       }
   // format and version carry no information once the days are there, so these two are filled in quietly.
@@ -772,7 +768,7 @@ function run(input, fix) {
   if (!own(top, "version") || top.version === "1") top.version = VERSION;
   if (top.goal === undefined || top.goal === null) {
     top.goal = "muscle";
-    fix("goal", "", 'No goal was given, so "muscle" was used.');
+    fix("goal", "", tr("pf.fix.goal"));
   } else if (typeof top.goal === "string") {
     const g = top.goal.trim().toLowerCase();
     const w = Object.hasOwn(GOALS, g)
@@ -781,7 +777,7 @@ function run(input, fix) {
         ? GOAL_WORDS[g]
         : null;
     if (w && w !== top.goal) {
-      fix("goalword", "", `Goal ${show(top.goal)} was read as "${w}".`);
+      fix("goalword", "", tr("pf.fix.goalword", { from: show(top.goal), to: w }));
       top.goal = w;
     }
   }
@@ -798,13 +794,13 @@ function day(d, i, fix) {
         delete o[k];
         fix(
           "dname",
-          `Used "${k}" as the workout name`,
-          `Day ${i + 1}: used "${k}" as the workout name.`,
+          tr("pf.fix.dname.general", { key: k }),
+          tr("pf.fix.dname", { n: N(i + 1), key: k }),
         );
         break;
       }
   if (typeof o.name === "string") o.name = o.name.trim();
-  const at = plain(o.name) ? clean(o.name).slice(0, 40) : `Day ${i + 1}`;
+  const at = plain(o.name) ? clean(o.name).slice(0, 40) : tr("pf.day", { n: N(i + 1) });
   if (!Array.isArray(o.exercises)) {
     const k = EX_LISTS.find((n) => Array.isArray(o[n]));
     if (k) {
@@ -812,8 +808,8 @@ function day(d, i, fix) {
       delete o[k];
       fix(
         "exlist",
-        `Used "${k}" as the list of exercises`,
-        `${at}: used "${k}" as the list of exercises.`,
+        tr("pf.fix.exlist.general", { key: k }),
+        tr("pf.fix.exlist", { at, key: k }),
       );
     }
   }
@@ -825,8 +821,8 @@ function day(d, i, fix) {
   if (!o.exercises.length) {
     fix(
       "emptyday",
-      "Workouts without exercises were left out",
-      `${at} had no exercises, so it was left out.`,
+      tr("pf.fix.emptyday.general"),
+      tr("pf.fix.emptyday", { at }),
     );
     return null;
   }
@@ -837,8 +833,8 @@ function exercise(x, at, fix) {
   const empty = () => {
     fix(
       "emptyex",
-      "Empty exercises were left out",
-      `${at}: an empty exercise was left out.`,
+      tr("pf.fix.emptyex.general"),
+      tr("pf.fix.emptyex", { at }),
     );
     return null;
   };
@@ -853,8 +849,8 @@ function exercise(x, at, fix) {
         delete o[k];
         fix(
           "exname",
-          `Used "${k}" as the exercise name`,
-          `${at}: used "${k}" as the exercise name.`,
+          tr("pf.fix.exname.general", { key: k }),
+          tr("pf.fix.exname", { at, key: k }),
         );
         break;
       }
@@ -862,7 +858,7 @@ function exercise(x, at, fix) {
     o.name = o.name.trim();
     if (!o.name) return empty();
   }
-  const lab = plain(o.name) ? `${at}, "${clean(o.name).slice(0, 40)}"` : at;
+  const lab = plain(o.name) ? tr("pf.where", { day: at, name: clean(o.name).slice(0, 40) }) : at;
   const s = o.sets;
   if (typeof s === "string") {
     const m = SETS_TEXT.exec(s.trim().toLowerCase());
@@ -871,14 +867,14 @@ function exercise(x, at, fix) {
       if (m[2] !== undefined)
         fix(
           "setsrange",
-          "Sets given as a range use the lower number",
-          `${lab}: sets ${show(s)} became ${o.sets} (the lower number).`,
+          tr("pf.fix.setsrange.general"),
+          tr("pf.fix.setsrange", { lab, v: show(s), n: N(o.sets) }),
         );
       else
         fix(
           "setstext",
-          "Sets written as text were read as numbers",
-          `${lab}: sets ${show(s)} read as ${o.sets}.`,
+          tr("pf.fix.setstext.general"),
+          tr("pf.fix.setstext", { lab, v: show(s), n: N(o.sets) }),
         );
     }
   } else if (Array.isArray(s) && s.length > 0 && s.length <= 50) {
@@ -892,8 +888,8 @@ function exercise(x, at, fix) {
         ];
       fix(
         "setslist",
-        "Lists of sets were counted",
-        `${lab}: a list of ${s.length} sets was counted as sets: ${s.length}.`,
+        tr("pf.fix.setslist.general"),
+        tr("pf.fix.setslist", { lab, count: N(s.length) }),
       );
     }
   }
@@ -907,8 +903,8 @@ function exercise(x, at, fix) {
       o.reps = r;
       fix(
         "reps",
-        "Reps were rewritten as a range",
-        `${lab}: reps ${show(v)} read as [${r[0]}, ${r[1]}].`,
+        tr("pf.fix.reps.general"),
+        tr("pf.fix.reps", { lab, v: show(v), lo: N(r[0]), hi: N(r[1]) }),
       );
     }
   }
@@ -927,14 +923,14 @@ function exercise(x, at, fix) {
       delete o.step;
       fix(
         "step",
-        "Unusable weight steps were dropped",
-        `${lab}: step ${show(v)} can't be used, so the default (${DEFAULT_STEP} kg) is used.`,
+        tr("pf.fix.step.general"),
+        tr("pf.fix.step", { lab, v: show(v), n: N(DEFAULT_STEP) }),
       );
     } else if (m)
       fix(
         "steptext",
-        "Steps written as text were read as numbers",
-        `${lab}: step ${show(v)} read as ${o.step}.`,
+        tr("pf.fix.steptext.general"),
+        tr("pf.fix.steptext", { lab, v: show(v), n: N(o.step) }),
       );
   }
   return o;
@@ -947,6 +943,7 @@ export function planFromFile(obj, library, customExercises = []) {
   const v = validatePlanFile(obj);
   if (!v.ok) return { ok: false, errors: v.errors };
   const news = new Map();
+  const tooMany = [];
   const days = obj.days.map((d) => ({
     name: clean(d.name),
     exercises: d.exercises.map((x) => {
@@ -964,6 +961,8 @@ export function planFromFile(obj, library, customExercises = []) {
       const lib = own
         ? library.find((e) => norm(e.name) === norm(name))
         : matchExercise(name, library);
+      if (repMax > LIMITS.reps[1] && !(own ?? lib)?.timed)
+        tooMany.push(tr("pf.err.reps.bad", { e: name, v: show(x.reps), min: N(LIMITS.reps[0]), max: N(LIMITS.reps[1]) }));
       if (lib)
         return {
           ...base,
@@ -990,6 +989,7 @@ export function planFromFile(obj, library, customExercises = []) {
       return { ...base, kind: "new", key };
     }),
   }));
+  if (tooMany.length) return { ok: false, errors: tooMany };
   return {
     ok: true,
     name: clean(obj.name),
@@ -1007,17 +1007,16 @@ export const needsMuscle = (preview) =>
 // Refuses (returns { ok:false, error }) while a workout is in progress or a muscle is missing; state is only
 // touched once everything has been checked.
 export function applyPlan(state, preview) {
-  if (!preview?.ok) return { ok: false, error: "This plan is not valid." };
+  if (!preview?.ok) return { ok: false, error: tr("pf.err.invalid") };
   if (state.active)
     return {
       ok: false,
-      error:
-        "A workout is in progress. Finish or discard it, then load the plan.",
+      error: tr("pf.err.active"),
     };
   if (needsMuscle(preview))
     return {
       ok: false,
-      error: "Choose a muscle group for each new exercise first.",
+      error: tr("pf.err.muscles"),
     };
   // An own exercise made since the preview was built is reused, never duplicated.
   const made = new Map(
@@ -1162,7 +1161,7 @@ function around(src, msg) {
     .slice(Math.max(0, at - 25), at + 25)
     .replace(/\s+/g, " ")
     .trim();
-  return bit ? ` Near: "${bit}".` : "";
+  return bit ? tr("pf.near", { bit }) : "";
 }
 
 // JSON from a file or a chat paste: also finds it inside chatter or code fences, and repairs what chat apps do
@@ -1171,9 +1170,9 @@ function around(src, msg) {
 // best one that parsed (so the validator's plain errors show); if nothing parsed, a short explanation.
 export function parsePlanText(text) {
   if (typeof text !== "string" || !text.trim())
-    return { ok: false, errors: ["There is no text to read."] };
+    return { ok: false, errors: [tr("pf.err.notext")] };
   if (text.length > MAX_PLAN_TEXT)
-    return { ok: false, errors: ["This is too long to be a plan."] };
+    return { ok: false, errors: [tr("pf.err.toolong")] };
   let first = null,
     planish = null,
     failed = null;
@@ -1203,13 +1202,11 @@ export function parsePlanText(text) {
   const best = planish ?? first;
   if (best) return { ok: true, ...best };
   const why = failed
-    ? ` The reader said: ${failed.msg}.${around(failed.src, failed.msg)}`
+    ? tr("pf.why", { msg: failed.msg, near: around(failed.src, failed.msg) })
     : "";
   return {
     ok: false,
-    errors: [
-      `No plan could be read from this text.${why} You can send this text as it is to your helper.`,
-    ],
+    errors: [tr("pf.err.noplan", { why })],
   };
 }
 

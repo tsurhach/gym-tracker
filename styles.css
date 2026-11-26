@@ -196,7 +196,7 @@ select {
     5px 5px,
     5px 5px;
   background-repeat: no-repeat;
-  padding-right: 36px;
+  padding-inline-end: 36px;
 }
 input[type="checkbox"] {
   flex: none;
@@ -377,7 +377,7 @@ h2,
   display: block;
   width: 100%;
   min-height: 72px;
-  text-align: left;
+  text-align: start;
   background: var(--surface);
   border: 2px solid transparent;
   border-radius: var(--radius);
@@ -585,7 +585,8 @@ body.resting #app {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 10px 10px 14px;
+  padding-block: 10px;
+  padding-inline: 14px 10px;
   background: var(--surface2);
   border: 1px solid var(--warning);
   border-radius: var(--radius);
@@ -658,7 +659,7 @@ body.resting #app {
   gap: 12px;
   width: 100%;
   min-height: 52px;
-  text-align: left;
+  text-align: start;
   padding: 8px 14px;
   margin-bottom: 6px;
   background: var(--surface);
@@ -767,7 +768,7 @@ a.btn-primary {
 .li .up,
 .li .stuck {
   max-width: 45%;
-  text-align: right;
+  text-align: end;
 }
 .st {
   flex: none;
@@ -904,6 +905,17 @@ a.btn-primary {
   opacity: 0;
   animation-name: flip-b;
 }
+/* Until both drawings are decoded (.ready): show the first one still, no fade. */
+.photo:not(.ready) .a,
+.photo:not(.ready) .b {
+  animation: none;
+}
+.photo:not(.ready) .a {
+  opacity: 1;
+}
+.photo img {
+  will-change: opacity;
+}
 @keyframes flip-a {
   0%,
   45% {
@@ -949,6 +961,24 @@ a.btn-primary {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+}
+.set.timed {
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1.2fr) 44px 48px 44px;
+  gap: 6px;
+}
+.hold {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  color: var(--accent);
+  font-size: 16px;
+}
+.hold.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 .set-head {
   margin-bottom: 4px;
@@ -1089,7 +1119,8 @@ a.card.block {
   height: auto;
 }
 .pb {
-  margin: -4px 0 8px 28px;
+  margin-block: -4px 8px;
+  margin-inline: 28px 0;
   font-size: 12px;
   font-weight: 600;
   color: var(--accent);
@@ -1196,7 +1227,7 @@ details.sec > summary::after {
   flex: none;
   width: 9px;
   height: 9px;
-  margin-left: auto;
+  margin-inline-start: auto;
   border-right: 2px solid var(--muted);
   border-bottom: 2px solid var(--muted);
   transform: rotate(-45deg);
@@ -1239,7 +1270,7 @@ details.help > summary {
 }
 details.help .sec-title {
   flex: 1 1 100%;
-  padding-right: 24px;
+  padding-inline-end: 24px;
 }
 details.help .sec-count {
   flex: 1 1 100%;
@@ -1248,14 +1279,14 @@ details.help .sec-count {
 }
 details.help > summary::after {
   position: absolute;
-  right: var(--pad);
+  inset-inline-end: var(--pad);
 }
 details.help {
   position: relative;
 }
 details.help .sec-body ol,
 details.help .sec-body ul {
-  padding-left: 22px;
+  padding-inline-start: 22px;
 }
 details.help .sec-body li {
   margin-bottom: 6px;
@@ -1336,17 +1367,17 @@ details.help .sec-body li {
   position: relative;
 }
 .item.ss {
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
 }
 .ss-tag {
   flex: none;
   min-height: 44px;
-  margin-right: 8px;
+  margin-inline-end: 8px;
   border: 0;
 }
 .ss-pick {
   width: 100%;
-  text-align: left;
+  text-align: start;
 }
 .ss-num {
   flex: none;
@@ -1364,7 +1395,7 @@ details.help .sec-body li {
   color: var(--on-accent);
 }
 .ss-group {
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
 }
 .ss-head {
   padding: 8px 0 0;
@@ -1397,8 +1428,9 @@ details.help .sec-body li {
   gap: 10px;
   background: transparent;
   border: 0;
-  padding: 6px 4px 6px 0;
-  text-align: left;
+  padding-block: 6px;
+  padding-inline: 0 4px;
+  text-align: start;
   color: inherit;
 }
 .xmain .ex-name::before {
@@ -1456,4 +1488,129 @@ details.help .sec-body li {
 .cal-sep {
   border-top: 1px solid var(--line);
   margin: 16px 0 4px;
+}
+/* Right-to-left (Hebrew): logical properties above do the flipping; these are the few extras. */
+[dir="rtl"] select {
+  background-position:
+    10px 21px,
+    15px 21px;
+}
+[dir="rtl"] .rest-prog i {
+  transform-origin: right;
+}
+[dir="rtl"] .flip {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+[dir="rtl"] .xchev {
+  transform: scaleX(-1);
+}
+[dir="rtl"] .xmain[aria-expanded="true"] .xchev {
+  transform: rotate(90deg);
+}
+/* Numbers, units, timers and charts keep left-to-right order (never mirrored). */
+.ltr,
+[dir="rtl"] input[inputmode="numeric"],
+[dir="rtl"] input[inputmode="decimal"],
+[dir="rtl"] input[type="time"],
+[dir="rtl"] input[type="date"],
+[dir="rtl"] .chart,
+[dir="rtl"] .spark {
+  direction: ltr;
+}
+.ltr {
+  unicode-bidi: isolate;
+}
+
+/* Hebrew exercise rows: the English name sits small under the Hebrew one. */
+.en-sub { display: block; font-size: 0.78em; font-weight: 400; color: var(--muted); text-align: start; unicode-bidi: isolate; }
+[dir="rtl"] .en-sub { text-align: right; direction: ltr; }
+
+/* End-of-workout rating */
+.rate-title {
+  margin: 0 0 4px;
+  font-size: var(--fs-lg);
+}
+.rate-q {
+  margin-bottom: var(--gap);
+}
+.rate-q .seg {
+  margin-top: 6px;
+}
+.rate-row .chip {
+  min-width: 0;
+  padding: 8px 2px;
+  font-size: 12px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.rate-row .face {
+  font-size: 24px;
+  line-height: 1;
+}
+.rate-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+.rate-q p {
+  margin: 6px 0 0;
+}
+.sheet.rate input[data-note] {
+  margin-bottom: var(--gap);
+}
+.rate-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.rate-note {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rate-note-full {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+button.card.rate-card {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+}
+button.card.rate-card .muted {
+  margin-top: 6px;
+}
+.trend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.trend-row > span:first-child {
+  flex: none;
+  width: 72px;
+}
+.bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 36px;
+}
+.bars i {
+  flex: 1;
+  min-height: 3px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+.bars i.none {
+  height: 3px;
+  background: var(--line);
 }

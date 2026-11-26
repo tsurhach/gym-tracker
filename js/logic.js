@@ -1,5 +1,23 @@
 import { MUSCLES } from "./constants.js";
 import { localDate } from "./weight.js";
+import { ltr, ltrText, t, tk } from "./i18n/index.js";
+
+// Number + unit chunks that keep their left-to-right order inside a sentence (no-ops in English).
+// n is already formatted. *Text for textContent / aria-label, *Html for html (n holds no markup).
+export const kgText = (n) => ltrText(t("logic.kg", { n }));
+export const kgHtml = (n) => ltr(t("logic.kg", { n }));
+export const minText = (n) => ltrText(t("logic.min", { n }));
+export const minHtml = (n) => ltr(t("logic.min", { n }));
+// Equipment name for display ("body only" etc.); anything else stays as stored.
+export const equipName = (v) => {
+  const s = tk("equip", v);
+  return s === "equip." + v ? v : s;
+};
+// Muscle name for display; a name that is not one of the 11 stays as typed.
+export const muscleName = (m) => {
+  const s = tk("muscle", m);
+  return s === "muscle." + m ? m : s;
+};
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -13,6 +31,21 @@ export function parseNum(text) {
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }
+
+// A timed exercise (plank, dead hang, wall sit) logs seconds in the set's `reps` field, so every
+// reps rule (valid set, new best, charts, sync, sharing) works unchanged. Missing flag = reps.
+export const isTimed = (ex) => ex?.timed === true;
+
+// "45" -> 45 s, "1:30" -> 90 s. Anything else (or over 99:59) -> null. Plain digits suit the numeric keypad.
+export function parseTime(text) {
+  const m = /^(?:(\d{1,2}):([0-5]?\d)|(\d{1,4}))$/.exec(String(text ?? "").trim());
+  if (!m) return null;
+  const s = m[3] !== undefined ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2]);
+  return s <= 5999 ? s : null;
+}
+
+// 45 -> "0:45", 90 -> "1:30"
+export const fmtTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 export const validSet = (weight, reps) =>
   typeof weight === "number" &&
@@ -75,58 +108,66 @@ const isBodyOnly = (ex) => ex?.equipment === "body only";
 // settings.bodyAdvice === false: body-weight moves get no sentence (missing setting = on).
 export function advice(prevSets, item, ex, settings) {
   const quiet = settings?.bodyAdvice === false;
+  const timed = isTimed(ex);
   if (!prevSets || prevSets.length === 0) {
+    if (timed) return { kind: "first", weight: 0, message: quiet ? "" : t("logic.firstTimed") };
     if (isBodyOnly(ex))
       return quiet
         ? { kind: "first", weight: 0, message: "" }
         : {
         kind: "first",
         weight: 0,
-        message: "First time. Body weight. Do as many good reps as you can.",
+        message: t("logic.firstBody"),
       };
     return {
       kind: "first",
       weight: null,
-      message: "First time. Pick a starting weight.",
+      message: t("logic.firstPick"),
     };
   }
   const { W, heavier } = analyse(prevSets, item);
   if (W === 0) {
     if (quiet) return { kind: "stay", weight: 0, message: "" };
+    if (timed)
+      return heavier
+        ? { kind: "heavier", weight: 0, message: t("logic.hitAddSec", { sec: t("logic.sec", { n: item.repMax }), kg: kgText(round2(item.step)) }) }
+        : { kind: "stay", weight: 0, message: t("logic.beatTime") };
     return heavier
       ? {
           kind: "heavier",
           weight: 0,
-          message: `You hit ${item.repMax} on every set. Add a rep or two, or add ${round2(item.step)} kg (belt or vest) if you have it.`,
+          message: t("logic.hitAddRep", { reps: item.repMax, kg: kgText(round2(item.step)) }),
         }
-      : { kind: "stay", weight: 0, message: "Beat your reps from last time." };
+      : { kind: "stay", weight: 0, message: t("logic.beatReps") };
   }
   if (heavier) {
     const weight = round2(W + item.step);
     return {
       kind: "heavier",
       weight,
-      message: `You hit ${item.repMax} on every set. Try ${weight} kg today.`,
+      message: timed
+        ? t("logic.hitTryTimed", { sec: t("logic.sec", { n: item.repMax }), kg: kgText(weight) })
+        : t("logic.hitTry", { reps: item.repMax, kg: kgText(weight) }),
     };
   }
   return {
     kind: "stay",
     weight: W,
-    message: `Stay at ${round2(W)} kg and beat your reps.`,
+    message: t(timed ? "logic.stayTimed" : "logic.stay", { kg: kgText(round2(W)) }),
   };
 }
 
 export function prefill(prevSets, item, ex, settings) {
   const rows = Array.from({ length: item.sets }, (_, i) => i);
   if (!prevSets || prevSets.length === 0) {
-    return rows.map(() => ({ weight: isBodyOnly(ex) ? 0 : null, reps: item.repMin }));
+    return rows.map(() => ({ weight: isBodyOnly(ex) || isTimed(ex) ? 0 : null, reps: item.repMin }));
   }
   const a = advice(prevSets, item, ex, settings);
   if (a.kind === "heavier" && a.weight === 0) {
     // Body weight at the top of the range: same weight, one more rep than last time.
     return rows.map((i) => ({
       weight: 0,
-      reps: (prevSets[i] ?? prevSets[prevSets.length - 1]).reps + 1,
+      reps: (prevSets[i] ?? prevSets[prevSets.length - 1]).reps + (isTimed(ex) ? 5 : 1),
     }));
   }
   if (a.kind === "heavier") {
@@ -164,7 +205,7 @@ export function isStuck(history) {
 export function stuckNote(history, adv, settings) {
   if (settings?.stuckNote === false) return null;
   if (adv?.kind === "heavier" || !isStuck(history)) return null;
-  return "Same numbers for the last 3 sessions. That happens. Aim for one more rep today.";
+  return t("logic.stuck");
 }
 
 export function nextWorkoutId(workouts, sessions) {
@@ -268,14 +309,12 @@ export function platesPerSide(target, bar, plates) {
 export function plateText(target, empty, plates) {
   const r = platesPerSide(target, empty, plates);
   if (!r) return "";
-  if (r.below) return `Below the empty weight (${round2(empty)} kg)`;
-  const side = r.each.length
-    ? `each side: ${r.each.join(" + ")}`
-    : empty > 0
-      ? "just the bar"
-      : "no plates";
-  if (r.exact) return side[0].toUpperCase() + side.slice(1);
-  return `Closest: ${round2(r.total)} kg — ${side}`;
+  if (r.below) return t("logic.plateBelow", { kg: kgText(round2(empty)) });
+  const list = ltrText(r.each.join(" + "));
+  if (r.exact)
+    return r.each.length ? t("logic.plateEachCap", { plates: list }) : empty > 0 ? t("logic.plateBarCap") : t("logic.plateNoneCap");
+  const side = r.each.length ? t("logic.plateEach", { plates: list }) : empty > 0 ? t("logic.plateBar") : t("logic.plateNone");
+  return t("logic.plateClosest", { kg: kgText(round2(r.total)), side });
 }
 
 // ---------- calendar subscription (settings.calendar) ----------
@@ -313,7 +352,7 @@ export function calendarBody(state, today, tz = Intl.DateTimeFormat().resolvedOp
   const days = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const name = (id) => {
     const w = (state.workouts ?? []).find((x) => x.id === id);
-    return Array.from(String(w?.name ?? "").trim()).slice(0, 60).join("") || "Workout";
+    return Array.from(String(w?.name ?? "").trim()).slice(0, 60).join("") || t("cal.fallback");
   };
   return {
     from: today,

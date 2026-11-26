@@ -1,4 +1,5 @@
 import { newItem } from "./session.js";
+import { hasHebrew, heMatch, ltrText, t } from "./i18n/index.js";
 import { ALIAS_LIST } from "./planfile.js";
 
 // Pure helpers for building a plan: gym-word search, adding many exercises at once, duplicating a day,
@@ -54,6 +55,10 @@ export function matchRank(name, query) {
 
 // Name match, or the best match over the plan-file aliases of that exercise ("bosu sit up" finds Bosu Ball Crunch). Aliases rank after names.
 function rankWithAliases(e, query) {
+  if (hasHebrew(query)) {
+    const h = heMatch(e.id, query);
+    return h === null ? null : h === 0 ? 0 : 3; // Hebrew name ranks like a name, Hebrew alias like an alias
+  }
   const r = matchRank(e.name, query);
   if (r !== null) return r;
   const hit = (ALIAS_LIST[e.id] ?? []).some((a) => matchRank(a, query) !== null);
@@ -62,7 +67,7 @@ function rankWithAliases(e, query) {
 
 // The exercises that match, best first (ties keep the library order). An empty query returns the list as is.
 export function searchExercises(list, query) {
-  if (!squash(query)) return list;
+  if (!squash(query) && !hasHebrew(query)) return list;
   return list
     .map((e, i) => ({ e, i, r: rankWithAliases(e, query) }))
     .filter((x) => x.r !== null)
@@ -72,11 +77,11 @@ export function searchExercises(list, query) {
 
 // Add exercises to a day in the given order, skipping ones already there (and repeats in ids).
 // Each gets the goal's sets and reps. Returns how many were added.
-export function addMany(workout, ids, goalKey) {
+export function addMany(workout, ids, goalKey, lookup = () => null) {
   let n = 0;
   for (const id of ids) {
     if (workout.items.some((it) => it.exerciseId === id)) continue;
-    workout.items.push(newItem(id, goalKey));
+    workout.items.push(newItem(id, goalKey, lookup(id)));
     n++;
   }
   return n;
@@ -85,7 +90,7 @@ export function addMany(workout, ids, goalKey) {
 // A copy of a day, added at the END of the plan (so the Today rotation is not disturbed), with a new id and a free name ("Push copy", "Push copy 2").
 export function duplicateWorkout(state, w, newId = crypto.randomUUID()) {
   const names = new Set(state.workouts.map((x) => x.name));
-  const base = `${w.name.slice(0, 33)} copy`;
+  const base = t("planbuild.copy", { name: w.name.slice(0, 33) });
   let name = base;
   for (let k = 2; names.has(name); k++) name = `${base} ${k}`;
   const copy = { ...structuredClone(w), id: newId, name };
@@ -157,4 +162,6 @@ export function recentIds(sessions, muscles, limit = 6) {
   return out;
 }
 
-export const summaryText = (it) => `${it.sets} × ${it.repMin === it.repMax ? it.repMin : `${it.repMin}–${it.repMax}`}`;
+// timed: the range is seconds ("3 × 30–45 sec")
+export const summaryText = (it, ex) =>
+  ltrText(`${it.sets} × ${it.repMin === it.repMax ? it.repMin : `${it.repMin}–${it.repMax}`}${ex?.timed === true ? ` ${t("plan.unit.sec")}` : ""}`);

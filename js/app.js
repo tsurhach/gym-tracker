@@ -1,5 +1,5 @@
 import { createStore } from "./store.js";
-import { linkCustomsToLibrary } from "./migrate.js";
+import { fixTimedPlans, linkCustomsToLibrary } from "./migrate.js";
 import { allMediaKeys } from "./media.js";
 import { confirmSheet, showBanner } from "./ui.js";
 import * as setup from "./screens/setup.js";
@@ -21,6 +21,7 @@ import * as person from "./screens/person.js";
 import { createShare } from "./share.js";
 import { createCalSync } from "./calendar.js";
 import * as passkey from "./passkey.js";
+import { applyLang, exHowto, heEnabled, setExHe, t } from "./i18n/index.js";
 
 const screens = {
   today,
@@ -51,6 +52,14 @@ const TAB_OF = {
   person: "plan",
   join: "plan",
 };
+
+// Tab labels live in index.html as English fallback; set them from the current language.
+export function applyTabs() {
+  const nav = document.getElementById("tabs");
+  nav.setAttribute("aria-label", t("tab.aria"));
+  const label = { today: t("tab.today"), history: t("tab.history"), muscles: t("tab.muscles"), plan: t("tab.plan") };
+  for (const a of nav.querySelectorAll("a[data-tab]")) a.textContent = label[a.dataset.tab];
+}
 
 function parseHash(hash) {
   try {
@@ -97,8 +106,9 @@ function startSync(ctx, store, render) {
     },
     isSafe: calm,
     applied: () => {
+      applyLang(ctx.state.settings); // a language change from the other phone
       render();
-      showBanner("Updated from your other device.", { kind: "ok" });
+      showBanner(t("app.updated"), { kind: "ok" });
     },
     storage: browserStorage(),
     passkey,
@@ -122,23 +132,32 @@ async function main() {
   try {
     library = await (await fetch("./data/exercises.json")).json();
   } catch {
-    app.textContent =
-      "Could not load the exercise library. Check your connection and reload.";
+    app.textContent = t("app.noLibrary");
     return;
   }
   const byId = new Map(library.map((e) => [e.id, e]));
+  if (heEnabled()) {
+    try {
+      setExHe(await (await fetch("./data/exercises.he.json")).json()); // Hebrew names, aliases, how-to (search works in both languages)
+    } catch {}
+  }
 
   const store = createStore(browserStorage());
   const loaded = store.load();
+  applyLang(loaded.state.settings);
+  if (loaded.kept && !loaded.recovered && !loaded.state.settings.timedFixed) {
+    fixTimedPlans(loaded.state, library);
+    store.save(loaded.state);
+  }
   // Customs an import made from a near-miss name become the library exercise (once; skipped if media is unreadable).
   if (loaded.kept && !loaded.recovered && loaded.state.customExercises.length) {
     try {
       const keys = new Set(await allMediaKeys());
       const links = linkCustomsToLibrary(loaded.state, library, keys);
       if (links.length && store.save(loaded.state)) {
-        const list = links.slice(0, 5).map((l) => `${l.from} → ${l.to}`).join(", ");
-        const more = links.length > 5 ? `, and ${links.length - 5} more` : "";
-        showBanner(`Linked ${links.length} exercise${links.length > 1 ? "s" : ""} to the library so they show drawings: ${list}${more}.`, { sticky: true, kind: "ok" });
+        const list = links.slice(0, 5).map((l) => t("app.linkedItem", { from: l.from, to: l.to })).join(", ");
+        const more = links.length > 5 ? t("app.linkedMore", { n: links.length - 5 }) : "";
+        showBanner(t("app.linked", { n: links.length, list, more }), { sticky: true, kind: "ok" });
       }
     } catch {}
   }
@@ -160,8 +179,9 @@ async function main() {
           images: e.images ?? 0,
           ext: e.ext,
           hint: e.hint,
-          howto: e.howto,
+          howto: exHowto(e.id, e.howto),
           equipment: e.equipment,
+          timed: e.timed === true,
         }
       );
     },
@@ -172,7 +192,7 @@ async function main() {
     // { render: false } saves without redrawing (used when the page is being hidden).
     async save({ render: redraw = true, resetSnapshot = false } = {}) {
       if (blocked && !(await askOverwrite())) {
-        showBanner("Changes are not saved. Your old data was left untouched.", {
+        showBanner(t("app.notSaved"), {
           sticky: true,
         });
         if (redraw) render();
@@ -182,7 +202,7 @@ async function main() {
       const saved = store.save(ctx.state, { resetSnapshot });
       if (!saved) {
         showBanner(
-          "Could not save. Storage may be full or blocked. Export a backup if you can.",
+          t("app.saveFailed"),
           { sticky: true },
         );
       }
@@ -195,9 +215,9 @@ async function main() {
 
   const askOverwrite = () =>
     confirmSheet(
-      "Saved data on this phone could not be read, and it could NOT be set aside. If you continue, the next save will overwrite it for good.",
-      "Overwrite and continue",
-      "Not now",
+      t("app.overwriteAsk"),
+      t("app.overwrite"),
+      t("app.notNow"),
     );
 
   let lastKey = null;
@@ -220,9 +240,10 @@ async function main() {
       screens[route.name].render(root, ctx);
     } catch (err) {
       console.error(err);
-      root.textContent = "Something went wrong showing this screen.";
+      root.textContent = t("app.screenError");
     }
 
+    applyTabs();
     const noTabs = NO_TABS.has(route.name);
     tabs.hidden = noTabs;
     document.body.classList.toggle("no-tabs", noTabs);
@@ -237,7 +258,7 @@ async function main() {
 
   if (loaded.recovered && loaded.kept) {
     showBanner(
-      "Saved data could not be read, so it was set aside and the app started fresh.",
+      t("app.recovered"),
       { sticky: true },
     );
   } else if (loaded.recovered) {
@@ -246,13 +267,13 @@ async function main() {
       if (ok) blocked = false;
       else
         showBanner(
-          "Saved data could not be read. Nothing will be saved until you confirm.",
+          t("app.unreadable"),
           { sticky: true },
         );
     });
   }
 
-  ctx.cal = createCalSync({ getState: () => ctx.state, storage: browserStorage(), onRefused: () => showBanner("Your calendar could not be updated. Try shortening your workout names.", { sticky: true }) });
+  ctx.cal = createCalSync({ getState: () => ctx.state, storage: browserStorage(), onRefused: () => showBanner(t("app.calRefused"), { sticky: true }) });
   if (SYNC_ENABLED) startSync(ctx, store, () => (ctx.cal.changed(), render())); // sync may bring new calendar keys or days
   ctx.cal.changed(); // app start: send if the feed is out of date or old
   window.addEventListener("hashchange", render);

@@ -1,4 +1,5 @@
 // "How to use" guide for people who are new to the app. Static text; no app data is read or changed.
+import { t } from "../i18n/index.js";
 const FLAG = "gymtracker.helpSeen";
 
 export const isInstalled = () => {
@@ -30,140 +31,78 @@ export function markSeen(key) {
   } catch {}
 }
 
-const SECTIONS = [
+const sections = () => [
   [
     "install",
-    "Put it on your home screen",
-    "Then it opens like a normal app.",
-    `<p><b>iPhone:</b></p>
-    <ol>
-      <li>Open the link in <b>Safari</b>.</li>
-      <li>Tap the <b>Share</b> button (a square with an arrow pointing up).</li>
-      <li>Tap <b>Add to Home Screen</b>.</li>
-      <li>Tap <b>Add</b>.</li>
-    </ol>
-    <p><b>Android:</b></p>
-    <ol>
-      <li>Open the link in <b>Chrome</b>.</li>
-      <li>Tap the <b>⋮</b> menu (three dots, top right).</li>
-      <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
-    </ol>
-    <p><b>Important:</b> your data is kept on this phone. If you delete the app from your home screen, it is deleted too, unless sync is on or you saved a backup file. See "Sync" and "Backup file".</p>`,
+    t("help.install.title"),
+    t("help.install.sub"),
+    t("help.install.body"),
   ],
   [
     "plan",
-    "Set up your plan",
-    "Your workouts and exercises.",
-    `<p>The first time, the app asks a few questions and suggests a plan. Just answer and tap <b>Propose my plan</b>.</p>
-    <p>Later, go to <b>Plan</b>, then <b>Change the whole plan</b>:</p>
-    <ul>
-      <li><b>Ready-made programs</b>: pick one and use it.</li>
-      <li><b>Build a plan with AI</b>: the app gives you words to copy into an AI app. Paste its answer back.</li>
-    </ul>
-    <p>You can also change any workout in Plan by hand.</p>
-    <p><b>Weekly schedule (optional):</b> in Plan, open <b>Weekly schedule</b> and tap your training days. Today then shows that day's workout, and says <b>Rest day</b> on the others. Without a schedule, the app just suggests the next workout in order.</p>
-    <p><b>Calendar (optional):</b> in Plan &gt; Weekly schedule, switch on <b>Calendar</b> and tap <b>Add to Apple Calendar</b> or <b>Add to Google Calendar</b> (or copy the link). Your planned training days show in your calendar, all day or at the time you pick. Only workout names and days leave the phone. Calendar apps check for changes on their own schedule (Google can take a day). Reminders are off: turn on alerts for the Gym Tracker calendar in your calendar app's settings. Make a new link or turn it off there at any time.</p>`,
+    t("help.plan.title"),
+    t("help.plan.sub"),
+    t("help.plan.body"),
   ],
   [
     "workout",
-    "Do a workout",
-    "Start, tick off your sets, finish.",
-    `<ol>
-      <li>On <b>Today</b>, tap <b>Start</b>.</li>
-      <li>Tap any exercise. You can do them in any order.</li>
-      <li>The weight and reps are filled in from last time.</li>
-      <li>After each set, tap the <b>✓</b> to confirm it.</li>
-      <li>To change a number, tap it and type. A weight you type on the first set is copied to the sets below it.</li>
-      <li>Want to remember something, like the seat setting? Type it in the note box. It shows again next time.</li>
-      <li>Machine taken? On the exercise, tap <b>Swap exercise</b> to switch to a similar one. Ones you picked before show <b>★ Usual</b>.</li>
-      <li>When all sets are ticked, tap <b>Next</b> to go to the next exercise, or <b>Done, back to list</b>.</li>
-      <li>At the end, tap <b>Finish workout</b>.</li>
-    </ol>`,
+    t("help.workout.title"),
+    t("help.workout.sub"),
+    t("help.workout.body"),
   ],
   [
     "supersets",
-    "Supersets (optional)",
-    "Switch between two exercises.",
-    `<p>A superset means you do one set of one exercise, then one set of the next, and so on. Nothing changes unless you make one.</p>
-    <ol>
-      <li>In <b>Plan</b>, open a workout and tap <b>Superset…</b>.</li>
-      <li>Tap the exercises in the order you want. Choose when to rest. Tap <b>Make superset</b>.</li>
-    </ol>
-    <p>When you tick a set, the app opens the next exercise of the superset for you. To change or remove it, tap its <b>Superset</b> tag in Plan.</p>`,
+    t("help.supersets.title"),
+    t("help.supersets.sub"),
+    t("help.supersets.body"),
   ],
   [
     "heavier",
-    "“Go heavier” advice",
-    "Only a suggestion.",
-    `<p>If you did all your reps on every set last time, the app says something like "Try 42.5 kg today". It means you may be ready for a bit more weight.</p>
-    <p>For body-weight exercises like push-ups, it suggests one more rep, or a little added weight if you have it. You can turn this off, and the Stuck reminder too, in <b>Plan</b>, then <b>Settings</b>.</p>
-    <p>It is only a suggestion. Use the weight that feels right.</p>`,
+    t("help.heavier.title"),
+    t("help.heavier.sub"),
+    t("help.heavier.body"),
   ],
   [
     "extras",
-    "Rest timer, photos, sound",
-    "Small helpers while you train.",
-    `<p><b>Rest timer:</b> after you tick a set, a countdown starts. Tap <b>−15s</b> or <b>+15s</b> to change it, or <b>Skip</b>. Set its length in <b>Plan</b>, then <b>Settings</b>.</p>
-    <p><b>Rest-over sound:</b> in <b>Settings</b> you can record your own sound or pick an audio file. Turn on <b>Notify me when rest is over</b> to get an alert when the phone is locked.</p>
-    <p><b>Your own photo or video:</b> on an exercise you added yourself, tap <b>Add photo or video</b>.</p>
-    <p><b>Plates per side:</b> for bar exercises the app shows which plates to put on each side.</p>
-    <p><b>New best:</b> a 🏆 shows when a set is heavier than ever, or has more reps than ever at that weight. When you finish, you see a short summary with your new bests.</p>`,
+    t("help.extras.title"),
+    t("help.extras.sub"),
+    t("help.extras.body"),
   ],
   [
     "progress",
-    "History, Muscles, Body weight",
-    "See how you are doing.",
-    `<p><b>History:</b> every past workout. Tap one to fix a mistake. Tap an exercise name for its chart.</p>
-    <p><b>Muscles:</b> how many sets each muscle got in the last 7 days, and which ones you missed.</p>
-    <p><b>Body weight:</b> on Today, tap <b>Body weight</b> to log your weight now and then.</p>`,
+    t("help.progress.title"),
+    t("help.progress.sub"),
+    t("help.progress.body"),
   ],
 ];
 
-const SYNC_SECTION = [
+const syncSection = () => [
   "sync",
-  "Sync",
-  "Optional. Keeps your data if you lose your phone.",
-  `<p>Go to <b>Plan</b>, then <b>Sync and sign-in</b>, and tap <b>Turn on sync with Face ID</b>. The app works fine without it.</p>
-    <p>It saves your workouts, plan, settings, photos and rest sound. Videos stay on this phone. Your data is locked before it leaves the phone, so nobody else can read it, not even us.</p>
-    <p><b>Recovery code:</b> the app shows it once. Tap <b>Save in iPhone Passwords</b>. You need it if Face ID alone cannot open your data, for example on an Android phone. Nobody can reset it.</p>
-    <p><b>Another phone or iPad:</b> open the app there, go to <b>Sync and sign-in</b>, and tap <b>I already use sync</b>.</p>
-    <p>Syncing happens by itself. <b>Sign out on this device</b> stops it on this phone. <b>Delete my cloud data</b> removes the saved copy. Either way, your data on the phone stays.</p>`,
+  t("help.sync.title"),
+  t("help.sync.sub"),
+  t("help.sync.body"),
 ];
 
-const BACKUP_SECTION = [
+const backupSection = () => [
   "backup",
-  "Backup file",
-  "A copy you keep yourself.",
-  `<p>A backup is a file you save somewhere safe, like Files or iCloud Drive. Do it about once a month, and before changing phones.</p>
-    <ol>
-      <li>Go to <b>Plan</b>, then <b>Backup and export</b>.</li>
-      <li>Tap <b>Export backup</b>. If you added your own photos, videos or sound, tap <b>Full backup</b> instead.</li>
-    </ol>
-    <p>To get your data back, tap <b>Import backup</b> and choose the file.</p>`,
+  t("help.backup.title"),
+  t("help.backup.sub"),
+  t("help.backup.body"),
 ];
 
-const SHARE_SECTION = [
+const shareSection = () => [
   "sharing",
-  "Coach and friends",
-  "Let someone look at your workouts.",
-  `<p>Turn on sync first. Then go to <b>Plan</b>, then <b>People</b>.</p>
-    <ol>
-      <li>Type your name, tap <b>Invite someone</b> and choose <b>Coach</b> or <b>Friend</b>.</li>
-      <li>Tap <b>Send the invite</b> and pick Messages or WhatsApp. The code works once, for 7 days.</li>
-      <li>When they enter it, open <b>People</b> again and tap <b>Allow</b>. Nothing is shared before that.</li>
-    </ol>
-    <p><b>What they see:</b> they can only look, never change anything. A coach sees your workouts and plan. A friend sees your workouts, and your plan only if you tick it. Body weight is hidden unless you switch on <b>Show my body weight to my coach</b>. Friends never see it.</p>
-    <p><b>Copying:</b> tick <b>Let them copy my workouts and plan</b> if they may copy days into their own plan.</p>
-    <p><b>Stop sharing:</b> tap <b>Remove</b>. They see nothing new from then on. What they already saw stays with them.</p>
-    <p><b>Got a code?</b> In <b>People</b>, tap <b>Enter a code</b>. Once they allow you, tap their name to see their workouts. If they let you copy, you can add a day or all days to your plan, or tap <b>Make a day from this workout</b>. The copy is yours and does not change when theirs does.</p>`,
+  t("help.sharing.title"),
+  t("help.sharing.sub"),
+  t("help.sharing.body"),
 ];
 
 export function render(root, ctx) {
   const want = ctx.params.id; // "#/help/install" opens that section
   const open = (k) => (want ? k === want : k === "install" && !isInstalled());
-  root.innerHTML = `<h1 class="title">How to use</h1>
-    <p class="muted" style="margin:0 0 12px">Tap a heading to open it.</p>
-    ${[...SECTIONS, SYNC_SECTION, BACKUP_SECTION, SHARE_SECTION].map(
+  root.innerHTML = `<h1 class="title">${t("help.title")}</h1>
+    <p class="muted" style="margin:0 0 12px">${t("help.hint")}</p>
+    ${[...sections(), syncSection(), backupSection(), shareSection()].map(
       ([
         k,
         title,
@@ -174,6 +113,6 @@ export function render(root, ctx) {
       <div class="sec-body">${body}</div>
     </details>`,
     ).join("")}
-    <a class="btn" href="#/today">Back to Today</a>`;
+    <a class="btn" href="#/today">${t("help.back")}</a>`;
   if (want) root.querySelector(`#help-${CSS.escape(want)}`)?.scrollIntoView();
 }

@@ -1,13 +1,21 @@
 // Rest timer: one bar fixed to the bottom of the page, outside the per-render screen root.
 import * as push from "./push.js";
+import { ltr, ltrText, t } from "./i18n/index.js";
 import { deleteBlob, getBlob, putBlob, SOUND_KEY } from "./media.js";
 
 // State lives in state.active.rest = { endsAt, total } (ms timestamp, seconds) so it survives a kill.
+// Everything is drawn from endsAt vs Date.now(), never from counting ticks (iOS freezes timers in the background).
+// Hook for a future server push: set in startRest() and adjust (click handler in build()); cleared in clear().
+// push.schedule(endsAt) / push.cancel() are already called at exactly those points.
 
 export const DEFAULT_REST = 90;
 const OVER_MS = 5000; // how long "Rest over" stays
 const PUSH_CUT_MS = 3000; // visible this close to the end: the bar is enough, drop the push
 const MAX_REST = 3600; // longest rest you can set: 60 minutes
+const LATE_MS = 3000; // noticed this long after the end: show "Rest over", do not blast a late sound
+
+// A rest that ended more than LATE_MS ago is only shown, never sounded.
+export const isLate = (endsAt, now) => now - endsAt > LATE_MS;
 
 // Minutes and seconds as typed -> whole seconds, 0..3600. Blank or junk counts as 0;
 // seconds above 59 carry into minutes simply by being added.
@@ -88,15 +96,15 @@ function build() {
   bar.id = "rest";
   bar.hidden = true;
   bar.setAttribute("role", "region");
-  bar.setAttribute("aria-label", "Rest timer");
+  bar.setAttribute("aria-label", t("rest.timer"));
   bar.innerHTML = `<div class="rest-prog"><i></i></div>
     <div class="rest-row">
       <div class="rest-time" aria-live="off">0:00</div>
       <div class="rest-msg" aria-live="polite"></div>
       <div class="rest-btns">
-        <button type="button" data-d="-15">−15s</button>
-        <button type="button" data-d="15">+15s</button>
-        <button type="button" data-d="0">Skip</button>
+        <button type="button" data-d="-15">${ltr(t("rest.minus15"))}</button>
+        <button type="button" data-d="15">${ltr(t("rest.plus15"))}</button>
+        <button type="button" data-d="0">${t("rest.skip")}</button>
       </div>
     </div>`;
   bar.addEventListener("click", (e) => {
@@ -152,8 +160,21 @@ function unlock() {
     if (navigator.audioSession) navigator.audioSession.type = "ambient";
   } catch {}
   try {
-    context().resume?.();
+    const a = context();
+    a.resume?.();
+    // A silent blip started inside the tap is what really unlocks iOS audio.
+    const src = a.createBufferSource();
+    src.buffer = a.createBuffer(1, 1, 22050);
+    src.connect(a.destination);
+    src.start(0);
     if (!custom) loadCustom();
+  } catch {}
+}
+
+// iOS suspends the context when the screen locks or the app is backgrounded; any tap or the return wakes it.
+function wakeAudio() {
+  try {
+    if (audio && audio.state !== "running") audio.resume?.();
   } catch {}
 }
 
@@ -200,6 +221,7 @@ function chime() {
 
 function play() {
   try {
+    context(); // reloaded mid-rest: there is no context yet
     if (!audio) return;
     if (custom) {
       try {
@@ -224,10 +246,18 @@ function play() {
   } catch {}
 }
 
-function beep() {
+// Once, while visible. A suspended context is resumed first (its clock is frozen, so a sound
+// scheduled on it would play late); if that takes too long the end is only shown.
+async function beep(endsAt) {
   try {
     navigator.vibrate?.(200);
   } catch {}
+  try {
+    const a = context();
+    if (a.state !== "running")
+      await Promise.race([a.resume(), new Promise((r) => setTimeout(r, 800))]);
+  } catch {}
+  if (audio?.state !== "running" || isLate(endsAt, Date.now())) return; // frozen clock: the chime would play at the next tap
   play();
 }
 
@@ -256,7 +286,7 @@ function tick() {
   }
   if (now >= r.endsAt && beepedFor !== r.endsAt) {
     beepedFor = r.endsAt;
-    beep();
+    if (!isLate(r.endsAt, now)) beep(r.endsAt);
   }
   paint();
 }
@@ -272,8 +302,8 @@ function paint() {
   const left = remaining(r.endsAt, now);
   const over = left === 0;
   bar.classList.toggle("over", over);
-  bar.querySelector(".rest-time").textContent = fmtRest(left);
-  bar.querySelector(".rest-msg").textContent = over ? "Rest over" : "";
+  bar.querySelector(".rest-time").textContent = ltrText(fmtRest(left));
+  bar.querySelector(".rest-msg").textContent = over ? t("rest.over") : "";
   bar.querySelector("i").style.transform =
     `scaleX(${Math.min(1, Math.max(0, (r.endsAt - now) / (r.total * 1000)))})`;
 }
@@ -283,13 +313,22 @@ function run() {
   wake(true);
 }
 
+// Leaving the app: the 3 s cut-off may already have dropped the push, so send it again (the server
+// clamps a past time to now). Only while the rest runs or ended less than PUSH_CUT_MS ago.
+function away() {
+  const r = rest();
+  if (!r || !notify() || pushed || Date.now() - r.endsAt > PUSH_CUT_MS) return;
+  pushed = true;
+  push.schedule(r.endsAt);
+}
+
 // Back in the foreground (visibilitychange, pageshow, focus): re-read the clock and repaint now.
 // A rest that ended while away shows "Rest over" for OVER_MS from now, without a late beep.
 function resume() {
   const r = rest();
   if (!r) return;
   const now = Date.now();
-  if (now >= r.endsAt) beepedFor = r.endsAt;
+  wakeAudio();
   if (graceFor !== r.endsAt && now >= r.endsAt + OVER_MS) {
     graceFor = r.endsAt;
     graceUntil = overDeadline(r.endsAt, now);
@@ -308,16 +347,22 @@ export function sync(name, shellCtx) {
     build();
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") resume();
+      else away();
     });
+    window.addEventListener("pagehide", away);
+    document.addEventListener("freeze", away);
     // iOS standalone does not always fire visibilitychange.
     window.addEventListener("pageshow", (e) => e.persisted && resume());
     window.addEventListener("focus", resume);
+    // pointerdown is not a user activation on iOS touch; pointerup / touchend are.
+    for (const ev of ["pointerup", "touchend"])
+      document.addEventListener(ev, wakeAudio, { capture: true, passive: true });
   }
   const r = rest();
   if (pushed && (!notify() || !restLength(ctx.state.settings))) cancelPush();
   if (r && !timer) {
     pushed = notify(); // reloaded mid-rest: a push may be waiting on the server; cancel is harmless
-    if (Date.now() >= r.endsAt) beepedFor = r.endsAt; // finished while away: no late beep
+    wakeAudio();
     run();
   }
   if (!r && timer) stop();

@@ -1,18 +1,32 @@
 import { MUSCLES, MAJOR_MUSCLES } from "./constants.js";
 import { newItem } from "./session.js";
+import { t } from "./i18n/index.js";
 
 export const PRESETS = [
   {
     key: "full",
-    label: "Full body",
-    workouts: [{ name: "Full body", muscles: MUSCLES }],
+    get label() {
+      return t("proposal.full");
+    },
+    workouts: [
+      {
+        get name() {
+          return t("proposal.full");
+        },
+        muscles: MUSCLES,
+      },
+    ],
   },
   {
     key: "ul",
-    label: "Upper / Lower",
+    get label() {
+      return t("proposal.upperLower");
+    },
     workouts: [
       {
-        name: "Upper",
+        get name() {
+          return t("proposal.upper");
+        },
         muscles: [
           "Chest",
           "Back",
@@ -23,19 +37,35 @@ export const PRESETS = [
         ],
       },
       {
-        name: "Lower",
+        get name() {
+          return t("proposal.lower");
+        },
         muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"],
       },
     ],
   },
   {
     key: "ppl",
-    label: "Push / Pull / Legs",
+    get label() {
+      return t("proposal.ppl");
+    },
     workouts: [
-      { name: "Push", muscles: ["Chest", "Shoulders", "Triceps"] },
-      { name: "Pull", muscles: ["Back", "Biceps", "Forearms"] },
       {
-        name: "Legs",
+        get name() {
+          return t("proposal.push");
+        },
+        muscles: ["Chest", "Shoulders", "Triceps"],
+      },
+      {
+        get name() {
+          return t("proposal.pull");
+        },
+        muscles: ["Back", "Biceps", "Forearms"],
+      },
+      {
+        get name() {
+          return t("proposal.legs");
+        },
         muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Abs"],
       },
     ],
@@ -66,7 +96,7 @@ export function proposeItems(muscles, library, goalKey) {
     for (const ex of library.filter((e) => e.primary === m).slice(0, countFor(m, muscles.length))) {
       if (seen.has(ex.id)) continue;
       seen.add(ex.id);
-      items.push(newItem(ex.id, goalKey));
+      items.push(newItem(ex.id, goalKey, ex));
     }
   }
   return items;

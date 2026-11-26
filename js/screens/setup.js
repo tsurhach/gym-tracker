@@ -1,6 +1,7 @@
 import { GOALS, MUSCLES } from "../constants.js";
 import { PRESETS, blankWorkouts, buildPlan } from "../proposal.js";
 import { esc } from "../ui.js";
+import { ltr, t as tr, tk } from "../i18n/index.js";
 
 // Wizard state lives here (not in saved state) until the user finishes.
 let draft = null;
@@ -41,59 +42,59 @@ function finish(ctx, propose, root) {
 
 function stepHtml(d, ctx) {
   if (d.step === 1) {
-    return `<h2>What is your goal?</h2>
-      <p class="muted" style="margin:4px 0 12px">It sets the rep range and number of sets.</p>
+    return `<h2>${tr("setup.goal.title")}</h2>
+      <p class="muted" style="margin:4px 0 12px">${tr("setup.goal.sub")}</p>
       ${Object.entries(GOALS)
         .map(
           ([
             key,
             g,
           ]) => `<button class="big-choice" data-goal="${key}" aria-pressed="${d.goal === key}">
-            <b>${esc(g.label)}</b><span>${g.repMin}–${g.repMax} reps · ${g.sets} sets</span></button>`,
+            <b>${esc(tk("goal", key))}</b><span>${tr("setup.goal.range", { range: ltr(`${g.repMin}–${g.repMax}`), sets: ltr(g.sets) })}</span></button>`,
         )
         .join("")}`;
   }
   if (d.step === 2) {
-    return `<h2>How many workouts?</h2>
-      <p class="muted" style="margin:4px 0 12px">Pick a starting point or set your own number.</p>
+    return `<h2>${tr("setup.count.title")}</h2>
+      <p class="muted" style="margin:4px 0 12px">${tr("setup.count.sub")}</p>
       <div class="chips">${PRESETS.map(
         (p) =>
           `<button class="chip" data-preset="${p.key}" aria-pressed="${d.preset === p.key}">${esc(p.label)}</button>`,
       ).join("")}</div>
       <div class="stepper">
-        <button class="icon-btn" data-n="-1" aria-label="Fewer workouts"${d.drafts.length <= 1 ? " disabled" : ""}>−</button>
+        <button class="icon-btn" data-n="-1" aria-label="${tr("setup.count.fewer")}"${d.drafts.length <= 1 ? " disabled" : ""}>−</button>
         <output aria-live="polite">${d.drafts.length}</output>
-        <button class="icon-btn" data-n="1" aria-label="More workouts"${d.drafts.length >= MAX_WORKOUTS ? " disabled" : ""}>+</button>
+        <button class="icon-btn" data-n="1" aria-label="${tr("setup.count.more")}"${d.drafts.length >= MAX_WORKOUTS ? " disabled" : ""}>+</button>
       </div>
-      <button class="btn btn-primary" data-next>Next</button>
-      <button class="btn" data-back>Back</button>`;
+      <button class="btn btn-primary" data-next>${tr("setup.next")}</button>
+      <button class="btn" data-back>${tr("setup.back")}</button>`;
   }
-  return `<h2>What does each workout train?</h2>
-    <p class="muted" style="margin:4px 0 12px">Rename a workout and tick its muscles.</p>
+  return `<h2>${tr("setup.muscles.title")}</h2>
+    <p class="muted" style="margin:4px 0 12px">${tr("setup.muscles.sub")}</p>
     ${d.drafts
       .map(
         (w, i) => `<section class="card" data-i="${i}">
-          <input class="name-input" data-name value="${esc(w.name)}" aria-label="Workout ${i + 1} name" maxlength="40" />
+          <input class="name-input" dir="auto" data-name value="${esc(w.name)}" aria-label="${tr("setup.name.aria", { n: i + 1 })}" maxlength="40" />
           <div class="chips">${MUSCLES.map(
             (m) =>
-              `<button class="chip" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(m)}</button>`,
+              `<button class="chip" data-m="${esc(m)}" aria-pressed="${w.muscles.includes(m)}">${esc(tk("muscle", m))}</button>`,
           ).join("")}</div>
         </section>`,
       )
       .join("")}
-    <button class="btn btn-primary" data-finish="propose">Propose my plan</button>
-    <button class="btn" data-finish="empty">Start from empty</button>
-    <button class="btn" data-back>Back</button>`;
+    <button class="btn btn-primary" data-finish="propose">${tr("setup.propose")}</button>
+    <button class="btn" data-finish="empty">${tr("setup.empty")}</button>
+    <button class="btn" data-back>${tr("setup.back")}</button>`;
 }
 
 export function render(root, ctx) {
   draft ??= fresh(ctx);
   const d = draft;
   const draw = () => {
-    root.innerHTML = `<h1 class="title">Set up your plan</h1>
-    <p class="subtitle">Step ${d.step} of 3</p>
+    root.innerHTML = `<h1 class="title">${tr("setup.title")}</h1>
+    <p class="subtitle">${tr("setup.step", { step: ltr(d.step) })}</p>
     ${stepHtml(d, ctx)}
-    ${ctx.state.workouts.length ? `<a class="btn" href="#/plan">Cancel</a>` : ""}`;
+    ${ctx.state.workouts.length ? `<a class="btn" href="#/plan">${tr("setup.cancel")}</a>` : ""}`;
   };
   draw();
 

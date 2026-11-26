@@ -1,4 +1,5 @@
-import { alternatives, pairKey } from "./logic.js";
+import { alternatives, equipName, pairKey } from "./logic.js";
+import { t, exTwo, exName } from "./i18n/index.js";
 import { swapEntry } from "./session.js";
 import { openPicker } from "./picker.js";
 import { esc, exImageUrls } from "./ui.js";
@@ -18,19 +19,19 @@ export function openSwap(ctx, entry, plan) {
   sheet.className = "sheet";
   sheet.setAttribute("role", "dialog");
   sheet.setAttribute("aria-modal", "true");
-  sheet.setAttribute("aria-label", `Swap ${entry.name}`);
+  sheet.setAttribute("aria-label", t("swap.aria", { name: exName(entry.exerciseId, entry.name) }));
   const rows = alts.map((e) => {
     const last = lastSets(state, e.id);
     return `<button class="pick-row" data-id="${esc(e.id)}">
       ${e.images ? `<img class="pick-thumb" src="${exImageUrls(e)[0]}" alt="" width="56" height="56" loading="lazy" decoding="async" />` : `<span class="pick-thumb"></span>`}
-      <span class="pick-name">${esc(e.name)}${state.swapCounts?.[pairKey(cur.id, e.id)] ? ` <span class="tag">★ Usual</span>` : ""}<span class="muted small" style="display:block">${esc(e.equipment ?? "custom")}${last ? ` · Last: ${esc(lastText(last))}` : ""}</span></span>
+      <span class="pick-name">${exTwo(e.id, e.name)}${state.swapCounts?.[pairKey(cur.id, e.id)] ? ` <span class="tag">${t("swap.usual")}</span>` : ""}<span class="muted small" style="display:block">${last ? t("swap.eqLast", { eq: esc(e.equipment ? equipName(e.equipment) : t("swap.custom")), text: esc(lastText(last, e.timed === true)) }) : esc(e.equipment ? equipName(e.equipment) : t("swap.custom"))}</span></span>
     </button>`;
   });
-  sheet.innerHTML = `<h2 style="margin-top:0">Swap ${esc(entry.name)} for…</h2>
-    ${rows.join("") || `<p class="muted">No other exercises for this muscle.</p>`}
-    <button class="btn" data-act="all">Show all</button>
-    ${plan ? "" : `<label class="check"><input type="checkbox" data-plan /> Also change it in my plan</label>`}
-    <button class="btn" data-act="cancel">Cancel</button>`;
+  sheet.innerHTML = `<h2 style="margin-top:0">${t("swap.title", { name: esc(exName(entry.exerciseId, entry.name)) })}</h2>
+    ${rows.join("") || `<p class="muted">${t("swap.none")}</p>`}
+    <button class="btn" data-act="all">${t("swap.showAll")}</button>
+    ${plan ? "" : `<label class="check"><input type="checkbox" data-plan /> ${t("swap.alsoPlan")}</label>`}
+    <button class="btn" data-act="cancel">${t("swap.cancel")}</button>`;
   scrim.append(sheet);
   const close = () => {
     document.removeEventListener("keydown", onKey);
@@ -52,7 +53,7 @@ export function openSwap(ctx, entry, plan) {
       go(row.dataset.id, inPlan);
     } else if (act === "all") {
       close();
-      openPicker(ctx, (id) => go(id, inPlan), { exclude: taken, muscles: [cur.primary], title: "Swap exercise" });
+      openPicker(ctx, (id) => go(id, inPlan), { exclude: taken, muscles: [cur.primary], title: t("exercise.swap") });
     } else if (act === "cancel" || e.target === scrim) close();
   });
   document.addEventListener("keydown", onKey);

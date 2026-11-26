@@ -1,12 +1,13 @@
 import { showBanner } from "./ui.js";
+import { t } from "./i18n/index.js";
 
 // Photo or video attached to a custom exercise. Lives in IndexedDB (not the JSON doc, which is
 // limited to ~5 MB). One record per exercise id. Everything fails soft: media is never required.
 export const MAX_SIDE = 1200;
 export const THUMB = 160;
 export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
-export const TOO_BIG =
-  "That video is too large. Try a shorter clip, under about 20 seconds.";
+// English text, kept as a constant for tests; messages use t() when produced.
+export const TOO_BIG = "That video is too large. Try a shorter clip, under about 20 seconds.";
 
 // Pure: size after scaling so the longest side is at most max; never upscales.
 export function fitSize(w, h, max = MAX_SIDE) {
@@ -20,9 +21,9 @@ export function checkFile(file) {
   if (type.startsWith("image/")) return { ok: true, kind: "image" };
   if (type.startsWith("video/"))
     return file.size > MAX_VIDEO_BYTES
-      ? { ok: false, message: TOO_BIG }
+      ? { ok: false, message: t("media.tooBig") }
       : { ok: true, kind: "video" };
-  return { ok: false, message: "Choose a photo or a video." };
+  return { ok: false, message: t("media.choosePhoto") };
 }
 
 export const SOUND_KEY = "rest-sound"; // fixed key in the same store; exercise ids are uuids
@@ -35,9 +36,9 @@ export function checkSound(file) {
   const named = SOUND_EXT.test(file?.name ?? "");
   // iOS sometimes labels saved audio as video/mp4 or video/quicktime.
   const audio = type.startsWith("audio/") || (/^video\/(mp4|quicktime)$/.test(type) && named);
-  if (!audio) return { ok: false, message: "Choose an audio file." };
+  if (!audio) return { ok: false, message: t("media.chooseAudio") };
   if (file.size > MAX_SOUND_BYTES)
-    return { ok: false, message: "That sound is too large. Choose one under 3 MB." };
+    return { ok: false, message: t("media.soundBig") };
   return { ok: true };
 }
 
@@ -198,9 +199,9 @@ export async function saveMedia(id, file) {
     await putMedia(id, file);
     return true;
   } catch (err) {
-    const msg = [TOO_BIG, "Choose a photo or a video."].includes(err.message)
+    const msg = [t("media.tooBig"), t("media.choosePhoto")].includes(err.message)
       ? err.message
-      : "Could not save that photo or video. Your workout data is fine.";
+      : t("media.saveFailed");
     showBanner(msg);
     return false;
   }

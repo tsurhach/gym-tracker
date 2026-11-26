@@ -512,7 +512,7 @@ test("copy coerces hostile values and caps names", () => {
   assert.ok(workout.name.length <= 40 && workout.muscles.length <= 8 && workout.muscles.every((m) => m.length <= 30));
   for (const it of workout.items) {
     for (const k of ["sets", "repMin", "repMax", "step"]) assert.ok(Number.isFinite(it[k]) && it[k] > 0);
-    assert.ok(it.sets <= 20 && it.repMin <= it.repMax && it.repMax <= 100 && it.step <= 25);
+    assert.ok(it.sets <= 20 && it.repMin <= it.repMax && it.repMax <= 3600 && it.step <= 25);
   }
   assert.equal(copyDay(view, "nope", emptyState(), hasId).workout, null);
 });
@@ -614,7 +614,7 @@ test("day from a shared workout: order, sets done, reps done, name with clash", 
   assert.equal(workout.name, "Heavy (copy 2)");
   assert.deepEqual(workout.items.map((i) => i.exerciseId), ["bench", cx.fresh[0].id]); // empty squat entry dropped
   assert.deepEqual([workout.items[0].sets, workout.items[0].repMin, workout.items[0].repMax], [3, 6, 10]);
-  assert.deepEqual([workout.items[1].sets, workout.items[1].repMax], [1, 100]); // hostile reps bounded
+  assert.deepEqual([workout.items[1].sets, workout.items[1].repMax], [1, 3600]); // hostile reps bounded
   assert.equal(dayFromSession(view, "nope", st, hasId).workout, null);
   assert.equal(st.workouts.length, 1);
 });
