@@ -20,6 +20,7 @@ export default {
   "equip.other": "other",
   "equip.e-z curl bar": "e-z curl bar",
   "equip.kettlebells": "kettlebells",
+  "equip.bands": "resistance bands",
   "goal.strength": "Strength",
   "goal.muscle": "Build muscle",
   "goal.endurance": "Endurance",

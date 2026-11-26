@@ -177,6 +177,7 @@ async function main() {
           primary: e.primary,
           secondary: e.secondary ?? [],
           images: e.images ?? 0,
+          img: byId.get(id)?.img,
           ext: e.ext,
           hint: e.hint,
           howto: exHowto(e.id, e.howto),

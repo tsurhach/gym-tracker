@@ -181,7 +181,7 @@ test("matching: no guessing", () => {
     null,
     5,
     {},
-    "Cable Hip Abduction",
+    "Cable Hip Adduction",
   ])
     assert.equal(matchExercise(n, lib), null, String(n));
   assert.equal(matchExercise("Barbell Squat", null), null);
@@ -514,7 +514,7 @@ test("applyPlan keeps plate settings of exercises in both plans, never duplicate
   p.days[0].exercises = [
     { name: "Smith Machine Squat", sets: 4, reps: [6, 8] },
     { name: "Bench Press", sets: 3, reps: [5, 5] },
-    { name: "Cable Hip Abduction", sets: 3, reps: [10, 15], muscle: "Glutes" },
+    { name: "Cable Hip Adduction", sets: 3, reps: [10, 15], muscle: "Glutes" },
   ];
   const st = emptyState();
   const prev = planFromFile(p, lib, st.customExercises);
@@ -548,7 +548,7 @@ test("applyPlan keeps plate settings of exercises in both plans, never duplicate
   // made by hand after the preview was built
   st.customExercises.push({
     id: "own",
-    name: "cable hip abduction",
+    name: "cable hip adduction",
     primary: "Glutes",
     secondary: [],
   });
